@@ -1,4 +1,4 @@
-import pytest
+
 from dlms_cosem.security import SecuritySuite0
 
 def test_aes_128_key_wrap():
