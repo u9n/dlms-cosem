@@ -1,5 +1,4 @@
-from dlms_cosem.security import SecuritySuiteFactory
-
+from amr_crypto.dlms.security import SecuritySuiteFactory
 
 class SecurityHeader:
 
