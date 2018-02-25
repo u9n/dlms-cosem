@@ -59,6 +59,7 @@ class SecurityControlField:
 class GeneralGlobalCipherAPDU:
 
     tag = 219
+    name = 'general-glo-cipher'
 
     def __init__(self, system_title, security_header, ciphered_apdu):
         self.system_title = system_title
@@ -84,6 +85,8 @@ class GeneralGlobalCipherAPDU:
             initialization_vector, self.ciphered_apdu, add_auth_data)
 
         self.apdu = apdu
+
+        return apdu
 
 
     @classmethod
