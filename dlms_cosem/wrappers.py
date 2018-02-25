@@ -9,6 +9,8 @@ class UDPWrapper:
         self.source_wport = source_wport
         self.dest_wport = dest_wport
         self.length = len(data)
+        self.raw_data = data
+        self.dlms_data = data[8:]
 
     def to_bytes(self):
         _version = self.version.to_bytes(2, 'big')
@@ -27,8 +29,8 @@ class UDPWrapper:
         body = data[8:]
         if not length == len(body):
             raise ValueError(
-                ('Length of data in UDP message ({}) does not match '
-                'UDP Wrapper ({})').format(length, len(body))
+                ('Length of data in UDP message ({0}) does not match '
+                'UDP Wrapper ({1})').format(length, len(body))
             )
         return cls(source_wport, dest_wport, data, version)
 

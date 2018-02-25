@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 setup(
     name='dlms-cosem',
@@ -9,7 +9,7 @@ setup(
            '@ Palmlund Wahlgren Innovative Technology AB',
     author_email='henrik@pwit.se',
     license='BSD 3-Clause License',
-    packages=['dlms_cosem'],
+    packages=['dlms_cosem', 'dlms_cosem.conf', 'dlms_cosem.'],
     install_requires=['amr-crypto', ]
 
 )
