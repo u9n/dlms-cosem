@@ -95,6 +95,7 @@ class GeneralGlobalCipherAPDU:
 
         # some meter send the length of the system title. But is is supposed to
         # be A-XDR encoded so no need of length.
+        # TODO: Just check if the first byte is 8.
         if use_system_title_length_byte:
             _bytes = _bytes[1:]
 
