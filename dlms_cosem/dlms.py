@@ -1,5 +1,6 @@
 from amr_crypto.dlms.security import SecuritySuiteFactory
 
+
 class SecurityHeader:
 
     def __init__(self, security_control_field, invocation_counter):
@@ -7,9 +8,7 @@ class SecurityHeader:
         self.invocation_counter = invocation_counter
 
 
-
 class SecurityControlField:
-
     """
     Bit 3...0: Security_Suite_Id;
     Bit 4: “A” subfield: indicates that authentication is applied;
@@ -19,7 +18,7 @@ class SecurityControlField:
     """
 
     def __init__(self, security_suite, authenticated=False, encrypted=False,
-                 broadcast=False, compressed=False,):
+                 broadcast=False, compressed=False, ):
         self.security_suite = security_suite
         self.authenticated = authenticated
         self.encrypted = encrypted
@@ -54,10 +53,7 @@ class SecurityControlField:
         return _byte.to_bytes(1, 'big')
 
 
-
-
 class GeneralGlobalCipherAPDU:
-
     tag = 219
     name = 'general-glo-cipher'
 
@@ -75,19 +71,17 @@ class GeneralGlobalCipherAPDU:
 
         security_suite_factory = SecuritySuiteFactory(encryption_key)
         security_suite = security_suite_factory.get_security_suite(
-            self.security_header.security_control_field.security_suite
-        )  #TODO: Move to SecurityHeader class
+            self.security_header.security_control_field.security_suite)  # TODO: Move to SecurityHeader class
 
         initialization_vector = self.system_title + self.security_header.invocation_counter
         add_auth_data = self.security_header.security_control_field.to_bytes() + authentication_key  # TODO: Document
 
-        apdu = security_suite.decrypt(
-            initialization_vector, self.ciphered_apdu, add_auth_data)
+        apdu = security_suite.decrypt(initialization_vector, self.ciphered_apdu,
+            add_auth_data)
 
         self.apdu = apdu
 
         return apdu
-
 
     @classmethod
     def from_bytes(cls, _bytes, use_system_title_length_byte=False,
@@ -109,56 +103,246 @@ class GeneralGlobalCipherAPDU:
         if length != len(ciphered_content):
             raise ValueError('The length of the ciphered content does not '
                              'correspond to the length byte')
-        s_c_f = SecurityControlField.from_bytes(
-            ciphered_content[0])
+        scf = SecurityControlField.from_bytes(ciphered_content[0])
 
-        if not s_c_f.encrypted and not s_c_f.authenticated:
+        if not scf.encrypted and not scf.authenticated:
             # if there is no protection there is no need for the invocation
             # counter. I don't know if that is something that would acctually
             # be sent in a  general-glo-cipher. If it is we have to implement
             # that then
             raise NotImplementedError(
                 'Handling an unprotected APDU in a general-glo-cipher is not '
-                'implemented (and maybe not a valid operation)'
-            )
+                'implemented (and maybe not a valid operation)')
 
-        elif s_c_f.authenticated and not s_c_f.encrypted:
+        elif scf.authenticated and not scf.encrypted:
             raise NotImplementedError(
                 'Decoding a APDU that is just authenticated is not yet '
-                'implemented'
-            )
+                'implemented')
 
-        elif s_c_f.encrypted and not s_c_f.authenticated:
+        elif scf.encrypted and not scf.authenticated:
             raise NotImplementedError(
-                'Decoding a APDU that is just encrypted is not yet implemented'
-            )
+                'Decoding a APDU that is just encrypted is not yet implemented')
 
-        elif s_c_f.encrypted and s_c_f.authenticated:
+        elif scf.encrypted and scf.authenticated:
 
             invocation_counter = ciphered_content[1:5]
-            security_header = SecurityHeader(s_c_f, invocation_counter)
+            security_header = SecurityHeader(scf, invocation_counter)
             ciphered_apdu = ciphered_content[5:]
 
 
         else:
             raise ValueError(
                 'Security Control Field {} is not correctly interpreted since '
-                'we have no way of handling its options'.format(s_c_f)
-            )
+                'we have no way of handling its options'.format(scf))
 
-        if s_c_f.compressed:
+        if scf.compressed:
             raise NotImplementedError(
-                'Handling Compressed APDUs is not implemented'
-            )
+                'Handling Compressed APDUs is not implemented')
 
         return cls(system_title, security_header, ciphered_apdu)
 
 
-class XDLMSAPDUFactory:
+class LongInvokeIdAndPriority:
+    """
+    Unsigned 32 bits
 
-    apdu_classes = {
-        219: GeneralGlobalCipherAPDU
-    }
+     - bit 0-23: Long Invoke ID
+     - bit 25-27: Reserved
+     - bit 28: Self descriptive -> 0=Not Self Descriptive, 1= Self-descriptive
+     - bit 29: Processing options -> 0 = Continue on Error, 1=Break on Error
+     - bit 30: Service class -> 0 = Unconfirmed, 1 = Confiremed
+     - bit 31 Priority, -> 0 = normal, 1 = high.
+    """
+
+    @classmethod
+    def from_bytes(cls, bytes_data):
+        raise NotImplementedError('TODO: implement longinvokeidandpriority')
+
+
+class NotificationBody:
+    """
+    Sequence of DLMSData
+    """
+
+    def __init__(self, data=None):
+        self.data = data
+
+    @classmethod
+    def from_bytes(cls, bytes_data):
+        raise NotImplementedError(
+            '# TODO: Parse bytes as list of DLMSData')
+
+
+class DLMSData:
+
+# TODO: have a factory that generates python object from bytes and can convert python object to bytes.
+
+    def parse(self, byte_data):
+        pass
+
+
+class NullData:
+    tag = 0
+
+
+class DataArray:
+    """Sequence of Data"""
+    tag = 1
+
+
+class DataStructure:
+    """SEQUENCE of Data"""
+    tag = 2
+
+
+class BooleanData:
+    tag = 3
+
+
+class BitStringData:
+    tag = 4
+
+
+class DoubleLongData:
+    """32 bit integer"""
+    tag = 5
+
+
+class DoubleLongUnsignedData:
+    """32 bit unsigned integer"""
+    tag = 6
+
+
+class OctetStringData:
+    tag = 9
+
+
+class VisibleStringData:
+    tag = 10
+
+
+class UFT8StringData:
+    tag = 12
+
+
+class BCDData:
+    """8 bit integer"""
+    tag = 13
+
+
+class IntegerData:
+    """"8 bit integer"""
+    tag = 15
+
+
+class LongData:
+    """16  bit integer"""
+
+
+class UnsignedIntegerData:
+    """8 bit unsigned integer"""
+    tag = 17
+
+
+class UnsignedLongData:
+    """16 bit unsigned integer"""
+    tag = 18
+
+
+class CompactArrayData:
+    """
+    Contains a Type description and arrray content in form of octet string
+    content_description -> Type Description tag = 0
+    array_content -> Octet string  tag = 1
+    """
+    tag = 19
+
+
+class Long64Data:
+    """
+    64 bit integer
+    """
+    tag = 20
+
+
+class UnsignedLong64Data:
+    """
+    64 bit unsigned integer
+    """
+    tag = 21
+
+
+class EnumData:
+    """
+    8 bit integer
+    """
+    tag = 22
+
+
+class Float32Data:
+    """
+    Octet string of 4 bytes
+    """
+    tag = 23
+
+
+class Float64Data:
+    """
+    Octet string of 8 bytes
+    """
+    tag = 24
+
+
+class DateTimeData:
+    """Octet string of 12 bytes"""
+
+    tag = 25
+
+    @classmethod
+    def from_bytes(cls, bytes_data):
+        raise NotImplementedError('Need to implement Datetime parsing')
+
+
+class DateData:
+    """Octet string of 5 bytes"""
+
+    tag = 26
+
+
+class TimeData:
+    """Octet string of 4 bytes"""
+
+    tag = 27
+
+
+class DontCareData:
+    """Nulldata"""
+
+    tag = 255
+
+
+class DataNotificationAPDU:
+    tag = 15
+    name = 'data-notification'
+
+    def __init__(self, long_invoke_id_and_priority, date_time,
+                 notification_body):
+        self.long_invoke_id_and_priority = long_invoke_id_and_priority
+        self.date_time = date_time
+        self.notification_body = notification_body  #
+
+    @classmethod
+    def from_bytes(cls, byte_data):
+        long_invoke_id_and_priority = LongInvokeIdAndPriority.from_bytes(
+            byte_data[:4])
+        date_time = DateTimeData.from_bytes(byte_data[4:16])
+        notification_body = NotificationBody.from_bytes(byte_data[16:])
+
+        return cls(long_invoke_id_and_priority, date_time, notification_body)
+
+
+class XDLMSAPDUFactory:
+    apdu_classes = {15: DataNotificationAPDU, 219: GeneralGlobalCipherAPDU, }
 
     def __init__(self):
         pass
@@ -172,7 +356,3 @@ class XDLMSAPDUFactory:
 
 
 apdu_factory = XDLMSAPDUFactory()
-
-
-
-
