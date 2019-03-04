@@ -81,4 +81,4 @@ class DlmsUdpMessage:
             raise ValueError((
                 f'Length of data in UDP message ({body_length}) does not match '
                 f'the length parameter in the UDP Wrapper Header ({length})'))
-        return cls(source_wport, destination_wport, in_data, version)
+        return cls(source_wport, destination_wport, body, version)
