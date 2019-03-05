@@ -1,4 +1,6 @@
-from dlms_cosem.wrappers import UDPRequest
+import pytest
+
+from dlms_cosem.wrappers import DlmsUdpMessage, WrapperHeader
 
 data_examples_encrypted_data_nofication = [
     b'\x00\x01\x00\x01\x00\x01\x00F\xdb\x08/\x19"\x91\x99\x16A\x03;0\x00\x00\x01\xe5\x02\\\xe9\xd2\'\x1f\xd7\x8b\xe8\xc2\x04!\x1a\x91j\x9d\x7fX~\nz\x81L\xad\xea\x89\xe9Y?\x01\xf9.\xa8\xc0\x87\xb5\xbd\xfd\xef\xea\xb6\xbe\xcf(-\xfeI\xc0\x8f[\xe6\xdc\x84\x00',
@@ -15,20 +17,51 @@ data_examples_encrypted_data_nofication = [
     b'\x00\x01\x00\x01\x00\x01\x00F\xdb\x08/\x19"\x91\x99\x16A\x03;0\x00\x00\x01\xf1\xce\xef\x1e-\xb6ad\x9a\xbc?\xc4\x1by+\x9a\xd5\xa9\xf0 J\xa16{i\xd5\xdc\x18\x0f\x8c\xd8\xaf\x8d\x99%\x9d\x1d\xfa\x16[\xaa\tg\xb1\xcej\xb9\x8a\xf8\xa5\xdb\x94(\xd3G',
     b'\x00\x01\x00\x01\x00\x01\x00F\xdb\x08/\x19"\x91\x99\x16A\x03;0\x00\x00\x01\xf2\xeb\xae\xa2s\xd5.\xd6V\xc0\x97wM\x08=G%]\x88b\xb57\x1d\xc0l\xf1 \xdcU\x81z;\x91\xc3\x86\xac/g\xca\xf7\x94\x1a=\x01\xb2\xb6|\xdd\x9d{\xbb\x871\x12K',
 
-
 ]
 
-def test_udp_parsing():
-    udp = UDPRequest(data_examples_encrypted_data_nofication[0])
 
-    assert (udp) == 2
+def test_udp_message_from_bytes():
+    udp_header_data = b'\x00\x01\x00\x01\x00\x01\x00F'
+    dlms_data = b'\xdb\x08/\x19"\x91\x99\x16A\x03;0\x00\x00\x01\xe5\x02\\\xe9\xd2\'\x1f\xd7\x8b\xe8\xc2\x04!\x1a\x91j\x9d\x7fX~\nz\x81L\xad\xea\x89\xe9Y?\x01\xf9.\xa8\xc0\x87\xb5\xbd\xfd\xef\xea\xb6\xbe\xcf(-\xfeI\xc0\x8f[\xe6\xdc\x84\x00'
 
-    # it is a general global ciphering APDU
+    udp_data = udp_header_data + dlms_data
 
-    a = (
-        b'\x00\x01\x00\x01\x00\x01\x00F'  # UDP wrapper
-        b'\xdb'  # general global ciphering tag
-        b'\x08/\x19"\x91\x99\x16A\x03'  # system title
-        b';0\x00\x00\x01\xf2'  # security Control field = 0b00110000 No compression, unicast, encrypted authenticated. length = 59 bytes = OK
-        b'\xeb\xae\xa2s\xd5.\xd6V\xc0\x97wM\x08=G%]\x88b\xb57\x1d\xc0l\xf1 \xdcU\x81z;\x91\xc3\x86\xac/g\xca\xf7\x94\x1a='
-        b'\x01\xb2\xb6|\xdd\x9d{\xbb\x871\x12K')  # auth tag)
+    message = DlmsUdpMessage.from_bytes(in_data=udp_data)
+
+    assert message.wrapper_header.version == 1
+    assert message.wrapper_header.source_wport == 1
+    assert message.wrapper_header.destination_wport == 1
+    assert message.wrapper_header.version == 1
+    assert message.wrapper_header.length == 70
+    assert message.data == dlms_data
+
+
+def test_upd_message_to_bytes():
+    udp_header_data = b'\x00\x01\x00\x01\x00\x01\x00F'
+    dlms_data = b'\xdb\x08/\x19"\x91\x99\x16A\x03;0\x00\x00\x01\xe5\x02\\\xe9\xd2\'\x1f\xd7\x8b\xe8\xc2\x04!\x1a\x91j\x9d\x7fX~\nz\x81L\xad\xea\x89\xe9Y?\x01\xf9.\xa8\xc0\x87\xb5\xbd\xfd\xef\xea\xb6\xbe\xcf(-\xfeI\xc0\x8f[\xe6\xdc\x84\x00'
+
+    udp_data = udp_header_data + dlms_data
+    wrapper_header = WrapperHeader(source_wport=1, destination_wport=1, length=len(dlms_data))
+    message = DlmsUdpMessage(data=dlms_data, wrapper_header=wrapper_header)
+    assert message.wrapper_header.version == 1
+    assert message.wrapper_header.source_wport == 1
+    assert message.wrapper_header.destination_wport == 1
+    assert message.wrapper_header.version == 1
+    assert message.wrapper_header.length == 70
+    assert message.data == dlms_data
+
+    assert message.to_bytes() == udp_data
+
+# def test_udp_parsing():
+#     udp = UDPRequest(data_examples_encrypted_data_nofication[0])
+#
+#     assert (udp) == 2
+#
+#     # it is a general global ciphering APDU
+#
+#     a = (b'\x00\x01\x00\x01\x00\x01\x00F'  # UDP wrapper
+#          b'\xdb'  # general global ciphering tag
+#          b'\x08/\x19"\x91\x99\x16A\x03'  # system title
+#          b';0\x00\x00\x01\xf2'  # security Control field = 0b00110000 No compression, unicast, encrypted authenticated. length = 59 bytes = OK
+#          b'\xeb\xae\xa2s\xd5.\xd6V\xc0\x97wM\x08=G%]\x88b\xb57\x1d\xc0l\xf1 \xdcU\x81z;\x91\xc3\x86\xac/g\xca\xf7\x94\x1a='
+#          b'\x01\xb2\xb6|\xdd\x9d{\xbb\x871\x12K')  # auth tag)
