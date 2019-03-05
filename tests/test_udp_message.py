@@ -1,6 +1,6 @@
 import pytest
 
-from dlms_cosem.wrappers import DlmsUdpMessage
+from dlms_cosem.wrappers import DlmsUdpMessage, WrapperHeader
 
 data_examples_encrypted_data_nofication = [
     b'\x00\x01\x00\x01\x00\x01\x00F\xdb\x08/\x19"\x91\x99\x16A\x03;0\x00\x00\x01\xe5\x02\\\xe9\xd2\'\x1f\xd7\x8b\xe8\xc2\x04!\x1a\x91j\x9d\x7fX~\nz\x81L\xad\xea\x89\xe9Y?\x01\xf9.\xa8\xc0\x87\xb5\xbd\xfd\xef\xea\xb6\xbe\xcf(-\xfeI\xc0\x8f[\xe6\xdc\x84\x00',
@@ -28,10 +28,11 @@ def test_udp_message_from_bytes():
 
     message = DlmsUdpMessage.from_bytes(in_data=udp_data)
 
-    assert message.source_wport == 1
-    assert message.destination_wport == 1
-    assert message.version == 1
-    assert message.length == 70
+    assert message.wrapper_header.version == 1
+    assert message.wrapper_header.source_wport == 1
+    assert message.wrapper_header.destination_wport == 1
+    assert message.wrapper_header.version == 1
+    assert message.wrapper_header.length == 70
     assert message.data == dlms_data
 
 
@@ -40,14 +41,13 @@ def test_upd_message_to_bytes():
     dlms_data = b'\xdb\x08/\x19"\x91\x99\x16A\x03;0\x00\x00\x01\xe5\x02\\\xe9\xd2\'\x1f\xd7\x8b\xe8\xc2\x04!\x1a\x91j\x9d\x7fX~\nz\x81L\xad\xea\x89\xe9Y?\x01\xf9.\xa8\xc0\x87\xb5\xbd\xfd\xef\xea\xb6\xbe\xcf(-\xfeI\xc0\x8f[\xe6\xdc\x84\x00'
 
     udp_data = udp_header_data + dlms_data
-
-    message = DlmsUdpMessage(source_wport=1, destination_wport=1,
-                             data=dlms_data)
-    assert message.version == 1
-    assert message.source_wport == 1
-    assert message.destination_wport == 1
-    assert message.version == 1
-    assert message.length == 70
+    wrapper_header = WrapperHeader(source_wport=1, destination_wport=1, length=len(dlms_data))
+    message = DlmsUdpMessage(data=dlms_data, wrapper_header=wrapper_header)
+    assert message.wrapper_header.version == 1
+    assert message.wrapper_header.source_wport == 1
+    assert message.wrapper_header.destination_wport == 1
+    assert message.wrapper_header.version == 1
+    assert message.wrapper_header.length == 70
     assert message.data == dlms_data
 
     assert message.to_bytes() == udp_data
