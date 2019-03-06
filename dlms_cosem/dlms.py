@@ -53,7 +53,11 @@ class SecurityControlField:
         return _byte.to_bytes(1, 'big')
 
 
-class GeneralGlobalCipherAPDU:
+# TODO: Add the encryption and decryption functionallity via Mixin.
+#  Encryption needs to be done with some form of service since their are
+#  different kinds of encryption generating different objects.
+
+class GeneralGlobalCipherApdu:
     tag = 219
     name = 'general-glo-cipher'
 
@@ -77,7 +81,7 @@ class GeneralGlobalCipherAPDU:
         add_auth_data = self.security_header.security_control_field.to_bytes() + authentication_key  # TODO: Document
 
         apdu = security_suite.decrypt(initialization_vector, self.ciphered_apdu,
-            add_auth_data)
+                                      add_auth_data)
 
         self.apdu = apdu
 
@@ -150,13 +154,35 @@ class LongInvokeIdAndPriority:
      - bit 25-27: Reserved
      - bit 28: Self descriptive -> 0=Not Self Descriptive, 1= Self-descriptive
      - bit 29: Processing options -> 0 = Continue on Error, 1=Break on Error
-     - bit 30: Service class -> 0 = Unconfirmed, 1 = Confiremed
+     - bit 30: Service class -> 0 = Unconfirmed, 1 = Confirmed
      - bit 31 Priority, -> 0 = normal, 1 = high.
     """
 
+    def __init__(self, long_invoke_id: int, prioritized: bool = False,
+                 confirmed: bool = False, self_descriptive: bool = False,
+                 break_on_error: bool = True):
+        self.long_invoke_id = long_invoke_id
+        self.prioritized = prioritized
+        self.confirmed = confirmed
+        self.self_descriptive = self_descriptive
+        self.break_on_error = break_on_error
+
     @classmethod
     def from_bytes(cls, bytes_data):
-        raise NotImplementedError('TODO: implement longinvokeidandpriority')
+        if len(bytes_data) is not 4:
+            raise ValueError(f'LongInvokeIdAndPriority is 4 bytes long,'
+                             f' received: {len(bytes_data)}')
+
+        long_invoke_id = int.from_bytes(bytes_data[0:3], 'big')
+        status_byte = bytes_data[3]
+        prioritized = bool(status_byte & 0b10000000)
+        confirmed = bool(status_byte & 0b01000000)
+        break_on_error = bool(status_byte & 0b00100000)
+        self_descriptive = bool(status_byte & 0b00010000)
+
+        return cls(long_invoke_id=long_invoke_id, prioritized=prioritized,
+                   confirmed=confirmed, break_on_error=break_on_error,
+                   self_descriptive=self_descriptive)
 
 
 class NotificationBody:
@@ -169,13 +195,13 @@ class NotificationBody:
 
     @classmethod
     def from_bytes(cls, bytes_data):
-        raise NotImplementedError(
-            '# TODO: Parse bytes as list of DLMSData')
+        print(bytes_data)
+        raise NotImplementedError('# TODO: Parse bytes as list of DLMSData')
 
 
-class DLMSData:
+class DlmsData:
 
-# TODO: have a factory that generates python object from bytes and can convert python object to bytes.
+    # TODO: have a factory that generates python object from bytes and can convert python object to bytes.
 
     def parse(self, byte_data):
         pass
@@ -321,7 +347,7 @@ class DontCareData:
     tag = 255
 
 
-class DataNotificationAPDU:
+class DataNotificationApdu:
     tag = 15
     name = 'data-notification'
 
@@ -341,18 +367,34 @@ class DataNotificationAPDU:
         return cls(long_invoke_id_and_priority, date_time, notification_body)
 
 
-class XDLMSAPDUFactory:
-    apdu_classes = {15: DataNotificationAPDU, 219: GeneralGlobalCipherAPDU, }
+class XDlmsApduFactory:
+    DATA_NOTIFICATION_TAG = 15
+    DATA_NOTIFICATION_APDU_CLASS = DataNotificationApdu
+    GENERAL_GLOBAL_CIPHER_TAG = 219
+    GENERAL_GLOBAL_CIPHER_APDU_CLASS = GeneralGlobalCipherApdu
 
     def __init__(self):
         pass
 
+    @property
+    def apdu_map(self):
+        apdu_map = {
+            self.DATA_NOTIFICATION_TAG: self.DATA_NOTIFICATION_APDU_CLASS,
+            self.GENERAL_GLOBAL_CIPHER_TAG: self.GENERAL_GLOBAL_CIPHER_APDU_CLASS,
+        }
+
+        return apdu_map
+
     def apdu_from_bytes(self, apdu_bytes):
         tag = apdu_bytes[0]
 
-        apdu_class = self.apdu_classes.get(tag)
+        apdu_class = self.apdu_map.get(tag)
 
-        return apdu_class.from_bytes(apdu_bytes[1:], True)
+        if tag == 219:
+            # is the really the system title lenght byte present in XADR-encoded data??
+            return apdu_class.from_bytes(apdu_bytes[1:], True)
+        else:
+            return apdu_class.from_bytes(apdu_bytes[1:])
 
 
-apdu_factory = XDLMSAPDUFactory()
+apdu_factory = XDlmsApduFactory()
