@@ -1,5 +1,12 @@
 from amr_crypto.dlms.security import SecuritySuiteFactory
 
+from dlms_cosem.a_xdr import EncodingConf, AttributeEncoding, SequenceEncoding, \
+    AXdrDecoder, DlmsDataToPythonConverter
+from dlms_cosem.dlms_data import DlmsData, DateTimeData
+
+import attr
+import typing
+
 
 class SecurityHeader:
 
@@ -185,171 +192,41 @@ class LongInvokeIdAndPriority:
                    self_descriptive=self_descriptive)
 
 
+@attr.s
 class NotificationBody:
     """
     Sequence of DLMSData
     """
+    ENCODING_CONF = EncodingConf(
+        attributes=[SequenceEncoding(attribute_name='encoding_conf', )])
 
-    def __init__(self, data=None):
-        self.data = data
-
-    @classmethod
-    def from_bytes(cls, bytes_data):
-        print(bytes_data)
-        raise NotImplementedError('# TODO: Parse bytes as list of DLMSData')
-
-
-class DlmsData:
-
-    # TODO: have a factory that generates python object from bytes and can convert python object to bytes.
-
-    def parse(self, byte_data):
-        pass
-
-
-class NullData:
-    tag = 0
-
-
-class DataArray:
-    """Sequence of Data"""
-    tag = 1
-
-
-class DataStructure:
-    """SEQUENCE of Data"""
-    tag = 2
-
-
-class BooleanData:
-    tag = 3
-
-
-class BitStringData:
-    tag = 4
-
-
-class DoubleLongData:
-    """32 bit integer"""
-    tag = 5
-
-
-class DoubleLongUnsignedData:
-    """32 bit unsigned integer"""
-    tag = 6
-
-
-class OctetStringData:
-    tag = 9
-
-
-class VisibleStringData:
-    tag = 10
-
-
-class UFT8StringData:
-    tag = 12
-
-
-class BCDData:
-    """8 bit integer"""
-    tag = 13
-
-
-class IntegerData:
-    """"8 bit integer"""
-    tag = 15
-
-
-class LongData:
-    """16  bit integer"""
-
-
-class UnsignedIntegerData:
-    """8 bit unsigned integer"""
-    tag = 17
-
-
-class UnsignedLongData:
-    """16 bit unsigned integer"""
-    tag = 18
-
-
-class CompactArrayData:
-    """
-    Contains a Type description and arrray content in form of octet string
-    content_description -> Type Description tag = 0
-    array_content -> Octet string  tag = 1
-    """
-    tag = 19
-
-
-class Long64Data:
-    """
-    64 bit integer
-    """
-    tag = 20
-
-
-class UnsignedLong64Data:
-    """
-    64 bit unsigned integer
-    """
-    tag = 21
-
-
-class EnumData:
-    """
-    8 bit integer
-    """
-    tag = 22
-
-
-class Float32Data:
-    """
-    Octet string of 4 bytes
-    """
-    tag = 23
-
-
-class Float64Data:
-    """
-    Octet string of 8 bytes
-    """
-    tag = 24
-
-
-class DateTimeData:
-    """Octet string of 12 bytes"""
-
-    tag = 25
+    data: typing.List[DlmsData] = attr.ib(default=None)
+    encoding_conf = attr.ib(
+        default=None)  # To store the data structure to be able to encode it again after initial decode.
 
     @classmethod
     def from_bytes(cls, bytes_data):
-        raise NotImplementedError('Need to implement Datetime parsing')
+        decoder = AXdrDecoder(encoding_conf=cls.ENCODING_CONF)
+        in_dict = decoder.decode(bytes_data)
+        in_dict.update({'data': DlmsDataToPythonConverter(
+            encoding_conf=in_dict['encoding_conf']).to_python()})
+        #print(in_dict)
 
-
-class DateData:
-    """Octet string of 5 bytes"""
-
-    tag = 26
-
-
-class TimeData:
-    """Octet string of 4 bytes"""
-
-    tag = 27
-
-
-class DontCareData:
-    """Nulldata"""
-
-    tag = 255
+        return cls(**in_dict)
 
 
 class DataNotificationApdu:
     tag = 15
     name = 'data-notification'
+
+    ENCODING_CONF = EncodingConf(attributes=[
+        AttributeEncoding(attribute_name='long_invoke_id_and_priority',
+                          instance_class=LongInvokeIdAndPriority, length=4),
+        AttributeEncoding(attribute_name='date_time',
+                          instance_class=DateTimeData, optional=True,
+                          length=12),
+        AttributeEncoding(attribute_name='notification_body',
+                          instance_class=NotificationBody), ])
 
     def __init__(self, long_invoke_id_and_priority, date_time,
                  notification_body):
@@ -358,13 +235,13 @@ class DataNotificationApdu:
         self.notification_body = notification_body  #
 
     @classmethod
-    def from_bytes(cls, byte_data):
-        long_invoke_id_and_priority = LongInvokeIdAndPriority.from_bytes(
-            byte_data[:4])
-        date_time = DateTimeData.from_bytes(byte_data[4:16])
-        notification_body = NotificationBody.from_bytes(byte_data[16:])
+    def from_bytes(cls, bytes_data: bytes):
+        decoder = AXdrDecoder(encoding_conf=cls.ENCODING_CONF)
+        in_dict = decoder.decode(bytes_data)
+        #print(in_dict)
+        return cls(**in_dict)
 
-        return cls(long_invoke_id_and_priority, date_time, notification_body)
+    # @classmethod  # def from_bytes(cls, byte_data):  #     long_invoke_id_and_priority = LongInvokeIdAndPriority.from_bytes(  #         byte_data[:4])  #     date_time = DateTimeData.from_bytes(byte_data[4:16])  #     notification_body = NotificationBody.from_bytes(byte_data[16:])  #  #     return cls(long_invoke_id_and_priority, date_time, notification_body)
 
 
 class XDlmsApduFactory:
@@ -380,8 +257,7 @@ class XDlmsApduFactory:
     def apdu_map(self):
         apdu_map = {
             self.DATA_NOTIFICATION_TAG: self.DATA_NOTIFICATION_APDU_CLASS,
-            self.GENERAL_GLOBAL_CIPHER_TAG: self.GENERAL_GLOBAL_CIPHER_APDU_CLASS,
-        }
+            self.GENERAL_GLOBAL_CIPHER_TAG: self.GENERAL_GLOBAL_CIPHER_APDU_CLASS, }
 
         return apdu_map
 

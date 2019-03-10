@@ -10,6 +10,6 @@ setup(
     author_email='henrik@pwit.se',
     license='BSD 3-Clause License',
     packages=['dlms_cosem'],
-    install_requires=['amr-crypto', ]
+    install_requires=['amr-crypto', 'attrs']
 
 )
