@@ -73,6 +73,16 @@ class OctetStringData(DlmsData):
         return cls(value=bytes_data, data=bytes_data, length=len(bytes_data))
 
 
+    def __repr__(self):
+        return (
+            f'{self.__class__.__name__}('
+            f'value={self.value!r}, '
+            f'data={self.value!r}, '
+            f'length={self.length!r}'
+            f')'
+        )
+
+
 class VisibleStringData(DlmsData):
     TAG = 10
 
@@ -247,4 +257,4 @@ class DlmsDataFactory:
 
     @classmethod
     def get_data_class(cls, tag: int, ):
-        return cls.MAP.get(tag)
+        return cls.MAP[tag]

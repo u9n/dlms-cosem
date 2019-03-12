@@ -58,7 +58,6 @@ def decode_variable_integer(bytes_input: bytes):
 
     # is the length encoded in single byte or mutliple?
     is_mutliple_bytes = bool(bytes_input[0] & 0b10000000)
-
     if is_mutliple_bytes:
         length_length = int(bytes_input[0] & 0b01111111)
         length = int(bytes_input[1:(length_length + 1)])
@@ -82,7 +81,8 @@ class AXdrEncoding:
 class AttributeEncoding(AXdrEncoding):
     attribute_name: str = attr.ib()
     instance_class = attr.ib()
-
+    return_value = attr.ib(default=False)
+    wrap_end = attr.ib(default=False)  # Maybe name wrapper?
     length: int = attr.ib(default=None)
     default: any = attr.ib(default=None)
     optional: bool = attr.ib(default=False)
@@ -109,23 +109,24 @@ class AXdrDecoder:
         """
         return a dict to instantiate the class with
         """
-
+        # print(bytes_data)
         in_data = bytes_data[:]  # copy so we don't work in the actual data.
+        # print(in_data)
 
         out_dict = dict()
 
         for attribute in self.encoding_conf.attributes:
 
             key = attribute.attribute_name
-            data = None
-            rest = b''
-            attribute_data = None
 
-            #print(b'To decode' + in_data)
+            # print(b'To decode' + in_data)
 
             if isinstance(attribute, AttributeEncoding):
 
                 data, rest = self._decode_attribute(in_data, attribute)
+
+                if attribute.return_value:
+                    data = data.value
 
             elif isinstance(attribute, SequenceEncoding):
 
@@ -149,28 +150,29 @@ class AXdrDecoder:
             data = None  # Should this be a nulldata instead?
             return data, in_data[1:]
 
-
         elif first_byte == 0 and attribute.default is not None:
             data = attribute.default
             return data, in_data[1:]
 
-        elif first_byte == 1 and (
-                attribute.optional or attribute.default is not None):
+        elif first_byte == 1 and (attribute.optional or attribute.default):
             # a value is existing and is after the 0x01
             in_data = in_data[1:]  # remove the first byte
 
         # Check if length is known.
-        if attribute.length is not None:
+        if attribute.length:
             attribute_data = in_data[:attribute.length]
             data = attribute.instance_class.from_bytes(attribute_data)
             return data, in_data[attribute.length:]
 
-        else:
-            data = attribute.instance_class.from_bytes(in_data)
-            return data, []
+        if attribute.wrap_end:
+            attribute_data = in_data
+            data = attribute.instance_class.from_bytes(attribute_data)
+            return data, b''
 
-        # TODO: What if there is more than one variable length data type?
-        #   Now we assume that if there is no length the rest is the last object.
+        # first byte indicates length.
+        attribute_data = in_data[1:(first_byte + 1)]
+        data = attribute.instance_class.from_bytes(attribute_data)
+        return data, in_data[(first_byte + 1):]
 
     def _decode_sequence(self, bytes_data: bytes, attribute):
         in_data = bytes_data[:]  # copy so not to mess with initial data
@@ -180,10 +182,9 @@ class AXdrDecoder:
             first_obj, rest = self._get_first(in_data)
 
             data_list.append(first_obj)
-
             in_data = rest
 
-        return data_list, []
+        return data_list, in_data
 
     def _get_tag(self, bytes_data: bytes):
         return bytes_data[0]
@@ -224,7 +225,6 @@ class AXdrDecoder:
 
     def encode(self, to_encode):
         raise NotImplemented('Encoding objects to A-XDR is not yet supported.')
-
 
 
 class DlmsDataToPythonConverter:

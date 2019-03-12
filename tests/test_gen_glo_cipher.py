@@ -29,3 +29,5 @@ def test_data_notification_apdu():
     apdu = apdu_factory.apdu_from_bytes(dlms_data)
 
     assert isinstance(apdu, DataNotificationApdu)
+
+    print(apdu)
