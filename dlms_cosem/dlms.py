@@ -14,6 +14,23 @@ class SecurityHeader:
         self.security_control_field = security_control_field
         self.invocation_counter = invocation_counter
 
+    @classmethod
+    def from_bytes(cls, _bytes):
+        # TODO: Raise error on no handled stuff
+
+        security_control_field = SecurityControlField.from_bytes(_bytes[0])
+        invocation_counter = int.from_bytes(_bytes[1:5], 'big')
+
+        return cls(security_control_field, invocation_counter)
+
+    def __repr__(self):
+        return (
+            f'{self.__class__.__name__}('
+            f'security_control_field={self.security_control_field!r}, '
+            f'invocation_counter={self.invocation_counter!r}'
+            f')'
+        )
+
 
 class SecurityControlField:
     """
@@ -33,7 +50,8 @@ class SecurityControlField:
         self.compressed = compressed
 
         if security_suite not in [0, 1, 2]:
-            raise ValueError('Only security suite of 0-2 is valid.')
+            raise ValueError(f'Only security suite of 0-2 is valid. '
+                             f'Got {security_suite}')
 
     @classmethod
     def from_bytes(cls, _byte):
@@ -59,6 +77,17 @@ class SecurityControlField:
 
         return _byte.to_bytes(1, 'big')
 
+    def __repr__(self):
+        return (
+            f'{self.__class__.__name__}('
+            f'security_suite={self.security_suite!r}, '
+            f'authenticated={self.authenticated!r}, '
+            f'encrypted={self.encrypted!r}, '
+            f'broadcast={self.broadcast!r}, '
+            f'compressed={self.compressed!r}'
+            f')'
+        )
+
 
 # TODO: Add the encryption and decryption functionallity via Mixin.
 #  Encryption needs to be done with some form of service since their are
@@ -67,15 +96,24 @@ class SecurityControlField:
 
 class CipheredContent:
 
-    def __init__(self, security_header, cipher_text, auth_tag=None):
+    def __init__(self, security_header, cipher_text):
         self.security_header = security_header
         self.cipher_text = cipher_text
-        self.auth_tag = auth_tag
 
     @classmethod
     def from_bytes(cls, _bytes_data):
-        pass
+        print(_bytes_data)
+        security_header = SecurityHeader.from_bytes(_bytes_data[0:5])
+        cipher_text = _bytes_data[5:]
+        return cls(security_header, cipher_text)
 
+    def __repr__(self):
+        return (
+            f'{self.__class__.__name__}('
+            f'security_header={self.security_header!r}, '
+            f'cipher_text={self.cipher_text!r}'
+            f')'
+        )
 
 
 class GeneralGlobalCipherApdu:
@@ -83,93 +121,50 @@ class GeneralGlobalCipherApdu:
     name = 'general-glo-cipher'
 
     ENCODING_CONF = EncodingConf([
-        AttributeEncoding(
-            attribute_name='system_title', instance_class=OctetStringData),
-        AttributeEncoding(attribute_name='ciphered_content', instance_class=CipheredContent)
-    ])
+        AttributeEncoding(attribute_name='system_title',
+            instance_class=OctetStringData, return_value=True),
+        AttributeEncoding(attribute_name='ciphered_content',
+                          instance_class=CipheredContent)])
 
-    def __init__(self, system_title, security_header, ciphered_apdu):
+    def __init__(self, system_title, ciphered_content):
         self.system_title = system_title
-        self.security_header = security_header
-        self.apdu = None
-        self.ciphered_apdu = ciphered_apdu
+        self.ciphered_content = ciphered_content
+        self.decrypted_data = None
 
     def decrypt(self, encryption_key, authentication_key):
-        if not (isinstance(encryption_key,
-                           bytes) or
-                isinstance(authentication_key, bytes)):
+        if not (isinstance(encryption_key, bytes) or isinstance(
+            authentication_key, bytes)):
             raise ValueError('keys must be in bytes')
 
         security_suite_factory = SecuritySuiteFactory(encryption_key)
         security_suite = security_suite_factory.get_security_suite(
-            self.security_header.security_control_field.security_suite)  # TODO: Move to SecurityHeader class
+            self.ciphered_content.security_header.security_control_field.security_suite)  # TODO: Move to SecurityHeader class
 
-        initialization_vector = self.system_title + self.security_header.invocation_counter
-        add_auth_data = self.security_header.security_control_field.to_bytes() + authentication_key  # TODO: Document
+        initialization_vector = self.system_title + int.to_bytes(
+            self.ciphered_content.security_header.invocation_counter, length=4,
+            byteorder='big')
+        add_auth_data = self.ciphered_content.security_header.security_control_field.to_bytes() + authentication_key  # TODO: Document
 
-        apdu = security_suite.decrypt(initialization_vector, self.ciphered_apdu,
+        apdu = security_suite.decrypt(initialization_vector,
+                                      self.ciphered_content.cipher_text,
                                       add_auth_data)
 
-        self.apdu = apdu
+        self.decrypted_data = apdu
 
         return apdu
 
     @classmethod
-    def from_bytes(cls, _bytes, use_system_title_length_byte=False):
+    def from_bytes(cls, _bytes):
+        decoder = AXdrDecoder(encoding_conf=cls.ENCODING_CONF)
+        in_dict = decoder.decode(_bytes)
+        return cls(**in_dict)
 
-        # some meter send the length of the system title. But is is supposed to
-        # be A-XDR encoded so no need of length.
-        # TODO: Just check if the first byte is 8.
-        if use_system_title_length_byte:
-            _bytes = _bytes[1:]
-
-        system_title = _bytes[:8]
-
-        ciphered_content = _bytes[8:]
-
-        length = ciphered_content[0]
-        ciphered_content = ciphered_content[1:]
-
-        if length != len(ciphered_content):
-            raise ValueError('The length of the ciphered content does not '
-                             'correspond to the length byte')
-        scf = SecurityControlField.from_bytes(ciphered_content[0])
-
-        if not scf.encrypted and not scf.authenticated:
-            # if there is no protection there is no need for the invocation
-            # counter. I don't know if that is something that would acctually
-            # be sent in a  general-glo-cipher. If it is we have to implement
-            # that then
-            raise NotImplementedError(
-                'Handling an unprotected APDU in a general-glo-cipher is not '
-                'implemented (and maybe not a valid operation)')
-
-        elif scf.authenticated and not scf.encrypted:
-            raise NotImplementedError(
-                'Decoding a APDU that is just authenticated is not yet '
-                'implemented')
-
-        elif scf.encrypted and not scf.authenticated:
-            raise NotImplementedError(
-                'Decoding a APDU that is just encrypted is not yet implemented')
-
-        elif scf.encrypted and scf.authenticated:
-
-            invocation_counter = ciphered_content[1:5]
-            security_header = SecurityHeader(scf, invocation_counter)
-            ciphered_apdu = ciphered_content[5:]
-
-
-        else:
-            raise ValueError(
-                'Security Control Field {} is not correctly interpreted since '
-                'we have no way of handling its options'.format(scf))
-
-        if scf.compressed:
-            raise NotImplementedError(
-                'Handling Compressed APDUs is not implemented')
-
-        return cls(system_title, security_header, ciphered_apdu)
+    def __repr__(self):
+        return (
+            f'{self.__class__.__name__}('
+            f'system_title={self.system_title!r}, '
+            f'ciphered_content={self.ciphered_content!r})'
+        )
 
 
 class LongInvokeIdAndPriority:
@@ -210,6 +205,17 @@ class LongInvokeIdAndPriority:
                    confirmed=confirmed, break_on_error=break_on_error,
                    self_descriptive=self_descriptive)
 
+    def __repr__(self):
+        return (
+            f'{self.__class__.__name__}('
+            f'long_invoke_id={self.long_invoke_id!r}, '
+            f'prioritized={self.prioritized!r}, '
+            f'confirmed={self.confirmed!r}, '
+            f'self_descriptive={self.self_descriptive!r}, '
+            f'break_on_error={self.break_on_error!r}'
+            f')'
+        )
+
 
 @attr.s
 class NotificationBody:
@@ -229,7 +235,6 @@ class NotificationBody:
         in_dict = decoder.decode(bytes_data)
         in_dict.update({'data': DlmsDataToPythonConverter(
             encoding_conf=in_dict['encoding_conf']).to_python()})
-        #print(in_dict)
 
         return cls(**in_dict)
 
@@ -245,7 +250,8 @@ class DataNotificationApdu:
                           instance_class=DateTimeData, optional=True,
                           length=12),
         AttributeEncoding(attribute_name='notification_body',
-                          instance_class=NotificationBody), ])
+                          instance_class=NotificationBody,
+                          wrap_end=True), ])
 
     # TODO: Verify if datetime has a length argument when sent. There is not
     #  set a specific length in the ASN.1 definition.
@@ -262,6 +268,14 @@ class DataNotificationApdu:
         decoder = AXdrDecoder(encoding_conf=cls.ENCODING_CONF)
         in_dict = decoder.decode(bytes_data)
         return cls(**in_dict)
+
+    def __repr__(self):
+        return (
+            f'{self.__class__.__name__}('
+            f'long_invoke_id_and_priority={self.long_invoke_id_and_priority!r}, '
+            f'date_time={self.date_time!r}, '
+            f'notification_body={self.notification_body!r})'
+        )
 
 
 class XDlmsApduFactory:
@@ -286,11 +300,7 @@ class XDlmsApduFactory:
 
         apdu_class = self.apdu_map.get(tag)
 
-        if tag == 219:
-            # is the really the system title lenght byte present in XADR-encoded data??
-            return apdu_class.from_bytes(apdu_bytes[1:], True)
-        else:
-            return apdu_class.from_bytes(apdu_bytes[1:])
+        return apdu_class.from_bytes(apdu_bytes[1:])
 
 
 apdu_factory = XDlmsApduFactory()
