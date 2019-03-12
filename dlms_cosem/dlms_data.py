@@ -224,9 +224,12 @@ class DontCareData(DlmsData):
 class UnixTimestamp(DoubleLongUnsignedData):
     """Unix timestamps should be represented as double long unsigned"""
 
+    DEFAULT_TIMEZONE = datetime.timezone.utc
+
     @classmethod
     def from_bytes(cls, bytes_data):
-        val = datetime.datetime.fromtimestamp(int.from_bytes(bytes_data, 'big'))
+        val = datetime.datetime.fromtimestamp(int.from_bytes(bytes_data, 'big'),
+                                              cls.DEFAULT_TIMEZONE)
         return cls(value=val, data=bytes_data)
 
 
@@ -243,5 +246,5 @@ class DlmsDataFactory:
            }
 
     @classmethod
-    def get_data_class(cls, tag: int):
+    def get_data_class(cls, tag: int, ):
         return cls.MAP.get(tag)
