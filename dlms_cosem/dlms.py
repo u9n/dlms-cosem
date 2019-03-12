@@ -2,7 +2,7 @@ from amr_crypto.dlms.security import SecuritySuiteFactory
 
 from dlms_cosem.a_xdr import EncodingConf, AttributeEncoding, SequenceEncoding, \
     AXdrDecoder, DlmsDataToPythonConverter
-from dlms_cosem.dlms_data import DlmsData, DateTimeData
+from dlms_cosem.dlms_data import DlmsData, DateTimeData, OctetStringData
 
 import attr
 import typing
@@ -64,9 +64,29 @@ class SecurityControlField:
 #  Encryption needs to be done with some form of service since their are
 #  different kinds of encryption generating different objects.
 
+
+class CipheredContent:
+
+    def __init__(self, security_header, cipher_text, auth_tag=None):
+        self.security_header = security_header
+        self.cipher_text = cipher_text
+        self.auth_tag = auth_tag
+
+    @classmethod
+    def from_bytes(cls, _bytes_data):
+        pass
+
+
+
 class GeneralGlobalCipherApdu:
     tag = 219
     name = 'general-glo-cipher'
+
+    ENCODING_CONF = EncodingConf([
+        AttributeEncoding(
+            attribute_name='system_title', instance_class=OctetStringData),
+        AttributeEncoding(attribute_name='ciphered_content', instance_class=CipheredContent)
+    ])
 
     def __init__(self, system_title, security_header, ciphered_apdu):
         self.system_title = system_title
@@ -76,7 +96,7 @@ class GeneralGlobalCipherApdu:
 
     def decrypt(self, encryption_key, authentication_key):
         if not (isinstance(encryption_key,
-                           bytes) or  # TODO: this could be moved to beginning
+                           bytes) or
                 isinstance(authentication_key, bytes)):
             raise ValueError('keys must be in bytes')
 
@@ -95,8 +115,7 @@ class GeneralGlobalCipherApdu:
         return apdu
 
     @classmethod
-    def from_bytes(cls, _bytes, use_system_title_length_byte=False,
-                   encryption_key=None, authentication_key=None):
+    def from_bytes(cls, _bytes, use_system_title_length_byte=False):
 
         # some meter send the length of the system title. But is is supposed to
         # be A-XDR encoded so no need of length.
@@ -228,6 +247,10 @@ class DataNotificationApdu:
         AttributeEncoding(attribute_name='notification_body',
                           instance_class=NotificationBody), ])
 
+    # TODO: Verify if datetime has a length argument when sent. There is not
+    #  set a specific length in the ASN.1 definition.
+    #  so might be 0x01{length}{data}
+
     def __init__(self, long_invoke_id_and_priority, date_time,
                  notification_body):
         self.long_invoke_id_and_priority = long_invoke_id_and_priority
@@ -238,10 +261,7 @@ class DataNotificationApdu:
     def from_bytes(cls, bytes_data: bytes):
         decoder = AXdrDecoder(encoding_conf=cls.ENCODING_CONF)
         in_dict = decoder.decode(bytes_data)
-        #print(in_dict)
         return cls(**in_dict)
-
-    # @classmethod  # def from_bytes(cls, byte_data):  #     long_invoke_id_and_priority = LongInvokeIdAndPriority.from_bytes(  #         byte_data[:4])  #     date_time = DateTimeData.from_bytes(byte_data[4:16])  #     notification_body = NotificationBody.from_bytes(byte_data[16:])  #  #     return cls(long_invoke_id_and_priority, date_time, notification_body)
 
 
 class XDlmsApduFactory:
