@@ -15,7 +15,7 @@ Changed
 ^^^^^^^
 -   UDP messages are now based WrapperProtocolDataUnit to be able to reuse
     WrapperHeader for TCP messages.
-
+-   Parsing of DLMS APDUs
 
 Deprecated
 ^^^^^^^^^^
