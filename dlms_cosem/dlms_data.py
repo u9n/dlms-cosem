@@ -72,15 +72,12 @@ class OctetStringData(DlmsData):
     def from_bytes(cls, bytes_data: bytes):
         return cls(value=bytes_data, data=bytes_data, length=len(bytes_data))
 
-
     def __repr__(self):
-        return (
-            f'{self.__class__.__name__}('
-            f'value={self.value!r}, '
-            f'data={self.value!r}, '
-            f'length={self.length!r}'
-            f')'
-        )
+        return (f'{self.__class__.__name__}('
+                f'value={self.value!r}, '
+                f'data={self.value!r}, '
+                f'length={self.length!r}'
+                f')')
 
 
 class VisibleStringData(DlmsData):
