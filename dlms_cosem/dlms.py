@@ -9,8 +9,17 @@ import typing
 
 
 class SecurityHeader:
+    """
+    The SecurityHeader contains the SecurityControlField that maps all the
+    settings of the encryption plus the invocation counter used in the
+    encryption.
+
+    :param `SecurityControlField` security_control_field: Bitmap of encryption options
+    :param int invocation_counter: Invocation counter for the key.
+    """
 
     def __init__(self, security_control_field, invocation_counter):
+
         self.security_control_field = security_control_field
         self.invocation_counter = invocation_counter
 
@@ -34,19 +43,28 @@ class SecurityHeader:
 
 class SecurityControlField:
     """
-    Bit 3...0: Security_Suite_Id;
-    Bit 4: “A” subfield: indicates that authentication is applied;
-    Bit 5: “E” subfield: indicates that encryption is applied;
-    Bit 6: Key_Set subfield: 0 = Unicast, 1 = Broadcast;
-    Bit 7: Indicates the use of compression.
+    8 bit unsigned integer
+
+    Bit 3...0: Security Suite number
+    Bit 4: Indicates if authentication is applied
+    Bit 5: Indicates if encryption is applied
+    Bit 6: Key usage: 0 = Unicast Encryption Key , 1 = Broadcast Encryption Key
+    Bit 7: Indicates the use of compression
+
+    :param bool security_suite: Number of the DLMS Security Suite used, valid
+        are 1, 2, 3.
+    :param bool authenticated: Indicates if authentication is applied
+    :param bool encrypted: Indicates if encryption is applied
+    :param bool broadcast_key: Indicates use of broadcast key. If false unicast key is used.
+    :param bool compressed: Indicates the use of compression.
     """
 
     def __init__(self, security_suite, authenticated=False, encrypted=False,
-                 broadcast=False, compressed=False, ):
+                 broadcast_key=False, compressed=False, ):
         self.security_suite = security_suite
         self.authenticated = authenticated
         self.encrypted = encrypted
-        self.broadcast = broadcast
+        self.broadcast_key = broadcast_key
         self.compressed = compressed
 
         if security_suite not in [0, 1, 2]:
@@ -70,7 +88,7 @@ class SecurityControlField:
             _byte += 0b00010000
         if self.encrypted:
             _byte += 0b00100000
-        if self.broadcast:
+        if self.broadcast_key:
             _byte += 0b01000000
         if self.compressed:
             _byte += 0b10000000
@@ -83,7 +101,7 @@ class SecurityControlField:
             f'security_suite={self.security_suite!r}, '
             f'authenticated={self.authenticated!r}, '
             f'encrypted={self.encrypted!r}, '
-            f'broadcast={self.broadcast!r}, '
+            f'broadcast={self.broadcast_key!r}, '
             f'compressed={self.compressed!r}'
             f')'
         )
@@ -95,6 +113,13 @@ class SecurityControlField:
 
 
 class CipheredContent:
+    """
+    CipheredContent contains the encrypted data plus a security header
+    defining how the encryption is done.
+
+    :param `SecurityHeader` security_header: Security header.
+    :param bytes cipher_text: The encrypted data.
+    """
 
     def __init__(self, security_header, cipher_text):
         self.security_header = security_header
@@ -102,7 +127,6 @@ class CipheredContent:
 
     @classmethod
     def from_bytes(cls, _bytes_data):
-        print(_bytes_data)
         security_header = SecurityHeader.from_bytes(_bytes_data[0:5])
         cipher_text = _bytes_data[5:]
         return cls(security_header, cipher_text)
@@ -117,8 +141,21 @@ class CipheredContent:
 
 
 class GeneralGlobalCipherApdu:
-    tag = 219
-    name = 'general-glo-cipher'
+    """
+    The general-global-cipher APDU can be used to cipher other APDUs with
+    either the global key or the dedicated key.
+
+    The additional authenticated data to use for decryption is depending on the
+    portection applied.
+
+    Encrypted and authenticated: Security Control Field || Authentication Key
+    Only authenticated: Security Control Field || Authentication Key || Ciphered Text
+    Only encrypted: b''
+    No protection: b''
+
+    """
+    TAG = 219
+    NAME = 'general-glo-cipher'
 
     ENCODING_CONF = EncodingConf([
         AttributeEncoding(attribute_name='system_title',
@@ -138,7 +175,10 @@ class GeneralGlobalCipherApdu:
 
         security_suite_factory = SecuritySuiteFactory(encryption_key)
         security_suite = security_suite_factory.get_security_suite(
-            self.ciphered_content.security_header.security_control_field.security_suite)  # TODO: Move to SecurityHeader class
+            self.ciphered_content
+                .security_header
+                .security_control_field
+                .security_suite)  # TODO: Move to SecurityHeader class
 
         initialization_vector = self.system_title + int.to_bytes(
             self.ciphered_content.security_header.invocation_counter, length=4,
@@ -177,6 +217,13 @@ class LongInvokeIdAndPriority:
      - bit 29: Processing options -> 0 = Continue on Error, 1=Break on Error
      - bit 30: Service class -> 0 = Unconfirmed, 1 = Confirmed
      - bit 31 Priority, -> 0 = normal, 1 = high.
+
+    :param int long_invoke_id: Long Invoke ID
+    :param bool self_descriptive: Indicates if self descriptive  `DEFAULT=False`
+    :param bool confirmed: Indicates if confirmed. `DEFAULT=False`
+    :param bool prioritized: Indicates if prioritized. `DEFAULT=False`
+    :param bool break_on_error: Indicates id should break in error. `DEFAULT=True`
+
     """
 
     def __init__(self, long_invoke_id: int, prioritized: bool = False,
@@ -240,8 +287,24 @@ class NotificationBody:
 
 
 class DataNotificationApdu:
-    tag = 15
-    name = 'data-notification'
+    """
+    The DataNotification APDU is used by the DataNotification service.
+    It is used to push data from a server (meter) to the client (amr-system).
+    It is an unconfirmable service.
+
+    A DataNotification APDU, if to large, can be sent using the general block
+    transfer method.
+
+    :param `LongInvoceAndPriority` long_invoke_id_and_priority: The long invoke
+        id is a reference to the server invocation. self_descriptive,
+        break_on_error and prioritized are not used for Datanotifications.
+    :param datetime.datetime date_time: Indicates the time the DataNotification
+        was sent. Is optional.
+    :param `NotificationBody` notification_body: Push data.
+    """
+
+    TAG = 15
+    NAME = 'data-notification'
 
     ENCODING_CONF = EncodingConf(attributes=[
         AttributeEncoding(attribute_name='long_invoke_id_and_priority',
@@ -279,6 +342,12 @@ class DataNotificationApdu:
 
 
 class XDlmsApduFactory:
+    """
+    A factory to return the correct APDU depending on the tag. There might be
+    differences in different companion standards of DLMS so all mapping values
+    are firstly defined so that it will be very simple to subclass the factory
+    and add other classes to tags if one needs special handling of an APDU.
+    """
     DATA_NOTIFICATION_TAG = 15
     DATA_NOTIFICATION_APDU_CLASS = DataNotificationApdu
     GENERAL_GLOBAL_CIPHER_TAG = 219
