@@ -7,6 +7,8 @@ DLMS/COSEM
 ==========
 
 .. image:: dlms-logo.png
+   :height: 200px
+   :width: 200px
 
 DLMS/COSEM (IEC 62056, EN13757-1) is the global standard for smart energy
 metering, control and management. It specifies an object-oriented data model,
@@ -27,11 +29,8 @@ DLMS/COSEM can be used for all utilities / energy kinds, all market segments,
 all applications and over virtually any communication media.
 
 
-COSEM
+COSEM  (Companion Specification for Energy Metering)
 -----
-
-.. note::
-    COSEM stands for Companion Specification for Energy Metering
 
 The COSEM object model describes the semantics of the language.
 
@@ -46,11 +45,8 @@ Objects can be used in combinations, to model simple use cases such as register
 reading or more complex ones such as tariff and billing schemes or load
 management.
 
-OBIS
+OBIS  (Object Identification System)
 ----
-
-.. note::
-    OBIS stands for Object Identification System
 
 OBIS is the naming system of COSEM objects.
 
@@ -66,8 +62,8 @@ billing period.
 DLMS /COSEM application layer services
 --------------------------------------
 
-.. note::
-    DLMS stands for Device Language Message Specification
+
+DLMS stands for Device Language Message Specification
 
 The syntax of the language is specified by the DLMS services.
 
