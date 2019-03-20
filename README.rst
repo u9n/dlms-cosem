@@ -6,10 +6,6 @@ A Python library for DLMS/COSEM.
 DLMS/COSEM
 ==========
 
-.. image:: dlms-logo.png
-   :height: 200
-   :width: 200
-
 DLMS/COSEM (IEC 62056, EN13757-1) is the global standard for smart energy
 metering, control and management. It specifies an object-oriented data model,
 an application layer protocol and media-specific communication profiles.
