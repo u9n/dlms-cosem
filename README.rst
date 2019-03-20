@@ -7,8 +7,8 @@ DLMS/COSEM
 ==========
 
 .. image:: dlms-logo.png
-   :height: 200px
-   :width: 200px
+   :height: 200
+   :width: 200
 
 DLMS/COSEM (IEC 62056, EN13757-1) is the global standard for smart energy
 metering, control and management. It specifies an object-oriented data model,
@@ -108,10 +108,7 @@ Communication profiles are available for:
 *   Mesh networks with IPv6 and 6LowPAN;
 *   Coming soon: Wi-SUN and NB IoT.
 
-
-.. note:: DLMS
-
-
+===========================
 Development of this library
 ===========================
 
@@ -142,5 +139,30 @@ This library is developed by Palmlund Wahlgren Innovative Technology AB. We are
 based in Sweden and are members of the DLMS User Association.
 We are currently developing a Head End System for Multi Utility Automatic Meter
 Readings.
+
+
+============
+Installation
+============
+
+We only support Python 3.6+
+
+.. code-block:: python
+
+    pip install dlms-cosem
+
+=============
+Example Usage
+=============
+
+To parse a message you need to use the `XDlmsAPDUFactory`
+
+.. code-block::
+
+    from dlms_cosem.dlms import apdu_factory
+
+    message = 'xxx'
+    apdu = adpu_factory.apdu_from_bytes(message)
+
 
 
