@@ -1,4 +1,4 @@
-from dlms_cosem.dlms import GeneralGlobalCipherApdu
+from dlms_cosem.protocol.dlms import GeneralGlobalCipherApdu
 
 
 def is_encrypted(apdu):

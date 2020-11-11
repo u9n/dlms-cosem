@@ -1,8 +1,8 @@
 from amr_crypto.dlms.security import SecuritySuiteFactory
 
-from dlms_cosem.a_xdr import EncodingConf, AttributeEncoding, SequenceEncoding, \
+from dlms_cosem.protocol.a_xdr import EncodingConf, AttributeEncoding, SequenceEncoding, \
     AXdrDecoder, DlmsDataToPythonConverter
-from dlms_cosem.dlms_data import DlmsData, DateTimeData, OctetStringData
+from dlms_cosem.protocol.dlms_data import DlmsData, DateTimeData, OctetStringData
 
 import attr
 import typing
