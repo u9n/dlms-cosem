@@ -38,7 +38,7 @@ class SerialHdlcClient:
 
     _send_frame_buffer: list = attr.ib(factory=list)
 
-    def _connect(self):
+    def connect(self):
         """
         Sets up the HDLC Connection by sending a SNRM request.
 
@@ -65,7 +65,20 @@ class SerialHdlcClient:
         )
         self._send_frame_buffer.append(snrm)
         ua_response = self._empty_send_buffer()[0]
+        # TODO: the UA response contains negotiaiated parameters for the HDLC connection
+        #   Window size etc. This should be extracted.
+        LOG.info(f"Received {ua_response!r}")
         return ua_response
+
+    def disconnect(self):
+        """
+        Sends a DisconnectFrame
+        :return:
+        """
+        disc = hdlc.DisconnectFrame(destination_address=self.destination_address, source_address=self.source_address)
+        self._send_frame_buffer.append(disc)
+        response = self._empty_send_buffer()[0]
+        return response
 
     def _empty_send_buffer(self):
         """
@@ -111,12 +124,19 @@ class SerialHdlcClient:
 
         # If we are not connected we should set up the HDLC connection
         if self.hdlc_connection.state.current_state == hdlc.NOT_CONNECTED:
-            ua = self._connect()
-            LOG.info(f"Received {ua!r}")
+            self.connect()
 
         if self.hdlc_connection.state.current_state == hdlc.IDLE:
             # is able to send.
-            pass
+            info = hdlc.InformationFrame(
+                self.destination_address,
+                self.source_address,
+                telegram,
+                send_sequence_number=self.hdlc_connection.state.client_ssn,
+                receive_sequence_number=self.hdlc_connection.state.client_rsn,
+            )
+            self._send_frame_buffer.append(info)
+            response = self._empty_send_buffer()
 
     def _write_frame(self, frame):
         frame_bytes = self.hdlc_connection.send(frame)

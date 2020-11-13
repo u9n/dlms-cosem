@@ -111,7 +111,59 @@ class TestUAFrame:
 
 
 
+class TestInformationReqeuestFrame:
+
+    def test_construct(self):
+
+        total = bytes.fromhex('7EA02C02232110AF9FE6E600601DA109060760857405080101BE10040E01000000065F1F0400001E1DFFFFC5E47E')
+        information_part = bytes.fromhex("601DA109060760857405080101BE10040E01000000065F1F0400001E1DFFFF")
+        destination_address = hdlc.HdlcAddress(logical_address=1, physical_address=17,
+                                          address_type="server")
+
+        # Public client
+        source_address = hdlc.HdlcAddress(logical_address=16,
+                                               physical_address=None,
+                                               address_type="client")
+        frame = hdlc.InformationFrame(destination_address, source_address, information_part, 0, 0)
+
+        print(total)
+        print(frame.to_bytes())
+        assert frame.to_bytes() == total
 
 
 
+class TestInformationResponseFrame:
 
+    def test_contruct(self):
+        total = bytes.fromhex(
+            '7EA0382102233034E7E6E7006129A109060760857405080101A203020100A305A103020100BE10040E0800065F1F0400001E1D04C80007B86A7E'
+)
+        information_part = bytes.fromhex(
+            "6129A109060760857405080101A203020100A305A103020100BE10040E0800065F1F0400001E1D04C80007")
+        source_address = hdlc.HdlcAddress(logical_address=1, physical_address=17,
+                                               address_type="server")
+
+        # Public client
+        destination_address = hdlc.HdlcAddress(logical_address=16, physical_address=None,
+                                          address_type="client")
+        frame = hdlc.InformationFrame(destination_address, source_address,
+                                             information_part, 0, 1, response_frame=True, segmented=False, final=True)
+
+        print(total.hex())
+        print(frame.to_bytes().hex())
+        assert frame.to_bytes() == total
+
+    def test_rebuild_frame(self):
+        in_data = b'~\xa08!\x02#04\xe7\xe6\xe7\x00a)\xa1\t\x06\x07`\x85t\x05\x08\x01\x01\xa2\x03\x02\x01\x00\xa3\x05\xa1\x03\x02\x01\x00\xbe\x10\x04\x0e\x08\x00\x06_\x1f\x04\x00\x00\x1e\x1d\x04\xc8\x00\x07\xb8j~'
+        info = hdlc.InformationFrame.from_bytes(in_data)
+        print(info)
+        assert info.to_bytes().hex() == in_data.hex()
+
+class TestInformationControlField:
+
+    def test_from_bytes(self):
+        in_byte = bytes.fromhex("30")
+        ctrl = hdlc.InformationControlField.from_bytes(in_byte)
+        assert ctrl.receive_sequence_number == 1
+        assert ctrl.send_sequence_number == 0
+        assert ctrl.final

@@ -45,8 +45,8 @@ from dlms_cosem.protocol.crc import FCS, HCS
 LOG = logging.getLogger(__name__)
 
 HDLC_FLAG = b"\x7e"
-LLC_COMMAND_HEADER = b"\xe6\xe7\x00"
-LLC_RESPONSE_HEADER = b"\xe6\xe6\x00"
+LLC_COMMAND_HEADER = b"\xe6\xe6\x00"
+LLC_RESPONSE_HEADER = b"\xe6\xe7\x00"
 
 
 class HdlcException(Exception):
@@ -114,6 +114,67 @@ class UaControlField(_AbstractHdlcControlField):
         if self.is_final:
             out |= 0b00010000
         return out.to_bytes(1, "big")
+
+@attr.s(auto_attribs=True)
+class DisconnectControlField(_AbstractHdlcControlField):
+    def is_final(self):
+        """
+        Always final
+        """
+        return True
+
+    def to_bytes(self) -> bytes:
+        out = 0b01000011
+        if self.is_final:
+            out |= 0b00010000
+        return out.to_bytes(1, "big")
+
+
+
+def validate_information_sequence_number(instance, attribute, value):
+    if 0 <= value >= 7:
+        raise ValueError(f"Sequence number can only be between 0-7. Got {value}")
+
+
+@attr.s(auto_attribs=True)
+class InformationControlField(_AbstractHdlcControlField):
+    send_sequence_number: int = attr.ib(
+        validator=[validate_information_sequence_number]
+    )
+    receive_sequence_number: int = attr.ib(
+        validator=[validate_information_sequence_number]
+    )
+    final: bool = attr.ib(default=True)
+
+    @property
+    def is_final(self):
+        return self.final
+
+    def to_bytes(self) -> bytes:
+        out = 0b00000000
+        out += self.send_sequence_number << 1
+        out += self.receive_sequence_number << 5
+        if self.is_final:
+            out |= 0b00010000
+        return out.to_bytes(1, "big")
+
+    @classmethod
+    def from_bytes(cls, in_byte: bytes):
+        if len(in_byte) != 1:
+            raise ValueError(
+                f"InformationControlField can only be 1 bytes. Got {len(in_byte)}"
+            )
+        value = int.from_bytes(in_byte, "big")
+        not_info_frame = bool(value & 0b00000001)
+        if not_info_frame:
+            raise ValueError(
+                "Byte is not representing a InformationControlField. LSB is 1, should be 0"
+            )
+        ssn = (value & 0b00001110) >> 1
+
+        rsn = (value & 0b11100000) >> 5
+        final = bool(value & 0b00010000)
+        return cls(ssn, rsn, final)
 
 
 def validate_frame_length(instance, attribute, value):
@@ -414,7 +475,6 @@ class HdlcFrame:
         )  # can't decide if it is a client or server address until we know the directions.
 
 
-
 # Sentinel values
 #
 # - Inherit identity-based comparison and hashing from object
@@ -432,6 +492,7 @@ def make_sentinel(name):
     cls = _SentinelBase(name, (_SentinelBase,), {})
     cls.__class__ = cls
     return cls
+
 
 # NOT_CONNECTED is when we have created a session but not actually set up HDLC
 # connection with the server (meter). We used a SNMR frame to set up the connection
@@ -563,7 +624,7 @@ class SetNormalResponseModeFrame(_AbstractHdlcFrame):
 class UnumberedAcknowlegmentFrame(_AbstractHdlcFrame):
     destination_address: HdlcAddress
     source_address: HdlcAddress
-    information_content: bytes
+    parameters: bytes
 
     @property
     def hcs(self) -> bytes:
@@ -579,7 +640,7 @@ class UnumberedAcknowlegmentFrame(_AbstractHdlcFrame):
         Information field on UA does not contain an LLC
         """
         out_data: List[bytes] = list()
-        out_data.append(self.information_content)
+        out_data.append(self.parameters)
 
         return b"".join(out_data)
 
@@ -677,12 +738,171 @@ class UnumberedAcknowlegmentFrame(_AbstractHdlcFrame):
         return frame
 
 
-class InformationRequestFrame:
-    pass
+@attr.s(auto_attribs=True)
+class InformationFrame(_AbstractHdlcFrame):
+    destination_address: HdlcAddress
+    source_address: HdlcAddress
+    information_content: bytes
+    send_sequence_number: int = attr.ib(
+        validator=[validate_information_sequence_number]
+    )
+    receive_sequence_number: int = attr.ib(
+        validator=[validate_information_sequence_number]
+    )
+    response_frame: bool = attr.ib(default=False)
+    segmented: bool = attr.ib(default=False)
+    final: bool = attr.ib(default=True)
 
+    @property
+    def hcs(self) -> bytes:
+        return HCS.calculate_for(self.header_content)
 
-class InformationResponseFrame:
-    pass
+    @property
+    def fcs(self) -> bytes:
+        return FCS.calculate_for(self.frame_content)
+
+    @property
+    def information(self) -> bytes:
+        """
+        Information request uses the LLC_COMMAND_HEADER
+        """
+        out_data: List[bytes] = list()
+        if self.response_frame:
+            out_data.append(LLC_RESPONSE_HEADER)
+        else:
+            out_data.append(LLC_COMMAND_HEADER)  # Requests uses the command header
+        out_data.append(self.information_content)
+
+        return b"".join(out_data)
+
+    @property
+    def header_content(self) -> bytes:
+        out_data: List[bytes] = list()
+        out_data.append(
+            DlmsHdlcFrameFormatField(
+                length=self.frame_length, segmented=self.segmented
+            ).to_bytes()
+        )
+        out_data.append(self.destination_address.to_bytes())
+        out_data.append(self.source_address.to_bytes())
+        out_data.append(
+            InformationControlField(
+                self.send_sequence_number, self.receive_sequence_number, self.final
+            ).to_bytes()
+        )
+        return b"".join(out_data)
+
+    @property
+    def frame_content(self) -> bytes:
+        out_data: List[bytes] = list()
+        out_data.append(self.header_content)
+        out_data.append(self.hcs)
+        out_data.append(self.information)
+        return b"".join(out_data)
+
+    def to_bytes(self) -> bytes:
+        out_data: List[bytes] = list()
+        out_data.append(HDLC_FLAG)
+        out_data.append(self.frame_content)
+        out_data.append(self.fcs)
+        out_data.append(HDLC_FLAG)
+        return b"".join(out_data)
+
+    @property
+    def frame_length(self) -> int:
+        # Frameformat is 2 bytes.
+        # address is variable.
+        # Control field is 1 byte
+        # hcs field = 2 bytes
+        # information field is variable
+        # FCS = 2 bytes
+        return (
+            2
+            + self.destination_address.length
+            + self.source_address.length
+            + 1
+            + 2
+            + len(self.information)
+            + 2
+        )
+
+    @classmethod
+    def from_bytes(cls, frame_bytes: bytes):
+        # has flags on both ends
+        if frame_bytes[0] != frame_bytes[-1] != HDLC_FLAG:
+            raise HdlcParsingError("HDLC Frame is not enclosed by HDLC Flags")
+
+        frame_format = DlmsHdlcFrameFormatField.from_bytes(frame_bytes[1:3])
+        if len(frame_bytes) != (frame_format.length + 2):
+            raise HdlcParsingError(
+                f"Frame data is not of length specified in frame format field. "
+                f"Should be {frame_format.length} but is {len(frame_bytes)}"
+            )
+
+        segmented = frame_format.segmented
+
+        destination_address_data, source_address_data = HdlcAddress.find_address(
+            frame_bytes
+        )
+        destination_logical, destination_physical, destination_length = (
+            destination_address_data
+        )
+        source_logical, source_physical, source_length = source_address_data
+        information_control_byte_position = 1 + 2 + destination_length + source_length
+        information_control_byte = frame_bytes[
+            information_control_byte_position : information_control_byte_position + 1
+        ]
+        information_control = InformationControlField.from_bytes(
+            information_control_byte
+        )
+
+        # is it a request or response?
+        llc_position = 1 + 2 + destination_length + source_length + 1 + 2
+        llc_part = frame_bytes[llc_position : (llc_position + 3)]
+
+        is_response = llc_part == LLC_RESPONSE_HEADER
+        is_request = llc_part == LLC_COMMAND_HEADER
+
+        if not (is_request or is_response):
+            raise HdlcParsingError("Could not find LLC bytes")
+        if is_response and not is_request:
+            # destination address is the client and source is the server
+            destination_address = HdlcAddress(
+                destination_logical, destination_physical, "client"
+            )
+            source_address = HdlcAddress(source_logical, source_physical, "server")
+        else:
+            destination_address = HdlcAddress(
+                destination_logical, destination_physical, "server"
+            )
+            source_address = HdlcAddress(source_logical, source_physical, "client")
+
+        hcs_position = 1 + 2 + destination_length + source_length + 1
+        hcs = frame_bytes[hcs_position : hcs_position + 2]
+        fcs = frame_bytes[-3:-1]
+        information = frame_bytes[hcs_position + 2 + 3 : -3]
+
+        frame = cls(
+            destination_address,
+            source_address,
+            information,
+            send_sequence_number=information_control.send_sequence_number,
+            receive_sequence_number=information_control.receive_sequence_number,
+            response_frame=is_response,
+            segmented=segmented,
+            final=information_control.final,
+        )
+
+        if hcs != frame.hcs:
+            raise HdlcParsingError(
+                f"HCS is not correct Calculated: {frame.hcs}, in data: {hcs}"
+            )
+
+        if fcs != frame.fcs:
+            raise HdlcParsingError(
+                f"FCS is not correct, Calculated: {frame.fcs}, in data: {fcs}")
+
+        return frame
 
 
 class SegmentedInformationRequestFrame:
@@ -697,25 +917,116 @@ class ReceiveReadyFrame:
     pass
 
 
-class DisconnectFrame:
-    pass
+@attr.s(auto_attribs=True)
+class DisconnectFrame(_AbstractHdlcFrame):
+    destination_address: HdlcAddress
+    source_address: HdlcAddress
 
+    @property
+    def hcs(self) -> bytes:
+        """No information field in the frame so no hcs. Only FCS"""
+        return b""
+
+    @property
+    def fcs(self) -> bytes:
+        return FCS.calculate_for(self.frame_content)
+
+    @property
+    def information(self) -> bytes:
+        """
+        No information field present
+        """
+        return b""
+
+    @property
+    def header_content(self) -> bytes:
+        out_data: List[bytes] = list()
+        # a Disconnect frame is never segmented.
+        out_data.append(DlmsHdlcFrameFormatField(length=self.frame_length,
+            segmented=False).to_bytes())
+        out_data.append(self.destination_address.to_bytes())
+        out_data.append(self.source_address.to_bytes())
+        out_data.append(DisconnectControlField().to_bytes())
+        return b"".join(out_data)
+
+    @property
+    def frame_content(self) -> bytes:
+        out_data: List[bytes] = list()
+        out_data.append(self.header_content)
+        out_data.append(self.hcs)
+        out_data.append(self.information)
+        return b"".join(out_data)
+
+    def to_bytes(self) -> bytes:
+        out_data: List[bytes] = list()
+        out_data.append(HDLC_FLAG)
+        out_data.append(self.frame_content)
+        out_data.append(self.fcs)
+        out_data.append(HDLC_FLAG)
+        return b"".join(out_data)
+
+    @property
+    def frame_length(self) -> int:
+        # Frameformat is 2 bytes.
+        # address is variable.
+        # Control field is 1 byte
+        # hcs field = 2 bytes
+        # information field is variable
+        # FCS = 2 bytes
+        return (
+                2 + self.destination_address.length + self.source_address.length + 1 + 2)
+
+    @classmethod
+    def from_bytes(cls, frame_bytes: bytes):
+
+        # has flags on both ends
+        if frame_bytes[0] != frame_bytes[-1] != HDLC_FLAG:
+            raise HdlcParsingError("HDLC Frame is not enclosed by HDLC Flags")
+
+        frame_format = DlmsHdlcFrameFormatField.from_bytes(frame_bytes[1:3])
+
+        if len(frame_bytes) != (frame_format.length + 2):
+            raise HdlcParsingError(
+                f"Frame data is not of length specified in frame format field. "
+                f"Should be {frame_format.length} but is {len(frame_bytes)}")
+
+        destination_address_data, source_address_data = HdlcAddress.find_address(
+            frame_bytes)
+        destination_logical, destination_physical, destination_length = (
+            destination_address_data)
+        source_logical, source_physical, source_length = source_address_data
+
+        destination_address = HdlcAddress(destination_logical, destination_physical,
+            "server")
+        source_address = HdlcAddress(source_logical, source_physical, "client")
+
+
+        fcs = frame_bytes[-3:-1]
+
+        frame = cls(destination_address, source_address)
+
+        if fcs != frame.fcs:
+            raise HdlcParsingError("FCS is not correct")
+
+        return frame
+
+
+# TODO: segmentation handling is not working with this state layout.
 
 HDLC_STATE_TRANSITIONS = {
     NOT_CONNECTED: {SetNormalResponseModeFrame: AWAITING_CONNECTION},
     AWAITING_CONNECTION: {UnumberedAcknowlegmentFrame: IDLE},
     IDLE: {
-        InformationRequestFrame: AWAITING_RESPONSE,
+        InformationFrame: AWAITING_RESPONSE,
         SegmentedInformationRequestFrame: AWAITING_RESPONSE,
         DisconnectFrame: AWAITING_DISCONNECT,
     },
     AWAITING_RESPONSE: {
-        InformationResponseFrame: IDLE,
+        InformationFrame: IDLE,
         SegmentedInformationResponseFrame: SHOULD_SEND_READY_TO_RECEIVE,
     },
     SHOULD_SEND_READY_TO_RECEIVE: {ReceiveReadyFrame: AWAITING_RESPONSE},
-    AWAITING_DISCONNECT: {UnumberedAcknowlegmentFrame: CLOSED},
-    CLOSED: {},
+    AWAITING_DISCONNECT: {UnumberedAcknowlegmentFrame: NOT_CONNECTED},
 }
 
 
@@ -727,18 +1038,86 @@ class LocalProtocolError(Exception):
     """Error in HDLC Protocol"""
 
 
+@attr.s(auto_attribs=True)
 class HdlcConnectionState:
     """
     Handles state changes in HDLC, we only focus on Client implementetion as of now
     """
 
-    # TODO: multi frame transmissions.
+    current_state: _SentinelBase = attr.ib(default=NOT_CONNECTED)
+    client_ssn: int = attr.ib(default=0)
+    client_rsn: int = attr.ib(default=0)
+    server_ssn: int = attr.ib(default=0)
+    server_rsn: int = attr.ib(default=0)
 
-    def __init__(self):
-        self.current_state = NOT_CONNECTED
+    def process_frame(self, frame):
 
-    def process_frame(self, frame_type):
-        self._transition_state(frame_type)
+        frame_type = type(frame)
+
+        if frame_type == InformationFrame:
+            self._process_information_frame(frame)
+
+        self._transition_state(type(frame))
+
+    def _process_information_frame(self, frame: InformationFrame):
+        """
+        When sending an information request the client ssn and client rsn should
+        correspond to the current state. We also know that the server rrs should be one
+        higher than the current
+        """
+        if frame.response_frame:
+
+            if not frame.send_sequence_number == self.client_ssn:
+                raise LocalProtocolError(
+                    f"Send Sequence Number {frame.send_sequence_number} does not correspond"
+                    f" with the current state of the HDLC connection {self.client_ssn}"
+                )
+
+            if not frame.receive_sequence_number == self.client_rsn:
+                raise LocalProtocolError(
+                    f"Receive Sequence number {frame.receive_sequence_number} does not "
+                    f"correspond with the current state of the HDLC "
+                    f"connection {self.client_rsn}"
+                )
+
+            self._increment_server_rsn()
+            self._increment_client_ssn()
+
+        else:
+            if not frame.send_sequence_number == self.server_ssn:
+                raise LocalProtocolError(
+                    f"Send Sequence Number {frame.send_sequence_number} does not correspond"
+                    f" with the current state of the HDLC connection {self.server_ssn}"
+                )
+
+            if not frame.receive_sequence_number == self.server_rsn:
+                raise LocalProtocolError(
+                    f"Receive Sequence number {frame.receive_sequence_number} does not "
+                    f"correspond with the current state of the HDLC "
+                    f"connection {self.server_rsn}"
+                )
+            self._increment_server_ssn()
+            self._increment_client_rsn()
+
+    def _increment_server_rsn(self):
+        self.server_rsn += 1
+        if self.server_rsn > 7:
+            self.server_rsn = 0
+
+    def _increment_server_ssn(self):
+        self.server_ssn += 1
+        if self.server_ssn > 7:
+            self.server_ssn = 0
+
+    def _increment_client_rsn(self):
+        self.client_rsn += 1
+        if self.client_rsn > 7:
+            self.client_rsn = 0
+
+    def _increment_client_ssn(self):
+        self.client_ssn += 1
+        if self.client_ssn > 7:
+            self.client_ssn = 0
 
     def _transition_state(self, frame_type):
         try:
@@ -750,7 +1129,6 @@ class HdlcConnectionState:
         old_state = self.current_state
         self.current_state = new_state
         LOG.debug(f"HDLC state transitioned from {old_state} to {new_state}")
-
 
     """
     Example exchange single frames:
@@ -776,10 +1154,20 @@ class HdlcFrameFactory:
             LOG.exception(e)
             return None
 
+    @staticmethod
+    def read_information_frame(frame_data: bytes):
+        try:
+            return InformationFrame.from_bytes(frame_data)
+        except HdlcParsingError as e:
+            LOG.exception(e)
+            return None
 
-PARSE_METHODS = {AWAITING_CONNECTION: HdlcFrameFactory.read_ua_frame}
 
-
+PARSE_METHODS = {
+    AWAITING_CONNECTION: HdlcFrameFactory.read_ua_frame,
+    AWAITING_RESPONSE: HdlcFrameFactory.read_information_frame,
+    AWAITING_DISCONNECT: HdlcFrameFactory.read_ua_frame
+}
 
 
 @attr.s(auto_attribs=True)
@@ -834,7 +1222,7 @@ class HdlcConnection:
         # TODO: Check if we need to split the data.
         # TODO: Check windows size to see if we can concat frames before ack.
         # toDO: run state change.
-        self.state.process_frame(type(frame))
+        self.state.process_frame(frame)
         return frame.to_bytes()
 
     def receive_data(self, data: bytes):
@@ -866,5 +1254,6 @@ class HdlcConnection:
         if frame is None:
             return NEED_DATA
 
-        self.state.process_frame(type(frame))
+        self.state.process_frame(frame)
+        self.tidy_buffer()
         return frame

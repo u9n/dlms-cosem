@@ -13,4 +13,8 @@ source = HdlcAddress(16, None, "client")
 port = "/dev/tty.usbserial-A704H8SO"
 baud = 9600
 client = SerialHdlcClient(destination_address=dest, source_address=source, serial_port=port, serial_baud_rate=baud)
-client.send(b"xx")
+resonse = client.connect()
+response = client.send(bytes.fromhex("601DA109060760857405080101BE10040E01000000065F1F0400001E1DFFFF"))
+print(response)
+response = client.disconnect()
+print(response)
