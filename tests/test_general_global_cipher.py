@@ -1,6 +1,4 @@
-import pytest
-
-from dlms_cosem.dlms import GeneralGlobalCipherApdu, apdu_factory, DataNotificationApdu
+from dlms_cosem.protocol.dlms import GeneralGlobalCipherApdu, apdu_factory, DataNotificationApdu
 def test_gen_glo_cipher_load():
     dlms_data = b'\xdb\x08/\x19"\x91\x99\x16A\x03;0\x00\x00\x01\xe5\x02\\\xe9\xd2\'\x1f\xd7\x8b\xe8\xc2\x04!\x1a\x91j\x9d\x7fX~\nz\x81L\xad\xea\x89\xe9Y?\x01\xf9.\xa8\xc0\x87\xb5\xbd\xfd\xef\xea\xb6\xbe\xcf(-\xfeI\xc0\x8f[\xe6\xdc\x84\x00'
 

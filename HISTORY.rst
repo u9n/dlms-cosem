@@ -11,6 +11,8 @@ Unreleased
 Added
 ^^^^^
 
+* HDLC client implementation
+
 Changed
 ^^^^^^^
 

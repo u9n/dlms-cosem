@@ -40,7 +40,7 @@ integer data. ex 0b10000010 -> 2 bytes after this is the integer. 0x820xff0xff =
 
 import attr
 import typing
-from dlms_cosem.dlms_data import DlmsDataFactory, DlmsData
+from dlms_cosem.protocol.dlms_data import DlmsDataFactory, DlmsData
 
 
 def decode_variable_integer(bytes_input: bytes):

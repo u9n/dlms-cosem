@@ -1,8 +1,13 @@
 from amr_crypto.dlms.security import SecuritySuiteFactory
 
-from dlms_cosem.a_xdr import EncodingConf, AttributeEncoding, SequenceEncoding, \
-    AXdrDecoder, DlmsDataToPythonConverter
-from dlms_cosem.dlms_data import DlmsData, DateTimeData, OctetStringData
+from dlms_cosem.protocol.a_xdr import (
+    EncodingConf,
+    AttributeEncoding,
+    SequenceEncoding,
+    AXdrDecoder,
+    DlmsDataToPythonConverter,
+)
+from dlms_cosem.protocol.dlms_data import DlmsData, DateTimeData, OctetStringData
 
 import attr
 import typing
@@ -28,16 +33,16 @@ class SecurityHeader:
         # TODO: Raise error on no handled stuff
 
         security_control_field = SecurityControlField.from_bytes(_bytes[0])
-        invocation_counter = int.from_bytes(_bytes[1:5], 'big')
+        invocation_counter = int.from_bytes(_bytes[1:5], "big")
 
         return cls(security_control_field, invocation_counter)
 
     def __repr__(self):
         return (
-            f'{self.__class__.__name__}('
-            f'security_control_field={self.security_control_field!r}, '
-            f'invocation_counter={self.invocation_counter!r}'
-            f')'
+            f"{self.__class__.__name__}("
+            f"security_control_field={self.security_control_field!r}, "
+            f"invocation_counter={self.invocation_counter!r}"
+            f")"
         )
 
 
@@ -59,8 +64,14 @@ class SecurityControlField:
     :param bool compressed: Indicates the use of compression.
     """
 
-    def __init__(self, security_suite, authenticated=False, encrypted=False,
-                 broadcast_key=False, compressed=False, ):
+    def __init__(
+        self,
+        security_suite,
+        authenticated=False,
+        encrypted=False,
+        broadcast_key=False,
+        compressed=False,
+    ):
         self.security_suite = security_suite
         self.authenticated = authenticated
         self.encrypted = encrypted
@@ -68,8 +79,9 @@ class SecurityControlField:
         self.compressed = compressed
 
         if security_suite not in [0, 1, 2]:
-            raise ValueError(f'Only security suite of 0-2 is valid. '
-                             f'Got {security_suite}')
+            raise ValueError(
+                f"Only security suite of 0-2 is valid. " f"Got {security_suite}"
+            )
 
     @classmethod
     def from_bytes(cls, _byte):
@@ -79,8 +91,7 @@ class SecurityControlField:
         _encrypted = bool(_byte & 0b00100000)
         _key_set = bool(_byte & 0b01000000)
         _compressed = bool(_byte & 0b10000000)
-        return cls(_security_suite, _authenticated, _encrypted, _key_set,
-                   _compressed)
+        return cls(_security_suite, _authenticated, _encrypted, _key_set, _compressed)
 
     def to_bytes(self):
         _byte = self.security_suite
@@ -93,17 +104,17 @@ class SecurityControlField:
         if self.compressed:
             _byte += 0b10000000
 
-        return _byte.to_bytes(1, 'big')
+        return _byte.to_bytes(1, "big")
 
     def __repr__(self):
         return (
-            f'{self.__class__.__name__}('
-            f'security_suite={self.security_suite!r}, '
-            f'authenticated={self.authenticated!r}, '
-            f'encrypted={self.encrypted!r}, '
-            f'broadcast={self.broadcast_key!r}, '
-            f'compressed={self.compressed!r}'
-            f')'
+            f"{self.__class__.__name__}("
+            f"security_suite={self.security_suite!r}, "
+            f"authenticated={self.authenticated!r}, "
+            f"encrypted={self.encrypted!r}, "
+            f"broadcast={self.broadcast_key!r}, "
+            f"compressed={self.compressed!r}"
+            f")"
         )
 
 
@@ -133,10 +144,10 @@ class CipheredContent:
 
     def __repr__(self):
         return (
-            f'{self.__class__.__name__}('
-            f'security_header={self.security_header!r}, '
-            f'cipher_text={self.cipher_text!r}'
-            f')'
+            f"{self.__class__.__name__}("
+            f"security_header={self.security_header!r}, "
+            f"cipher_text={self.cipher_text!r}"
+            f")"
         )
 
 
@@ -154,14 +165,22 @@ class GeneralGlobalCipherApdu:
     No protection: b''
 
     """
-    TAG = 219
-    NAME = 'general-glo-cipher'
 
-    ENCODING_CONF = EncodingConf([
-        AttributeEncoding(attribute_name='system_title',
-            instance_class=OctetStringData, return_value=True),
-        AttributeEncoding(attribute_name='ciphered_content',
-                          instance_class=CipheredContent)])
+    TAG = 219
+    NAME = "general-glo-cipher"
+
+    ENCODING_CONF = EncodingConf(
+        [
+            AttributeEncoding(
+                attribute_name="system_title",
+                instance_class=OctetStringData,
+                return_value=True,
+            ),
+            AttributeEncoding(
+                attribute_name="ciphered_content", instance_class=CipheredContent
+            ),
+        ]
+    )
 
     def __init__(self, system_title, ciphered_content):
         self.system_title = system_title
@@ -169,25 +188,29 @@ class GeneralGlobalCipherApdu:
         self.decrypted_data = None
 
     def decrypt(self, encryption_key, authentication_key):
-        if not (isinstance(encryption_key, bytes) or isinstance(
-            authentication_key, bytes)):
-            raise ValueError('keys must be in bytes')
+        if not (
+            isinstance(encryption_key, bytes) or isinstance(authentication_key, bytes)
+        ):
+            raise ValueError("keys must be in bytes")
 
         security_suite_factory = SecuritySuiteFactory(encryption_key)
         security_suite = security_suite_factory.get_security_suite(
-            self.ciphered_content
-                .security_header
-                .security_control_field
-                .security_suite)  # TODO: Move to SecurityHeader class
+            self.ciphered_content.security_header.security_control_field.security_suite
+        )  # TODO: Move to SecurityHeader class
 
         initialization_vector = self.system_title + int.to_bytes(
-            self.ciphered_content.security_header.invocation_counter, length=4,
-            byteorder='big')
-        add_auth_data = self.ciphered_content.security_header.security_control_field.to_bytes() + authentication_key  # TODO: Document
+            self.ciphered_content.security_header.invocation_counter,
+            length=4,
+            byteorder="big",
+        )
+        add_auth_data = (
+            self.ciphered_content.security_header.security_control_field.to_bytes()
+            + authentication_key
+        )  # TODO: Document
 
-        apdu = security_suite.decrypt(initialization_vector,
-                                      self.ciphered_content.cipher_text,
-                                      add_auth_data)
+        apdu = security_suite.decrypt(
+            initialization_vector, self.ciphered_content.cipher_text, add_auth_data
+        )
 
         self.decrypted_data = apdu
 
@@ -201,9 +224,9 @@ class GeneralGlobalCipherApdu:
 
     def __repr__(self):
         return (
-            f'{self.__class__.__name__}('
-            f'system_title={self.system_title!r}, '
-            f'ciphered_content={self.ciphered_content!r})'
+            f"{self.__class__.__name__}("
+            f"system_title={self.system_title!r}, "
+            f"ciphered_content={self.ciphered_content!r})"
         )
 
 
@@ -226,9 +249,14 @@ class LongInvokeIdAndPriority:
 
     """
 
-    def __init__(self, long_invoke_id: int, prioritized: bool = False,
-                 confirmed: bool = False, self_descriptive: bool = False,
-                 break_on_error: bool = True):
+    def __init__(
+        self,
+        long_invoke_id: int,
+        prioritized: bool = False,
+        confirmed: bool = False,
+        self_descriptive: bool = False,
+        break_on_error: bool = True,
+    ):
         self.long_invoke_id = long_invoke_id
         self.prioritized = prioritized
         self.confirmed = confirmed
@@ -238,29 +266,35 @@ class LongInvokeIdAndPriority:
     @classmethod
     def from_bytes(cls, bytes_data):
         if len(bytes_data) is not 4:
-            raise ValueError(f'LongInvokeIdAndPriority is 4 bytes long,'
-                             f' received: {len(bytes_data)}')
+            raise ValueError(
+                f"LongInvokeIdAndPriority is 4 bytes long,"
+                f" received: {len(bytes_data)}"
+            )
 
-        long_invoke_id = int.from_bytes(bytes_data[0:3], 'big')
+        long_invoke_id = int.from_bytes(bytes_data[0:3], "big")
         status_byte = bytes_data[3]
         prioritized = bool(status_byte & 0b10000000)
         confirmed = bool(status_byte & 0b01000000)
         break_on_error = bool(status_byte & 0b00100000)
         self_descriptive = bool(status_byte & 0b00010000)
 
-        return cls(long_invoke_id=long_invoke_id, prioritized=prioritized,
-                   confirmed=confirmed, break_on_error=break_on_error,
-                   self_descriptive=self_descriptive)
+        return cls(
+            long_invoke_id=long_invoke_id,
+            prioritized=prioritized,
+            confirmed=confirmed,
+            break_on_error=break_on_error,
+            self_descriptive=self_descriptive,
+        )
 
     def __repr__(self):
         return (
-            f'{self.__class__.__name__}('
-            f'long_invoke_id={self.long_invoke_id!r}, '
-            f'prioritized={self.prioritized!r}, '
-            f'confirmed={self.confirmed!r}, '
-            f'self_descriptive={self.self_descriptive!r}, '
-            f'break_on_error={self.break_on_error!r}'
-            f')'
+            f"{self.__class__.__name__}("
+            f"long_invoke_id={self.long_invoke_id!r}, "
+            f"prioritized={self.prioritized!r}, "
+            f"confirmed={self.confirmed!r}, "
+            f"self_descriptive={self.self_descriptive!r}, "
+            f"break_on_error={self.break_on_error!r}"
+            f")"
         )
 
 
@@ -269,19 +303,27 @@ class NotificationBody:
     """
     Sequence of DLMSData
     """
+
     ENCODING_CONF = EncodingConf(
-        attributes=[SequenceEncoding(attribute_name='encoding_conf', )])
+        attributes=[SequenceEncoding(attribute_name="encoding_conf")]
+    )
 
     data: typing.List[DlmsData] = attr.ib(default=None)
     encoding_conf = attr.ib(
-        default=None)  # To store the data structure to be able to encode it again after initial decode.
+        default=None
+    )  # To store the data structure to be able to encode it again after initial decode.
 
     @classmethod
     def from_bytes(cls, bytes_data):
         decoder = AXdrDecoder(encoding_conf=cls.ENCODING_CONF)
         in_dict = decoder.decode(bytes_data)
-        in_dict.update({'data': DlmsDataToPythonConverter(
-            encoding_conf=in_dict['encoding_conf']).to_python()})
+        in_dict.update(
+            {
+                "data": DlmsDataToPythonConverter(
+                    encoding_conf=in_dict["encoding_conf"]
+                ).to_python()
+            }
+        )
 
         return cls(**in_dict)
 
@@ -304,24 +346,34 @@ class DataNotificationApdu:
     """
 
     TAG = 15
-    NAME = 'data-notification'
+    NAME = "data-notification"
 
-    ENCODING_CONF = EncodingConf(attributes=[
-        AttributeEncoding(attribute_name='long_invoke_id_and_priority',
-                          instance_class=LongInvokeIdAndPriority, length=4),
-        AttributeEncoding(attribute_name='date_time',
-                          instance_class=DateTimeData, optional=True,
-                          length=12),
-        AttributeEncoding(attribute_name='notification_body',
-                          instance_class=NotificationBody,
-                          wrap_end=True), ])
+    ENCODING_CONF = EncodingConf(
+        attributes=[
+            AttributeEncoding(
+                attribute_name="long_invoke_id_and_priority",
+                instance_class=LongInvokeIdAndPriority,
+                length=4,
+            ),
+            AttributeEncoding(
+                attribute_name="date_time",
+                instance_class=DateTimeData,
+                optional=True,
+                length=12,
+            ),
+            AttributeEncoding(
+                attribute_name="notification_body",
+                instance_class=NotificationBody,
+                wrap_end=True,
+            ),
+        ]
+    )
 
     # TODO: Verify if datetime has a length argument when sent. There is not
     #  set a specific length in the ASN.1 definition.
     #  so might be 0x01{length}{data}
 
-    def __init__(self, long_invoke_id_and_priority, date_time,
-                 notification_body):
+    def __init__(self, long_invoke_id_and_priority, date_time, notification_body):
         self.long_invoke_id_and_priority = long_invoke_id_and_priority
         self.date_time = date_time
         self.notification_body = notification_body  #
@@ -334,10 +386,10 @@ class DataNotificationApdu:
 
     def __repr__(self):
         return (
-            f'{self.__class__.__name__}('
-            f'long_invoke_id_and_priority={self.long_invoke_id_and_priority!r}, '
-            f'date_time={self.date_time!r}, '
-            f'notification_body={self.notification_body!r})'
+            f"{self.__class__.__name__}("
+            f"long_invoke_id_and_priority={self.long_invoke_id_and_priority!r}, "
+            f"date_time={self.date_time!r}, "
+            f"notification_body={self.notification_body!r})"
         )
 
 
@@ -348,6 +400,7 @@ class XDlmsApduFactory:
     are firstly defined so that it will be very simple to subclass the factory
     and add other classes to tags if one needs special handling of an APDU.
     """
+
     DATA_NOTIFICATION_TAG = 15
     DATA_NOTIFICATION_APDU_CLASS = DataNotificationApdu
     GENERAL_GLOBAL_CIPHER_TAG = 219
@@ -360,7 +413,8 @@ class XDlmsApduFactory:
     def apdu_map(self):
         apdu_map = {
             self.DATA_NOTIFICATION_TAG: self.DATA_NOTIFICATION_APDU_CLASS,
-            self.GENERAL_GLOBAL_CIPHER_TAG: self.GENERAL_GLOBAL_CIPHER_APDU_CLASS, }
+            self.GENERAL_GLOBAL_CIPHER_TAG: self.GENERAL_GLOBAL_CIPHER_APDU_CLASS,
+        }
 
         return apdu_map
 
