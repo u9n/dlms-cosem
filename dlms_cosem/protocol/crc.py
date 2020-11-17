@@ -95,5 +95,3 @@ def reverse_byte_message(msg):
     return reversed_mgs
 
 
-FCS = CRCCCITT()
-HCS = FCS

@@ -3,7 +3,13 @@ import logging
 import attr
 import serial
 
-from dlms_cosem.protocol import hdlc
+from dlms_cosem.protocol.hdlc import (
+    address,
+    state,
+    connection,
+    frames,
+    exceptions as hdlc_exception,
+)
 
 
 LOG = logging.getLogger(__name__)
@@ -15,14 +21,19 @@ class ClientError(Exception):
 
 @attr.s(auto_attribs=True)
 class SerialHdlcClient:
-    destination_address: hdlc.HdlcAddress
-    source_address: hdlc.HdlcAddress
+    """
+    HDLC client to send data over serial.
+    """
+    client_logical_address: int
+    server_logical_address: int
     serial_port: str
-    serial_baud_rate: int
-    hdlc_connection: hdlc.HdlcConnection = attr.ib(
+    serial_baud_rate: int = attr.ib(default=9600)
+    server_physical_address: Optional[int] = attr.ib(default=None)
+    client_physical_address: Optional[int] = attr.ib(default=None)
+    hdlc_connection: connection.HdlcConnection = attr.ib(
         default=attr.Factory(
-            lambda self: hdlc.HdlcConnection(
-                self.destination_address, self.source_address
+            lambda self: connection.HdlcConnection(
+                self.server_hdlc_address, self.client_hdlc_address
             ),
             takes_self=True,
         )
@@ -36,37 +47,45 @@ class SerialHdlcClient:
         )
     )
 
-    _send_frame_buffer: list = attr.ib(factory=list)
+    _send_buffer: list = attr.ib(factory=list)
+
+
+
+    @property
+    def server_hdlc_address(self):
+        return address.HdlcAddress(
+            logical_address=self.server_logical_address,
+            physical_address=self.server_physical_address,
+            address_type="server",
+        )
+
+    @property
+    def client_hdlc_address(self):
+        return address.HdlcAddress(
+            logical_address=self.client_logical_address,
+            physical_address=self.client_physical_address,
+            address_type="client",
+        )
 
     def connect(self):
         """
         Sets up the HDLC Connection by sending a SNRM request.
 
         """
-        # TODO: It is possible to exchange connection data in the SNRM request.
-        #       If nothing is sent the server will assume standard settings.
-        #       Window size = 1
-        #       Max frame size = 128 bytes
-        #       The propoesd connection settings that the server will use is sent in the
-        #       UA frame that is returned.
-        #       As of now we dont support negotiating connection parameter so we will
-        #       always assume the standard settings and ignore anything proposed by the
-        #       server (meter)
+        # TODO: Implement hdlc parameter negotiation in SNRM frame
 
-        if self.hdlc_connection.state.current_state != hdlc.NOT_CONNECTED:
+        if self.hdlc_connection.state.current_state != state.NOT_CONNECTED:
             raise ClientError(
                 f"Client tried to initiate a HDLC connection but connection state was "
                 f"not in NOT_CONNECTED but in "
                 f"state={self.hdlc_connection.state.current_state}"
             )
-        snrm = hdlc.SetNormalResponseModeFrame(
-            destination_address=self.destination_address,
-            source_address=self.source_address,
+        snrm = frames.SetNormalResponseModeFrame(
+            destination_address=self.server_hdlc_address,
+            source_address=self.client_hdlc_address,
         )
-        self._send_frame_buffer.append(snrm)
-        ua_response = self._empty_send_buffer()[0]
-        # TODO: the UA response contains negotiaiated parameters for the HDLC connection
-        #   Window size etc. This should be extracted.
+        self._send_buffer.append(snrm)
+        ua_response = self._drain_send_buffer()[0]
         LOG.info(f"Received {ua_response!r}")
         return ua_response
 
@@ -75,23 +94,25 @@ class SerialHdlcClient:
         Sends a DisconnectFrame
         :return:
         """
-        disc = hdlc.DisconnectFrame(destination_address=self.destination_address, source_address=self.source_address)
-        self._send_frame_buffer.append(disc)
-        response = self._empty_send_buffer()[0]
+        disc = frames.DisconnectFrame(
+            destination_address=self.server_hdlc_address,
+            source_address=self.client_hdlc_address,
+        )
+        self._send_buffer.append(disc)
+        response = self._drain_send_buffer()[0]
         return response
 
-    def _empty_send_buffer(self):
+    def _drain_send_buffer(self):
         """
         Messages to send might need to be fragmented and to handle the flow we can split all
         data that is needed to be sent into several frames to be send and when this is
         called it will make sure all is sent according to the protocol.
         """
-        # TODO: Does not handle segmented responses. Should look at the .final attribute.
         response_frames = list()
-        while self._send_frame_buffer:
-            frame = self._send_frame_buffer.pop(0)  # FIFO behavior
+        while self._send_buffer:
+            frame = self._send_buffer.pop(0)  # FIFO behavior
             self._write_frame(frame)
-            if self.hdlc_connection.state.current_state in hdlc.RECEIVE_STATES:
+            if self.hdlc_connection.state.current_state in state.RECEIVE_STATES:
                 response = self._next_event()
                 response_frames.append(response)
         return response_frames
@@ -106,12 +127,12 @@ class SerialHdlcClient:
             # return that. Otherwise, read some data, add it to the internal
             # buffer, and then try again.
             event = self.hdlc_connection.next_event()
-            if event is hdlc.NEED_DATA:
+            if event is state.NEED_DATA:
                 self.hdlc_connection.receive_data(self._read_frame())
                 continue
             return event
 
-    def send(self, telegram: bytes):
+    def send(self, telegram: bytes) -> bytes:
         """
         Send will make sure the data that needs to be sent i sent.
         The send is the only public function that will return the response data
@@ -121,22 +142,28 @@ class SerialHdlcClient:
         :param telegram:
         :return:
         """
-
-        # If we are not connected we should set up the HDLC connection
-        if self.hdlc_connection.state.current_state == hdlc.NOT_CONNECTED:
-            self.connect()
-
-        if self.hdlc_connection.state.current_state == hdlc.IDLE:
-            # is able to send.
-            info = hdlc.InformationFrame(
-                self.destination_address,
-                self.source_address,
-                telegram,
-                send_sequence_number=self.hdlc_connection.state.client_ssn,
-                receive_sequence_number=self.hdlc_connection.state.client_rsn,
+        current_state = self.hdlc_connection.state.current_state
+        if not current_state == state.IDLE:
+            raise hdlc_exception.LocalProtocolError(
+                f"Connection is not in state IDLE and cannot send any data. "
+                f"Current state is {current_state}"
             )
-            self._send_frame_buffer.append(info)
-            response = self._empty_send_buffer()
+
+        info = self.generate_information_request(telegram)
+        self._send_buffer.append(info)
+        response: frames.InformationFrame = self._drain_send_buffer()[0]
+
+        return response.payload
+
+    def generate_information_request(self, payload):
+        return frames.InformationFrame(
+            destination_address=self.server_hdlc_address,
+            source_address=self.client_hdlc_address,
+            payload=payload,
+            send_sequence_number=self.hdlc_connection.state.client_ssn,
+            receive_sequence_number=self.hdlc_connection.state.client_rsn,
+            response_frame=False
+        )
 
     def _write_frame(self, frame):
         frame_bytes = self.hdlc_connection.send(frame)
@@ -148,11 +175,18 @@ class SerialHdlcClient:
         self._serial.write(to_write)
 
     def _read_frame(self) -> bytes:
-        in_bytes = self._serial.read_until(hdlc.HDLC_FLAG)
+        in_bytes = self._serial.read_until(frames.HDLC_FLAG)
 
-        if in_bytes == hdlc.HDLC_FLAG:
+        if in_bytes == frames.HDLC_FLAG:
             # We found the first HDLC Frame Flag. We should read until the last one.
-            in_bytes += self._serial.read_until(hdlc.HDLC_FLAG)
+            in_bytes += self._serial.read_until(frames.HDLC_FLAG)
 
         LOG.debug(f"Received: {in_bytes!r}")
         return in_bytes
+
+    def __enter__(self):
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.disconnect()
