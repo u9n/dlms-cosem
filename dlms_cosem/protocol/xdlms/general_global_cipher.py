@@ -8,11 +8,10 @@ from dlms_cosem.protocol.security import SecuritySuiteFactory
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 
 
-
-
 def validate_security_suite_number(instance, attribute, value):
     if value not in [0, 1, 2]:
         raise ValueError(f"Only Security Suite 0-2 is valid, Got: {value}")
+
 
 @attr.s(auto_attribs=True)
 class SecurityControlField:
@@ -67,6 +66,7 @@ class SecurityControlField:
 #  Encryption needs to be done with some form of service since their are
 #  different kinds of encryption generating different objects.
 
+
 @attr.s(auto_attribs=True)
 class SecurityHeader:
     """
@@ -103,6 +103,7 @@ class CipheredContent:
     :param `SecurityHeader` security_header: Security header.
     :param bytes cipher_text: The encrypted data.
     """
+
     security_header: SecurityHeader
     ciphered_text: bytes
 
@@ -111,7 +112,6 @@ class CipheredContent:
         security_header = SecurityHeader.from_bytes(_bytes_data[0:5])
         cipher_text = _bytes_data[5:]
         return cls(security_header, cipher_text)
-
 
 
 @attr.s(auto_attribs=True)
@@ -129,8 +129,6 @@ class GeneralGlobalCipherApdu(AbstractXDlmsApdu):
     No protection: b''
 
     """
-
-
 
     TAG = 219
     NAME = "general-glo-cipher"
@@ -151,7 +149,6 @@ class GeneralGlobalCipherApdu(AbstractXDlmsApdu):
     system_title: OctetStringData
     ciphered_content: CipheredContent
     decrypted_data: Optional[Any] = attr.ib(default=None)
-
 
     def decrypt(self, encryption_key, authentication_key):
         if not (
@@ -193,4 +190,3 @@ class GeneralGlobalCipherApdu(AbstractXDlmsApdu):
 
     def to_bytes(self) -> bytes:
         raise NotImplementedError()
-

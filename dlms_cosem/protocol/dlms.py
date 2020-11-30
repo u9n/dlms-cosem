@@ -20,8 +20,6 @@ class WriteResponseApdu:
     pass
 
 
-class InitiateResponseApdu:
-    pass
 
 
 class ConfirmedServiceErrorApdu:
@@ -40,7 +38,7 @@ class XDlmsApduFactory:
         1: xdlms.InitiateRequestApdu,
         5: ReadRequestApdu,
         6: WriteRequestApdu,
-        8: InitiateResponseApdu,
+        8: xdlms.InitiateResponseApdu,
         12: ReadResponseApdu,
         13: WriteResponseApdu,
         14: ConfirmedServiceErrorApdu,

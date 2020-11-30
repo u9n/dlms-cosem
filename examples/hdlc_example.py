@@ -41,7 +41,7 @@ with client as c:
         calling_authentication_value=None,
         implementation_information=None,
         user_information=UserInformation(
-            initiate_request=InitiateRequestApdu(
+            content=InitiateRequestApdu(
                 proposed_conformance=Conformance(
                     general_protection=False,
                     general_block_transfer=False,

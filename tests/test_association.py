@@ -1,6 +1,9 @@
 import pytest
 from pprint import pprint
-from dlms_cosem.protocol.acse import ApplicationAssociationRequestApdu
+from dlms_cosem.protocol.acse import (
+    ApplicationAssociationRequestApdu,
+    ApplicationAssociationResponseApdu,
+)
 from dlms_cosem.protocol.xdlms.conformance import Conformance
 
 
@@ -57,3 +60,15 @@ def test_conformance():
     )
 
     assert c.to_bytes() == b"\x00\x00\x7e\x1f"
+
+def test_simple_aare():
+    data = bytes.fromhex("6129a109060760857405080101a203020100a305a103020100be10040e0800065f1f0400001e1d04c80007")
+    aare = ApplicationAssociationResponseApdu.from_bytes(data)
+    pprint(aare)
+
+    print(data.hex())
+    print(aare.to_bytes().hex())
+
+
+
+    assert data == aare.to_bytes()

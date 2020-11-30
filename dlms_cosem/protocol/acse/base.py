@@ -8,7 +8,7 @@ from dlms_cosem.protocol.ber import BER
 from dlms_cosem.protocol import xdlms
 
 # TODO: These classes are placeholders!
-from dlms_cosem.protocol.dlms import ConfirmedServiceErrorApdu, InitiateResponseApdu, apdu_factory
+from dlms_cosem.protocol.dlms import ConfirmedServiceErrorApdu, apdu_factory
 
 
 class AbstractAcseApdu(abc.ABC):
@@ -259,7 +259,7 @@ class UserInformation:
 
     content: Union[
         xdlms.InitiateRequestApdu,
-        InitiateResponseApdu,
+        xdlms.InitiateResponseApdu,
         ConfirmedServiceErrorApdu,
     ]
 

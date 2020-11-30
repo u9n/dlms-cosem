@@ -81,7 +81,6 @@ class ApplicationAssociationRequestApdu:
     calling_authentication_value: Optional[acse_base.AuthenticationValue] = attr.ib(default=None)
     implementation_information: Optional[bytes] = attr.ib(default=None)
     user_information: Optional[acse_base.UserInformation] = attr.ib(default=None)
-    raw_bytes: Optional[bytes] = attr.ib(default=None)
 
     @classmethod
     def from_bytes(cls, aarq_bytes):
@@ -103,8 +102,6 @@ class ApplicationAssociationRequestApdu:
 
         # Decode the AARQ  data
         object_dict = dict()
-        object_dict["raw_bytes"] = aarq_bytes
-
         # use the data in tags to go through the bytes and create objects.
         while True:
             # TODO: this does not take into account when defining objects in dict and not using them.
