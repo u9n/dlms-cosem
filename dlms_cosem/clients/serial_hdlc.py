@@ -151,7 +151,7 @@ class SerialHdlcClient:
 
         info = self.generate_information_request(telegram)
         self._send_buffer.append(info)
-        response: frames.InformationFrame = self._drain_send_buffer()[0]
+        response = self._drain_send_buffer()[0]
 
         return response.payload
 

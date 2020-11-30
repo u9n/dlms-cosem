@@ -1,0 +1,5 @@
+attrs~=20.2.0
+pytest~=6.1.1
+setuptools~=38.5.1
+pyserial~=3.4
+cryptography~=2.1.4

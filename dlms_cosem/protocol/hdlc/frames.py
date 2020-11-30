@@ -197,8 +197,11 @@ class UnNumberedAcknowledgmentFrame(BaseHdlcFrame):
         Information field on UA does not contain an LLC as it is not a true
         information field.
         """
+        out: List[bytes] = list()
+        if self.payload:
+            out.append(self.payload)
 
-        return b"".join([self.payload])
+        return b"".join(out)
 
     def get_control_field(self):
         return fields.UaControlField()
@@ -231,7 +234,7 @@ class UnNumberedAcknowledgmentFrame(BaseHdlcFrame):
 
         if hcs != frame.hcs:
             raise hdlc_exceptions.HdlcParsingError(
-                f"HCS is not correct. " f"Calculated: {frame.hcs}, in data: {hcs}"
+                f"HCS is not correct. " f"Calculated: {frame.hcs!r}, in data: {hcs!r}"
             )
 
         if fcs != frame.fcs:
@@ -263,7 +266,9 @@ class InformationFrame(BaseHdlcFrame):
             out_data.append(LLC_RESPONSE_HEADER)
         else:
             out_data.append(LLC_COMMAND_HEADER)  # Requests uses the command header
-        out_data.append(self.payload)
+
+        if self.payload:
+            out_data.append(self.payload)
 
         return b"".join(out_data)
 
@@ -339,12 +344,12 @@ class InformationFrame(BaseHdlcFrame):
 
         if hcs != frame.hcs:
             raise hdlc_exceptions.HdlcParsingError(
-                f"HCS is not correct Calculated: {frame.hcs}, in data: {hcs}"
+                f"HCS is not correct Calculated: {frame.hcs!r}, in data: {hcs!r}"
             )
 
         if fcs != frame.fcs:
             raise hdlc_exceptions.HdlcParsingError(
-                f"FCS is not correct, Calculated: {frame.fcs}, in data: {fcs}"
+                f"FCS is not correct, Calculated: {frame.fcs!r}, in data: {fcs!r}"
             )
 
         return frame

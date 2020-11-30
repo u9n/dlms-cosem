@@ -39,7 +39,7 @@ integer data. ex 0b10000010 -> 2 bytes after this is the integer. 0x820xff0xff =
 """
 
 import attr
-import typing
+from typing import *
 from dlms_cosem.protocol.dlms_data import DlmsDataFactory, DlmsData
 
 
@@ -84,19 +84,19 @@ class AttributeEncoding(AXdrEncoding):
     return_value = attr.ib(default=False)
     wrap_end = attr.ib(default=False)  # Maybe name wrapper?
     length: int = attr.ib(default=None)
-    default: any = attr.ib(default=None)
+    default: Any = attr.ib(default=None)
     optional: bool = attr.ib(default=False)
 
 
 @attr.s
 class SequenceEncoding(AXdrEncoding):
     attribute_name: str = attr.ib()
-    instance_factory: DlmsDataFactory = attr.ib(default=DlmsDataFactory)
+    instance_factory: DlmsDataFactory = attr.ib(factory=DlmsDataFactory)
 
 
 @attr.s
 class EncodingConf:
-    attributes: typing.List[AXdrEncoding] = attr.ib()
+    attributes: List[AXdrEncoding] = attr.ib()
 
 
 class AXdrDecoder:
@@ -132,7 +132,7 @@ class AXdrDecoder:
 
                 data, rest = self._decode_sequence(in_data, attribute)
             else:
-                raise NotImplemented(f'Attribute: {attribute} is not supported')
+                raise NotImplementedError(f'Attribute: {attribute} is not supported')
 
             in_data = rest
             out_dict.update({key: data})
@@ -229,7 +229,7 @@ class AXdrDecoder:
 
 class DlmsDataToPythonConverter:
 
-    def __init__(self, encoding_conf: typing.List[DlmsData]):
+    def __init__(self, encoding_conf: List[DlmsData]):
         self.encoding_conf = encoding_conf
 
     def to_python(self):
@@ -239,6 +239,6 @@ class DlmsDataToPythonConverter:
 
         return out_list
 
-    def to_dlms(self, data: typing.List):
-        raise NotImplemented(
+    def to_dlms(self, data: List):
+        raise NotImplementedError(
             'Not yet supported to convert python values to DLMS')
