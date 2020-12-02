@@ -1,10 +1,9 @@
-==========
-A Python library for DLMS/COSEM.
-==========
 
-==========
-DLMS/COSEM
-==========
+# A Python library for DLMS/COSEM.
+
+
+
+# DLMS/COSEM
 
 DLMS/COSEM (IEC 62056, EN13757-1) is the global standard for smart energy
 metering, control and management. It specifies an object-oriented data model,
@@ -12,21 +11,23 @@ an application layer protocol and media-specific communication profiles.
 
 DLMS/COSEM comprises three key components:
 
-**COSEM**
-    Companion Specification for Energy Metering - the object model capable of
-    describing virtually any application.
-**OBIS**
-    Object Identification System, the naming system of the objects
-**DLMS**
-    Device Language Message Specification - the application layer protocol
-    that turns the information held by the objects into messages.
+### COSEM 
+Companion Specification for Energy Metering - the object model capable of
+ describing virtually any application.
+  
+### OBIS
+Object Identification System, the naming system of the objects
+
+### DLMS
+Device Language Message Specification - the application layer protocol
+that turns the information held by the objects into messages.
 
 DLMS/COSEM can be used for all utilities / energy kinds, all market segments,
 all applications and over virtually any communication media.
 
 
-COSEM  (Companion Specification for Energy Metering)
------
+## COSEM  (Companion Specification for Energy Metering)
+
 
 The COSEM object model describes the semantics of the language.
 
@@ -41,8 +42,8 @@ Objects can be used in combinations, to model simple use cases such as register
 reading or more complex ones such as tariff and billing schemes or load
 management.
 
-OBIS  (Object Identification System)
-----
+## OBIS  (Object Identification System)
+
 
 OBIS is the naming system of COSEM objects.
 
@@ -55,8 +56,8 @@ the data e.g. electrical energy – active power – integration – tariff –
 billing period.
 
 
-DLMS /COSEM application layer services
---------------------------------------
+## DLMS /COSEM application layer services
+
 
 
 DLMS stands for Device Language Message Specification
@@ -82,8 +83,8 @@ The messages can transported over virtually any communication media.
 There are various built-in mechanisms available for optimizing the traffic to
 the characteristics of the media.
 
-Transport
----------
+## Transport
+
 
 The application messages can be transported over virtually any communication
 media.
@@ -104,9 +105,8 @@ Communication profiles are available for:
 *   Mesh networks with IPv6 and 6LowPAN;
 *   Coming soon: Wi-SUN and NB IoT.
 
-===========================
-Development of this library
-===========================
+
+# Development of this library
 
 We are developing this library as an ongoing project to support DLMS/COSEM in
 our AMR (Automatic Meter Reading) system Utilitarian.
@@ -133,13 +133,10 @@ you notice an error using the library please raise an issue.
 
 This library is developed by Palmlund Wahlgren Innovative Technology AB. We are
 based in Sweden and are members of the DLMS User Association.
-We are currently developing a Head End System for Multi Utility Automatic Meter
-Readings.
 
 
-============
-Installation
-============
+# Installation
+
 
 We only support Python 3.6+
 
@@ -147,18 +144,15 @@ We only support Python 3.6+
 
     pip install dlms-cosem
 
-=============
-Example Usage
-=============
+# Example Usage
 
 To parse a message you need to use the `XDlmsAPDUFactory`
 
-.. code-block::
+```python
+from dlms_cosem.protocol.dlms import apdu_factory
 
-    from dlms_cosem.dlms import apdu_factory
-
-    message = 'xxx'
-    apdu = adpu_factory.apdu_from_bytes(message)
-
+message = 'xxx'
+apdu = adpu_factory.apdu_from_bytes(message)
+```
 
 
