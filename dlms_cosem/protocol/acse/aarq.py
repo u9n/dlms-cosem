@@ -19,6 +19,19 @@ def user_information_holds_initiate_request(
         )
 
 
+def aarq_should_set_authenticated(mechanism: acse_base.AuthenticationMechanism):
+    """
+    * If Lowest Level Scurity (None) is used it shall not be present.
+    * If Low Level Security (LLS) is used it should be present in request and may
+        be present in response (AARE) and indicate authentication (bit0 = 1)
+    * If High Level Security (HLS) is used it should be present in both request and
+        response (AARE) and indicate authentication (bit0 = 1)
+    """
+    if mechanism == acse_base.AuthenticationMechanism.NONE:
+        return False
+    else:
+        return True
+
 @attr.s(auto_attribs=True)
 class ApplicationAssociationRequestApdu:
     """
@@ -48,9 +61,7 @@ class ApplicationAssociationRequestApdu:
     # sent it should be the default?
 
     Kernel:
-    :parameter application_context_name: Holds information about name
-        referencing (long name refs are always used in this library) and use of
-        ciphered APDUs
+    :parameter ciphered: Sets the AppContextName to indicate ciphered apdus.
 
     :parameter calling_ap_title:  If the `application_context_name` uses ciphering
         `calling_ap_title` should contain the clients system title. Also if the
@@ -61,17 +72,7 @@ class ApplicationAssociationRequestApdu:
         use of ciphered APDUs the `calling_ae_qualifier` may hold the public digital
         signature key certificate of the client.
 
-    :parameter sender_acse_requirements: The use depends on the authentication
-        mechanism used.
-        * If Lowest Level Scurity (None) is used it shall not be present.
-        * If Low Level Security (LLS) is used it should be present in request and may
-            be present in response (AARE) and indicate authentication (bit0 = 1)
-        * If High Level Security (HLS) is used it should be present in both request and
-            response (AARE) and indicate authentication (bit0 = 1)
-
-    :parameter mechanism_name: Shall only be present if `sender_acse_requirements`
-        indicates authentication. The field in the request is the proposed method and
-        the response holds the value to be used.
+    :parameter authentication: Defines the type of authentication that is used.
 
     :parameter calling_authentication_value: Shall only be present if
         `sender_acse_requirements` indicates authentication. It holds the client
@@ -108,11 +109,6 @@ class ApplicationAssociationRequestApdu:
         Usage could be defined by meter manufacturer
 
     }
-
-    # TODO: sender_asce_requirement is compleaty dependant on the meshanism name.
-    # No need to have it as input.
-    # TODO: Mechanism name as INT Enum.
-
     """
 
     TAG: ClassVar[int] = 0x60  # Application 0 = 60H = 96
@@ -138,23 +134,22 @@ class ApplicationAssociationRequestApdu:
         ),  # Context specific, constructed 30
     }
 
-    application_context_name: acse_base.AppContextName
-    protocol_version: Optional[int] = attr.ib(default=1)
     calling_ap_title: Optional[bytes] = attr.ib(default=None)
+    # TODO: Can we rename this to client public certificate?
     calling_ae_qualifier: Optional[bytes] = attr.ib(default=None)
-
-    sender_acse_requirements: Optional[acse_base.AuthFunctionalUnit] = attr.ib(
-        default=None
-    )
-    mechanism_name: Optional[acse_base.MechanismName] = attr.ib(default=None)
+    authentication: Optional[acse_base.AuthenticationMechanism] = attr.ib(default=None)
+    ciphered: bool = attr.ib(default=False)
+    # TODO: Can we rename this to password? Would be nice to pass it as bytes or str.
     calling_authentication_value: Optional[acse_base.AuthenticationValue] = attr.ib(
         default=None
     )
+    # TODO: validate that a ciphered InitiateReqest is used when ciphering is True.
     user_information: Optional[acse_base.UserInformation] = attr.ib(
         default=None, validator=[user_information_holds_initiate_request]
     )
 
     # Not really used
+    # TODO: Should we keep them?
     called_ap_title: Optional[bytes] = attr.ib(default=None)
     called_ae_qualifier: Optional[bytes] = attr.ib(default=None)
     called_ap_invocation_identifier: Optional[bytes] = attr.ib(default=None)
@@ -162,6 +157,44 @@ class ApplicationAssociationRequestApdu:
     calling_ap_invocation_identifier: Optional[bytes] = attr.ib(default=None)
     calling_ae_invocation_identifier: Optional[bytes] = attr.ib(default=None)
     implementation_information: Optional[bytes] = attr.ib(default=None)
+
+    @property
+    def sender_acse_requirements(self) -> Optional[acse_base.AuthFunctionalUnit]:
+        """
+        Is only sent if the AuthFunctionalUnit needs to indicate authentication.
+        """
+        if aarq_should_set_authenticated(self.authentication):
+            return acse_base.AuthFunctionalUnit(True)
+
+        return None
+
+    @property
+    def mechanism_name(self) -> Optional[acse_base.MechanismName]:
+        """
+        The mechanism_name field should only be present if the AuthFunctionalUnit
+        indicates authenticated.
+        :return:
+        """
+        if self.sender_acse_requirements is not None:
+            return acse_base.MechanismName(mechanism=self.authentication)
+
+        return None
+
+    @property
+    def application_context_name(self) -> acse_base.AppContextName:
+        """
+        Always use logical name references.
+        """
+        if self.ciphered:
+            return acse_base.AppContextName(logical_name_refs=True, ciphered_apdus=True)
+        else:
+            return acse_base.AppContextName(
+                logical_name_refs=True, ciphered_apdus=False
+            )
+
+    @property
+    def protocol_version(self) -> int:
+        return 1
 
     @classmethod
     def from_bytes(cls, aarq_bytes):
@@ -211,16 +244,32 @@ class ApplicationAssociationRequestApdu:
             if len(aarq_data) <= 0:
                 break
 
+        protocol_version: Optional[int] = object_dict.pop("protocol_version", None)
+        if protocol_version is not None:
+            if protocol_version != 0:
+                raise ValueError("Parsed a protocol version that is not 0")
+
+        application_context_name: acse_base.AppContextName = object_dict.pop("application_context_name")
+        object_dict["ciphered"] = application_context_name.ciphered_apdus
+        if not application_context_name.logical_name_refs:
+            raise ValueError("Parsed a AARQ that uses Short Name Referencing!")
+
+        sender_acse_requirements: Optional[
+            acse_base.AuthFunctionalUnit
+        ] = object_dict.pop("sender_acse_requirements", None)
+
+        mechanism_name: Optional[acse_base.MechanismName] = object_dict.pop(
+            "mechanism_name", None
+        )
+
+        if sender_acse_requirements and mechanism_name:
+            object_dict["authentication"] = mechanism_name.mechanism
+
         return cls(**object_dict)
 
     def to_bytes(self):
-        # if we created the object from bytes we can just return the same bytes
-        # if self._raw_bytes is not None:
-        #    return self._raw_bytes
         aarq_data = bytearray()
-        # default value of protocol_version is 1. Only decode if other than 1
-        if self.protocol_version != 1:
-            aarq_data.extend(BER.encode(160, bytes(self.protocol_version)))
+        # There is no need to encode the version since it is always v1. (int 0)
         if self.application_context_name is not None:
             aarq_data.extend(BER.encode(161, self.application_context_name.to_bytes()))
         if self.called_ap_title is not None:
@@ -251,11 +300,5 @@ class ApplicationAssociationRequestApdu:
             aarq_data.extend(BER.encode(0xBD, self.implementation_information))
         if self.user_information is not None:
             aarq_data.extend(BER.encode(0xBE, self.user_information.to_bytes()))
-        # TODO: UPDATE THE ENCODING TAGS!
 
         return BER.encode(self.TAG, aarq_data)
-
-        # TODO: make BER.encode handle bytes or bytearray to save code space.
-        # TODO: CAn we use an orderedDict to loopt through all elemetns of the aarq to be transformed.
-
-        # TODO: Add encoding of all values from ground up.

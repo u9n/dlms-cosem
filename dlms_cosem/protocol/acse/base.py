@@ -1,3 +1,4 @@
+from enum import IntEnum
 from typing import *
 import abc
 
@@ -12,7 +13,6 @@ from dlms_cosem.protocol.dlms import ConfirmedServiceErrorApdu, apdu_factory
 
 
 class AbstractAcseApdu(abc.ABC):
-
     @classmethod
     @abc.abstractmethod
     def from_bytes(cls, source_bytes: bytes):
@@ -21,7 +21,6 @@ class AbstractAcseApdu(abc.ABC):
     @abc.abstractmethod
     def to_bytes(self) -> bytes:
         raise NotImplementedError("")
-
 
 
 @attr.s(auto_attribs=True)
@@ -61,8 +60,9 @@ class AppContextName(DLMSObjectIdentifier):
         elif not self.logical_name_refs and self.ciphered_apdus:
             return 4
         else:
-            raise ValueError("Combination of logical name ref and "
-                             "ciphered apdus not possible")
+            raise ValueError(
+                "Combination of logical name ref and " "ciphered apdus not possible"
+            )
 
     @classmethod
     def from_bytes(cls, _bytes):
@@ -103,43 +103,22 @@ class AppContextName(DLMSObjectIdentifier):
         return settings_dict.get(context_id)
 
 
-def validate_mechanism_name(instance, attribute, value):
-    if value not in MechanismName.id_by_mechanism_names.keys():
-        raise ValueError(f"Mechanism name: {value} not valid")
-
-
-def validate_mechanism_id(instance, attribute, value):
-    if value not in MechanismName.mechanism_names_by_id.keys():
-        raise ValueError(f"Mechanism id: {value} not valid")
+class AuthenticationMechanism(IntEnum):
+    NONE = 0
+    LLS = 1
+    HLS = 2
+    HLS_MD5 = 3  # Insecure. Don't use with new meters
+    HLS_SHA1 = 4  # Insecure. Don't use with new meters
+    HLS_GMAC = 5
+    HLS_SHA256 = 6
+    HLS_ECDSA = 7
 
 
 @attr.s(auto_attribs=True)
 class MechanismName(DLMSObjectIdentifier):
-    mechanism_name: str = attr.ib(validator=[validate_mechanism_name])
-
     app_context: ClassVar[int] = 2
 
-    # TODO: Don't like this but can't be bothered to come up with other way now.
-    mechanism_names_by_id: ClassVar[Dict[int, str]] = {
-        0: "none",  # lowest level
-        1: "lls",  # low level security
-        2: "hls",  # high level security
-        3: "hls-md5",  # HLS with MD5 , not recommended for new meters
-        4: "hls-sha1",  # HLS with SHA1 , not recommended for new meters
-        5: "hls-gmac",
-        6: "hls-sha256",
-        7: "hls-ecdsa",
-    }
-    id_by_mechanism_names: ClassVar[Dict[str, int]] = {
-        "none": 0,  # lowest level
-        "lls": 1,  # low level security
-        "hls": 2,  # high level security
-        "hls-md5": 3,  # HLS with MD5 , not recommended for new meters
-        "hls-sha1": 4,  # HLS with SHA1 , not recommended for new meters
-        "hls-gmac": 5,
-        "hls-sha256": 6,
-        "hls-ecdsa": 7,
-    }
+    mechanism: AuthenticationMechanism
 
     @classmethod
     def from_bytes(cls, _bytes: bytes):
@@ -147,10 +126,7 @@ class MechanismName(DLMSObjectIdentifier):
         Apparently the data in mechanism name is not encoded in BER.
         """
 
-        mechanism_id = _bytes[-1]
-
-        if mechanism_id not in MechanismName.mechanism_names_by_id.keys():
-            raise ValueError(f"mechanism_id of {mechanism_id} is not valid")
+        mechanism_id: int = _bytes[-1]
 
         total_prefix = bytes(_bytes[:-1])
         if total_prefix != (
@@ -161,12 +137,10 @@ class MechanismName(DLMSObjectIdentifier):
                 f" according to DLMS: {total_prefix!r}"
             )
 
-        return cls(mechanism_name=MechanismName.mechanism_names_by_id[mechanism_id])
+        return cls(mechanism=AuthenticationMechanism(mechanism_id))
 
     def to_bytes(self):
-        total_data = self.PREFIX + bytes(
-            [self.app_context, self.id_by_mechanism_names[self.mechanism_name]]
-        )
+        total_data = self.PREFIX + bytes([self.app_context, self.mechanism.value])
         return total_data
 
 
@@ -258,9 +232,7 @@ class UserInformation:
     tag = b"\x04"  # is encoded as an octetstring
 
     content: Union[
-        xdlms.InitiateRequestApdu,
-        xdlms.InitiateResponseApdu,
-        ConfirmedServiceErrorApdu,
+        xdlms.InitiateRequestApdu, xdlms.InitiateResponseApdu, ConfirmedServiceErrorApdu
     ]
 
     @classmethod
