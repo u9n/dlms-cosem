@@ -5,49 +5,118 @@ import attr
 from dlms_cosem.protocol.ber import BER
 
 from dlms_cosem.protocol.acse import base as acse_base
+from dlms_cosem.protocol import xdlms
+
+
+def user_information_holds_initiate_request(
+    instance, attribute, value: acse_base.UserInformation
+):
+    if not isinstance(value.content, xdlms.InitiateRequestApdu):
+        raise ValueError(
+            f"ApplicationAssociationRequestApdu.user_information should "
+            f"only hold a UserInformation where .content is a "
+            f"InitiateRequestApdu. Got {value.content.__class__.__name__}"
+        )
+
 
 @attr.s(auto_attribs=True)
 class ApplicationAssociationRequestApdu:
     """
-      AARQ_apdu ::= [APPLICATION 0] IMPLICIT SEQUENCE {
-      protocol_version [0] IMPLICIT BIT STRING OPTIONAL,
-      application_context_name          [1]  EXPLICIT OBJECT IDENTIFIER,
-      called_AP_title                   [2]  AP_title OPTIONAL,
-      called_AE_qualifier               [3]  AE_qualifier OPTIONAL,
-      called_AP_invocation_identifier   [4]  EXPLICIT AP_invocation_identifier OPTIONAL,
-      called_AE_invocation_identifier   [5]  EXPLICIT AE_invocation_identifier OPTIONAL,
-      calling_AP_title                  [6]  AP_title OPTIONAL,
-      calling_AE_qualifier              [7]  AE_qualifier OPTIONAL,
-      calling_AP_invocation_identifier  [8]  AP_invocation_identifier OPTIONAL,
-      calling_AE_invocation_identifier  [9]  AE_invocation_identifier OPTIONAL,
-      --  The following field shall not be present if only the Kernel is used.
-      sender_acse_requirements          [10] IMPLICIT ACSE_requirements OPTIONAL,
-      --  The following field shall only be present if the Authentication functional unit is selected.
-      mechanism_name                    [11] IMPLICIT Mechanism_name OPTIONAL,
-      --  The following field shall only be present if the Authentication functional unit is selected.
-      calling_authentication_value      [12] EXPLICIT Authentication_value OPTIONAL,
-      application_context_name_list
-        [13] IMPLICIT Application_context_name_list OPTIONAL,
-      --  The above field shall only be present if the Application Context Negotiation functional unit is selected
-      implementation_information        [29] IMPLICIT Implementation_data OPTIONAL,
-      user_information [30] EXPLICIT Association_information OPTIONAL
-    }
+    Application Association Request ( AARQ ) is used for starting an Application
+    Association with a DLMS server (meter).
 
-    Application Association Request ( AARQ ) is encoded in BER. This is due to many of
+    It is encoded in BER. This is due to many of
     the field are variable in length and it is hard to know the length of each field in
     advance.
-    The user information field holds an InitiateRequestApdu/InitiateResponseApdu or
-    ConfirmedServiceErrorApdu encoded in X-ADR using OCTET_STRING.
 
+    The user information field holds an InitiateRequestApdu encoded in X-ADR wrapped
+    in BER encoded OCTET_STRING.
 
     If sender_acse_requirements is present authentication is used.
 
     mechanism_name and calling_authentication_value should only be present if
     authentication is used.
+
+    AP = Application Process
+    AE = Application Entity
+    ACSE = Association Control Service Element
+
+    :parameter protocol_version: DLMS Protocol version. Always is the default
+        (0) and is not used.
+
+    # TODO: can we remove the protocol version since it is always the default and if
+    # sent it should be the default?
+
+    Kernel:
+    :parameter application_context_name: Holds information about name
+        referencing (long name refs are always used in this library) and use of
+        ciphered APDUs
+
+    :parameter calling_ap_title:  If the `application_context_name` uses ciphering
+        `calling_ap_title` should contain the clients system title. Also if the
+        proposed HLS (High Level Security) auth mechanism uses the system title it
+        should be present.
+
+    :parameter calling_ae_qualifier: If the `application_context_name` indicates the
+        use of ciphered APDUs the `calling_ae_qualifier` may hold the public digital
+        signature key certificate of the client.
+
+    :parameter sender_acse_requirements: The use depends on the authentication
+        mechanism used.
+        * If Lowest Level Scurity (None) is used it shall not be present.
+        * If Low Level Security (LLS) is used it should be present in request and may
+            be present in response (AARE) and indicate authentication (bit0 = 1)
+        * If High Level Security (HLS) is used it should be present in both request and
+            response (AARE) and indicate authentication (bit0 = 1)
+
+    :parameter mechanism_name: Shall only be present if `sender_acse_requirements`
+        indicates authentication. The field in the request is the proposed method and
+        the response holds the value to be used.
+
+    :parameter calling_authentication_value: Shall only be present if
+        `sender_acse_requirements` indicates authentication. It holds the client
+        authentication value appropriat to the selected `mechanism_name`.
+
+    :parameter user_information: Holds the proposed xDLMS context in the form of a
+        `InitiateRequestApdu` encoded as a BER OctetString.
+        If the `InitiateRequestApdu` contains a dedicated_key it should be
+        authenticated and encrypted using the AES-GCM, global encryption key and the
+        authentication key (if in use).
+        Even if there is no dedicated key the `InitiateRequestApdu` should be protected
+        as above if there is need to protect the RLRQ
+
+
+    :parameter called_ap_title: Usage not defined in DLMS green book.
+        Usage could be defined by meter manufacturer
+
+    :parameter called_ae_qualifier: Usage not defined in DLMS green book.
+        Usage could be defined by meter manufacturer
+
+    :parameter called_ap_invocation_identfier: Usage not defined in DLMS green book.
+        Usage could be defined by meter manufacturer
+
+    :parameter called_ae_invocation_indentifier: Usage not defined in DLMS green book.
+        Usage could be defined by meter manufacturer
+
+    :parameter calling_ap_invocation_identifier: Usage not defined in DLMS green book.
+        Usage could be defined by meter manufacturer
+
+    :parameter calling_ae_invocation_identifier: Usage not defined in DLMS green book.
+        Usage could be defined by meter manufacturer
+
+    :parameter implementation_information: Usage not defined in DLMS green book.
+        Usage could be defined by meter manufacturer
+
+    }
+
+    # TODO: sender_asce_requirement is compleaty dependant on the meshanism name.
+    # No need to have it as input.
+    # TODO: Mechanism name as INT Enum.
+
     """
 
-    tag = 0x60  # Application 0 = 60H = 96
-    tags = {
+    TAG: ClassVar[int] = 0x60  # Application 0 = 60H = 96
+    PARSE_TAGS = {
         0x80: ("protocol_version", None),  # Context specific, constructed? 0
         0xA1: ("application_context_name", acse_base.AppContextName),
         # Context specific, constructed 1
@@ -63,24 +132,36 @@ class ApplicationAssociationRequestApdu:
         0x8B: ("mechanism_name", acse_base.MechanismName),
         0xAC: ("calling_authentication_value", acse_base.AuthenticationValue),
         0xBD: ("implementation_information", None),
-        0xBE: ("user_information", acse_base.UserInformation),  # Context specific, constructed 30
+        0xBE: (
+            "user_information",
+            acse_base.UserInformation,
+        ),  # Context specific, constructed 30
     }
 
     application_context_name: acse_base.AppContextName
     protocol_version: Optional[int] = attr.ib(default=1)
+    calling_ap_title: Optional[bytes] = attr.ib(default=None)
+    calling_ae_qualifier: Optional[bytes] = attr.ib(default=None)
+
+    sender_acse_requirements: Optional[acse_base.AuthFunctionalUnit] = attr.ib(
+        default=None
+    )
+    mechanism_name: Optional[acse_base.MechanismName] = attr.ib(default=None)
+    calling_authentication_value: Optional[acse_base.AuthenticationValue] = attr.ib(
+        default=None
+    )
+    user_information: Optional[acse_base.UserInformation] = attr.ib(
+        default=None, validator=[user_information_holds_initiate_request]
+    )
+
+    # Not really used
     called_ap_title: Optional[bytes] = attr.ib(default=None)
     called_ae_qualifier: Optional[bytes] = attr.ib(default=None)
     called_ap_invocation_identifier: Optional[bytes] = attr.ib(default=None)
     called_ae_invocation_identifier: Optional[bytes] = attr.ib(default=None)
-    calling_ap_title: Optional[bytes] = attr.ib(default=None)
-    calling_ae_qualifier: Optional[bytes] = attr.ib(default=None)
     calling_ap_invocation_identifier: Optional[bytes] = attr.ib(default=None)
     calling_ae_invocation_identifier: Optional[bytes] = attr.ib(default=None)
-    sender_acse_requirements: Optional[acse_base.AuthFunctionalUnit] = attr.ib(default=None)
-    mechanism_name: Optional[acse_base.MechanismName] = attr.ib(default=None)
-    calling_authentication_value: Optional[acse_base.AuthenticationValue] = attr.ib(default=None)
     implementation_information: Optional[bytes] = attr.ib(default=None)
-    user_information: Optional[acse_base.UserInformation] = attr.ib(default=None)
 
     @classmethod
     def from_bytes(cls, aarq_bytes):
@@ -88,7 +169,7 @@ class ApplicationAssociationRequestApdu:
         aarq_data = bytearray(aarq_bytes)
 
         aarq_tag = aarq_data.pop(0)
-        if not aarq_tag == cls.tag:
+        if not aarq_tag == cls.TAG:
             raise ValueError("Bytes are not an AARQ APDU. TAg is not int(96)")
 
         aarq_length = aarq_data.pop(0)
@@ -106,7 +187,9 @@ class ApplicationAssociationRequestApdu:
         while True:
             # TODO: this does not take into account when defining objects in dict and not using them.
             object_tag = aarq_data.pop(0)
-            object_desc = ApplicationAssociationRequestApdu.tags.get(object_tag, None)
+            object_desc = ApplicationAssociationRequestApdu.PARSE_TAGS.get(
+                object_tag, None
+            )
             if object_desc is None:
                 raise ValueError(
                     f"Could not find object with tag {object_tag} "
@@ -170,7 +253,7 @@ class ApplicationAssociationRequestApdu:
             aarq_data.extend(BER.encode(0xBE, self.user_information.to_bytes()))
         # TODO: UPDATE THE ENCODING TAGS!
 
-        return BER.encode(self.tag, aarq_data)
+        return BER.encode(self.TAG, aarq_data)
 
         # TODO: make BER.encode handle bytes or bytearray to save code space.
         # TODO: CAn we use an orderedDict to loopt through all elemetns of the aarq to be transformed.

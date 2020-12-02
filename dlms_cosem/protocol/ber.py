@@ -17,7 +17,7 @@ class BER:
         else:
             _tag_bytes = tag
 
-        if not data:
+        if data is None:
             return b""
 
         if not isinstance(data, (bytes, bytearray)):

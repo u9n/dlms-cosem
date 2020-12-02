@@ -52,7 +52,10 @@ class XDlmsApduFactory:
     def apdu_from_bytes(self, apdu_bytes):
         tag = apdu_bytes[0]
 
-        apdu_class = self.APDU_MAP.get(tag)
+        try:
+            apdu_class = self.APDU_MAP[tag]
+        except KeyError as e:
+            raise KeyError(f"Tag {tag!r} is not available in DLMS APDU Factory") from e
 
         return apdu_class.from_bytes(apdu_bytes)
 
