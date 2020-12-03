@@ -44,7 +44,7 @@ class HdlcConnection:
     """
     HDLC - High-level Data Link Control
 
-    In DLMS/COSEM HDLC is used to send DLSM data over serial intefaces. Like the optical
+    In DLMS/COSEM HDLC is used to send DLMS data over serial interfaces. Like the optical
     probe for diagnostic. Some meters also send data over TCP sockets sing HDLC when they
     have not implemented the TCP transport variant of DLMS/COSEM.
 

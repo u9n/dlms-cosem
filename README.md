@@ -149,7 +149,7 @@ We only support Python 3.6+
 To parse a message you need to use the `XDlmsAPDUFactory`
 
 ```python
-from dlms_cosem.protocol.dlms import apdu_factory
+from dlms_cosem.protocol.dlms import xdlms_apdu_factory
 
 message = 'xxx'
 apdu = adpu_factory.apdu_from_bytes(message)

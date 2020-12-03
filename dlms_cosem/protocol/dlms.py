@@ -1,4 +1,4 @@
-from dlms_cosem.protocol import xdlms
+from dlms_cosem.protocol import xdlms, acse
 
 
 # Following classes are just to provide a base to setup proper Factory handling
@@ -18,8 +18,6 @@ class WriteRequestApdu:
 
 class WriteResponseApdu:
     pass
-
-
 
 
 class ConfirmedServiceErrorApdu:
@@ -44,6 +42,11 @@ class XDlmsApduFactory:
         14: ConfirmedServiceErrorApdu,
         15: xdlms.DataNotificationApdu,
         219: xdlms.GeneralGlobalCipherApdu,
+        # ACSE APDUs:
+        96: acse.ApplicationAssociationRequestApdu,
+        97: acse.ApplicationAssociationResponseApdu,
+        98: acse.ReleaseRequestApdu,
+        99: acse.ReleaseResponseApdu,
     }
 
     def __init__(self):
@@ -60,4 +63,4 @@ class XDlmsApduFactory:
         return apdu_class.from_bytes(apdu_bytes)
 
 
-apdu_factory = XDlmsApduFactory()
+xdlms_apdu_factory = XDlmsApduFactory()

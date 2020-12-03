@@ -9,7 +9,7 @@ from dlms_cosem.protocol.ber import BER
 from dlms_cosem.protocol import xdlms
 
 # TODO: These classes are placeholders!
-from dlms_cosem.protocol.dlms import ConfirmedServiceErrorApdu, apdu_factory
+from dlms_cosem.protocol.dlms import ConfirmedServiceErrorApdu, xdlms_apdu_factory
 
 
 class AbstractAcseApdu(abc.ABC):
@@ -243,7 +243,7 @@ class UserInformation:
                 f"The tag for UserInformation data should be 0x04" f"not {tag!r}"
             )
 
-        return cls(content=apdu_factory.apdu_from_bytes(data))
+        return cls(content=xdlms_apdu_factory.apdu_from_bytes(data))
 
     def to_bytes(self):
         return BER.encode(self.tag, self.content.to_bytes())

@@ -5,7 +5,7 @@ from dlms_cosem.protocol.xdlms import (
     DataNotificationApdu,
 )
 
-from dlms_cosem.protocol.dlms import apdu_factory
+from dlms_cosem.protocol.dlms import xdlms_apdu_factory
 
 
 def test_gen_glo_cipher_load():
@@ -13,7 +13,7 @@ def test_gen_glo_cipher_load():
 
     system_title = b'/\x19"\x91\x99\x16A\x03'
 
-    apdu = apdu_factory.apdu_from_bytes(apdu_bytes=dlms_data)
+    apdu = xdlms_apdu_factory.apdu_from_bytes(apdu_bytes=dlms_data)
 
     assert isinstance(apdu, GeneralGlobalCipherApdu)
 
@@ -23,7 +23,7 @@ def test_gen_glo_cipher_load():
 def test_data_notification_apdu():
     dlms_data = b'\x0f\x00\x00\x01\xdb\x00\t"\x12Z\x85\x916\x00\x00\x00\x00I\x00\x00\x00\x11\x00\x00\x00\nZ\x85\x13\xd0\x14\x80\x00\x00\x00\r\x00\x00\x00\n\x01\x00'
 
-    apdu = apdu_factory.apdu_from_bytes(dlms_data)
+    apdu = xdlms_apdu_factory.apdu_from_bytes(dlms_data)
 
     assert isinstance(apdu, DataNotificationApdu)
 

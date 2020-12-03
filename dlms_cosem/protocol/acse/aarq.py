@@ -19,7 +19,9 @@ def user_information_holds_initiate_request(
         )
 
 
-def aarq_should_set_authenticated(mechanism: acse_base.AuthenticationMechanism):
+def aarq_should_set_authenticated(
+    mechanism: Optional[acse_base.AuthenticationMechanism]
+):
     """
     * If Lowest Level Scurity (None) is used it shall not be present.
     * If Low Level Security (LLS) is used it should be present in request and may
@@ -27,10 +29,12 @@ def aarq_should_set_authenticated(mechanism: acse_base.AuthenticationMechanism):
     * If High Level Security (HLS) is used it should be present in both request and
         response (AARE) and indicate authentication (bit0 = 1)
     """
-    if mechanism == acse_base.AuthenticationMechanism.NONE:
-        return False
-    else:
-        return True
+    if mechanism:
+        if mechanism == acse_base.AuthenticationMechanism.NONE:
+            return False
+
+    return True
+
 
 @attr.s(auto_attribs=True)
 class ApplicationAssociationRequestApdu:
@@ -54,13 +58,6 @@ class ApplicationAssociationRequestApdu:
     AE = Application Entity
     ACSE = Association Control Service Element
 
-    :parameter protocol_version: DLMS Protocol version. Always is the default
-        (0) and is not used.
-
-    # TODO: can we remove the protocol version since it is always the default and if
-    # sent it should be the default?
-
-    Kernel:
     :parameter ciphered: Sets the AppContextName to indicate ciphered apdus.
 
     :parameter calling_ap_title:  If the `application_context_name` uses ciphering
@@ -175,7 +172,10 @@ class ApplicationAssociationRequestApdu:
         indicates authenticated.
         :return:
         """
-        if self.sender_acse_requirements is not None:
+        if (
+            self.sender_acse_requirements is not None
+            and self.authentication is not None
+        ):
             return acse_base.MechanismName(mechanism=self.authentication)
 
         return None
@@ -249,7 +249,9 @@ class ApplicationAssociationRequestApdu:
             if protocol_version != 0:
                 raise ValueError("Parsed a protocol version that is not 0")
 
-        application_context_name: acse_base.AppContextName = object_dict.pop("application_context_name")
+        application_context_name: acse_base.AppContextName = object_dict.pop(
+            "application_context_name"
+        )
         object_dict["ciphered"] = application_context_name.ciphered_apdus
         if not application_context_name.logical_name_refs:
             raise ValueError("Parsed a AARQ that uses Short Name Referencing!")
