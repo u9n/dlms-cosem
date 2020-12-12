@@ -41,7 +41,7 @@ class LongInvokeIdAndPriority:
 
     @classmethod
     def from_bytes(cls, bytes_data):
-        if len(bytes_data) is not 4:
+        if len(bytes_data) != 4:
             raise ValueError(
                 f"LongInvokeIdAndPriority is 4 bytes long,"
                 f" received: {len(bytes_data)}"
