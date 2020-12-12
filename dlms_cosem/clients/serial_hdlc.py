@@ -151,7 +151,7 @@ class SerialHdlcClient:
 
         info = self.generate_information_request(telegram)
         self._send_buffer.append(info)
-        response: frames.InformationFrame = self._drain_send_buffer()[0]
+        response = self._drain_send_buffer()[0]
 
         return response.payload
 
@@ -181,7 +181,6 @@ class SerialHdlcClient:
             # We found the first HDLC Frame Flag. We should read until the last one.
             in_bytes += self._serial.read_until(frames.HDLC_FLAG)
 
-        LOG.debug(f"Received: {in_bytes!r}")
         return in_bytes
 
     def __enter__(self):

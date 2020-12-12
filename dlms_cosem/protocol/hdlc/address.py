@@ -68,7 +68,9 @@ class HdlcAddress:
         return b"".join(out_bytes)
 
     @staticmethod
-    def _split_address(address: int) -> Tuple[int, int]:
+    def _split_address(address: int) -> Tuple[Optional[int], int]:
+        higher: Optional[int]
+        lower: int
 
         if address > 0b01111111:
             lower = (address & 0b0000000001111111) << 1
@@ -87,17 +89,17 @@ class HdlcAddress:
     @classmethod
     def destination_from_bytes(cls, frame_bytes: bytes, address_type: str):
         destination_address_data, _ = HdlcAddress.find_address_in_frame_bytes(
-            frame_bytes)
+            frame_bytes
+        )
         destination_logical, destination_physical, destination_length = (
-            destination_address_data)
+            destination_address_data
+        )
 
-        return cls(destination_logical,
-            destination_physical, address_type)
+        return cls(destination_logical, destination_physical, address_type)
 
     @classmethod
     def source_from_bytes(cls, frame_bytes: bytes, address_type: str):
-        _, source_address_data = HdlcAddress.find_address_in_frame_bytes(
-            frame_bytes)
+        _, source_address_data = HdlcAddress.find_address_in_frame_bytes(frame_bytes)
 
         source_logical, source_physical, source_length = source_address_data
         return cls(source_logical, source_physical, address_type)
@@ -116,10 +118,11 @@ class HdlcAddress:
         """
 
         # Find destination address.
-        destination_length = 1
-        destination_logical = 0
-        destination_physical = 0
-        destination_positions_list = [(3, 1), (4, 2), (6, 4)]
+        destination_length: int = 1
+        destination_logical: int = 0
+        destination_physical: Optional[int] = 0
+        destination_positions_list: List[Tuple[int, int]] = [(3, 1), (4, 2), (6, 4)]
+        address_bytes: bytes
         for pos, _length in destination_positions_list:
             end_byte = hdlc_frame_bytes[pos]
             if bool(end_byte & 0b00000001):
@@ -128,8 +131,8 @@ class HdlcAddress:
                 break
             continue
         if destination_length == 1:
-            address_bytes = hdlc_frame_bytes[3]
-            destination_logical = address_bytes >> 1
+            address_bytes = hdlc_frame_bytes[3].to_bytes(1, "big")
+            destination_logical = address_bytes[0] >> 1
             destination_physical = None
 
         elif destination_length == 2:
@@ -143,10 +146,10 @@ class HdlcAddress:
             destination_physical = HdlcAddress.parse_two_byte_address(address_bytes[3:])
 
         # Find source address
-        source_length = 1
-        source_logical = 0
-        source_physical = 0
-        source_position_list = [
+        source_length: int = 1
+        source_logical: int = 0
+        source_physical: Optional[int] = 0
+        source_position_list: List[Tuple[int, int]] = [
             (item[0] + destination_length, item[1])
             for item in destination_positions_list
         ]
@@ -158,8 +161,8 @@ class HdlcAddress:
                 break
             continue
         if source_length == 1:
-            address_bytes = hdlc_frame_bytes[3 + destination_length]
-            source_logical = address_bytes >> 1
+            address_bytes = hdlc_frame_bytes[3 + destination_length].to_bytes(1, "big")
+            source_logical = address_bytes[0] >> 1
             source_physical = None
 
         elif source_length == 2:

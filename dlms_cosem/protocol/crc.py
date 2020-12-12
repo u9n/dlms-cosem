@@ -7,10 +7,10 @@
 # The reversed crc is then XOR:ed with 0xFFFF
 #
 from ctypes import c_ushort
-
+from typing import *
 
 class CRCCCITT:
-    crc_ccitt_table = []
+    crc_ccitt_table: List[int] = list()
 
     # The CRC's are computed using polynomials.
 
@@ -37,18 +37,18 @@ class CRCCCITT:
 
         reversed_crc = self._calculate(reversed_data)
         lsb_rev = reversed_crc & 0x00FF
-        lsb = ord(reverse_byte(lsb_rev))
+        lsb: int = ord(reverse_byte(lsb_rev))
         lsb ^= 0xFF
-        lsb = chr(lsb).encode('latin-1')
+        lsb_byte = lsb.to_bytes(1, 'big')
         msb_rev = (reversed_crc & 0xFF00) >> 8
         msb = ord(reverse_byte(msb_rev))
         msb ^= 0xFF
-        msb = chr(msb).encode('latin-1')
+        msb_byte = msb.to_bytes(1, 'big')
 
         if lsb_first:
-            return b"".join((lsb, msb))
+            return b"".join([lsb_byte, msb_byte])
         else:
-            return b"".join((msb, lsb))
+            return b"".join([msb_byte, lsb_byte])
 
     def _calculate(self, input_data: bytes):
 

@@ -64,10 +64,10 @@ class UploadCommand(Command):
         sys.exit()
 
 
-with open('README.rst') as readme_file:
+with open('README.md') as readme_file:
     readme = readme_file.read()
 
-with open('HISTORY.rst') as history_file:
+with open('HISTORY.md') as history_file:
     history = history_file.read()
 
 setup(
@@ -84,7 +84,7 @@ setup(
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     include_package_data=True,
-    license='BSD 3-Clause License',
+    license='MIT',
     zip_safe=False,
     keywords='AMR, Metering, MDM, dlms, cosem',
     classifiers=[
