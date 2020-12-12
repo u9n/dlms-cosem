@@ -1,6 +1,28 @@
 
 # A Python library for DLMS/COSEM.
 
+[![codecov](https://codecov.io/gh/pwitab/dlms-cosem/branch/master/graph/badge.svg?token=RO37L11VQJ)](https://codecov.io/gh/pwitab/dlms-cosem)
+
+
+# Installation
+
+
+We only support Python 3.6+
+
+```
+pip install dlms-cosem
+```
+
+# Example Usage
+
+To parse a message you need to use the `XDlmsAPDUFactory`
+
+```python
+from dlms_cosem.protocol.dlms import xdlms_apdu_factory
+
+message = 'xxx'
+apdu = adpu_factory.apdu_from_bytes(message)
+```
 
 
 # DLMS/COSEM
@@ -135,24 +157,5 @@ This library is developed by Palmlund Wahlgren Innovative Technology AB. We are
 based in Sweden and are members of the DLMS User Association.
 
 
-# Installation
-
-
-We only support Python 3.6+
-
-.. code-block:: python
-
-    pip install dlms-cosem
-
-# Example Usage
-
-To parse a message you need to use the `XDlmsAPDUFactory`
-
-```python
-from dlms_cosem.protocol.dlms import xdlms_apdu_factory
-
-message = 'xxx'
-apdu = adpu_factory.apdu_from_bytes(message)
-```
 
 
