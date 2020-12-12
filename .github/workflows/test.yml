@@ -24,9 +24,11 @@ jobs:
         run: |
           python -m pytest -v --cov=dlms_cosem
 
-      - name: Coveralls
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Submit coverage report to Codecov
+          # only submit to Codecov once
+          if: ${{ matrix.python-version == 3.8 }}
+          uses: codecov/codecov-action@v1.0.12
+          with:
+            fail_ci_if_error: true
 
 
