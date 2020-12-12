@@ -79,7 +79,7 @@ class InitiateRequestApdu(AbstractXDlmsApdu):
     # TODO: Cannot be default and optional at the same time!
 
     proposed_conformance: Conformance
-    proposed_quality_of_service: int
+    proposed_quality_of_service: Optional[int] = attr.ib(default=None)
     client_max_receive_pdu_size: int = attr.ib(default=65535)
     proposed_dlms_version_number: int = attr.ib(default=6)
     response_allowed: bool = attr.ib(default=True)

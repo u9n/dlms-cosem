@@ -29,11 +29,16 @@ def aarq_should_set_authenticated(
     * If High Level Security (HLS) is used it should be present in both request and
         response (AARE) and indicate authentication (bit0 = 1)
     """
-    if mechanism:
-        if mechanism == acse_base.AuthenticationMechanism.NONE:
-            return False
+    if not mechanism:
+        return False
+
+    if mechanism == acse_base.AuthenticationMechanism.NONE:
+        return False
 
     return True
+
+
+
 
 
 @attr.s(auto_attribs=True)
@@ -83,6 +88,12 @@ class ApplicationAssociationRequestApdu:
         Even if there is no dedicated key the `InitiateRequestApdu` should be protected
         as above if there is need to protect the RLRQ
 
+    :parameter calling_ae_invocation_identifier: When used it holds the user_id of the
+        client. User ideentification is an optional feature, `Blue Bool 4.4.2`.
+        Not abvailable on presetablished associations.
+        The server (meter) should hold a users list and if the user_id is not present
+        in the meter the assiciation request is rejected.
+
 
     :parameter called_ap_title: Usage not defined in DLMS green book.
         Usage could be defined by meter manufacturer
@@ -99,8 +110,7 @@ class ApplicationAssociationRequestApdu:
     :parameter calling_ap_invocation_identifier: Usage not defined in DLMS green book.
         Usage could be defined by meter manufacturer
 
-    :parameter calling_ae_invocation_identifier: Usage not defined in DLMS green book.
-        Usage could be defined by meter manufacturer
+
 
     :parameter implementation_information: Usage not defined in DLMS green book.
         Usage could be defined by meter manufacturer
@@ -144,6 +154,8 @@ class ApplicationAssociationRequestApdu:
     user_information: Optional[acse_base.UserInformation] = attr.ib(
         default=None, validator=[user_information_holds_initiate_request]
     )
+    calling_ae_invocation_identifier: Optional[bytes] = attr.ib(default=None)
+
 
     # Not really used
     # TODO: Should we keep them?
@@ -152,7 +164,6 @@ class ApplicationAssociationRequestApdu:
     called_ap_invocation_identifier: Optional[bytes] = attr.ib(default=None)
     called_ae_invocation_identifier: Optional[bytes] = attr.ib(default=None)
     calling_ap_invocation_identifier: Optional[bytes] = attr.ib(default=None)
-    calling_ae_invocation_identifier: Optional[bytes] = attr.ib(default=None)
     implementation_information: Optional[bytes] = attr.ib(default=None)
 
     @property

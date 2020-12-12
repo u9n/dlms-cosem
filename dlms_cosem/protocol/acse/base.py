@@ -8,9 +8,6 @@ from dlms_cosem.protocol.ber import BER
 
 from dlms_cosem.protocol import xdlms
 
-# TODO: These classes are placeholders!
-from dlms_cosem.protocol.dlms import ConfirmedServiceErrorApdu, xdlms_apdu_factory
-
 
 class AbstractAcseApdu(abc.ABC):
     @classmethod
@@ -232,7 +229,9 @@ class UserInformation:
     tag = b"\x04"  # is encoded as an octetstring
 
     content: Union[
-        xdlms.InitiateRequestApdu, xdlms.InitiateResponseApdu, ConfirmedServiceErrorApdu
+        xdlms.InitiateRequestApdu,
+        xdlms.InitiateResponseApdu,
+        xdlms.ConfirmedServiceErrorApdu,
     ]
 
     @classmethod
@@ -243,7 +242,16 @@ class UserInformation:
                 f"The tag for UserInformation data should be 0x04" f"not {tag!r}"
             )
 
-        return cls(content=xdlms_apdu_factory.apdu_from_bytes(data))
+        if data[0] == 1:
+            return cls(content=xdlms.InitiateRequestApdu.from_bytes(data))
+        elif data[0] == 8:
+            return cls(content=xdlms.InitiateResponseApdu.from_bytes(data))
+        elif data[0] == 14:
+            return cls(content=xdlms.ConfirmedServiceErrorApdu.from_bytes(data))
+        else:
+            raise ValueError(
+                f"Not able to find a proper data tag in UserInformation. Got {data[0]}"
+            )
 
     def to_bytes(self):
         return BER.encode(self.tag, self.content.to_bytes())

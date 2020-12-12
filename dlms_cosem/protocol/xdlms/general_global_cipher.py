@@ -105,7 +105,7 @@ class CipheredContent:
     """
 
     security_header: SecurityHeader
-    ciphered_text: bytes
+    cipher_text: bytes
 
     @classmethod
     def from_bytes(cls, _bytes_data):
@@ -135,13 +135,13 @@ class GeneralGlobalCipherApdu(AbstractXDlmsApdu):
 
     ENCODING_CONF = a_xdr.EncodingConf(
         [
-            a_xdr.AttributeEncoding(
+            a_xdr.Attribute(
                 attribute_name="system_title",
-                instance_class=OctetStringData,
-                return_value=True,
+                create_instance=OctetStringData.from_bytes,
             ),
-            a_xdr.AttributeEncoding(
-                attribute_name="ciphered_content", instance_class=CipheredContent
+            a_xdr.Attribute(
+                attribute_name="ciphered_content",
+                create_instance=CipheredContent.from_bytes,
             ),
         ]
     )

@@ -39,6 +39,7 @@ AWAITING_ASSOCIATION_RESPONSE = make_sentinel("AWAITING_ASSOCIATION_RESPONSE")
 READY = make_sentinel("READY")
 
 AWAITING_RELEASE_RESPONSE = make_sentinel("AWAITING_RELEASE_RESPONSE")
+AWAITING_GET_RESPONSE = make_sentinel("AWATING_GET_RESPONSE")
 
 NEED_DATA = make_sentinel("NEED_DATA")
 
@@ -49,7 +50,11 @@ DLMS_STATE_TRANSITIONS = {
         acse.ApplicationAssociationRequestApdu: AWAITING_ASSOCIATION_RESPONSE
     },
     AWAITING_ASSOCIATION_RESPONSE: {acse.ApplicationAssociationResponseApdu: READY},
-    READY: {acse: AWAITING_RELEASE_RESPONSE},
+    READY: {
+        acse.ReleaseRequestApdu: AWAITING_RELEASE_RESPONSE,
+        xdlms.GetRequest: AWAITING_GET_RESPONSE,
+    },
+    AWAITING_GET_RESPONSE: {xdlms.GetResponse: READY},
     AWAITING_RELEASE_RESPONSE: {acse.ReleaseResponseApdu: NO_ASSOCIATION},
 }
 

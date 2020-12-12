@@ -74,6 +74,7 @@ class HdlcConnection:
         After this you could call next_event
         """
         if data:
+            LOG.debug(f"Received HDLC data: {data!r}")
             self.buffer += data
 
     def next_event(self):
@@ -97,8 +98,10 @@ class HdlcConnection:
         if frame is None:
             return NEED_DATA
 
+        LOG.debug(f"Received frame: {frame}")
         self.state.process_frame(frame)
         self._tidy_buffer()
+
         return frame
 
     def _find_frame(self):

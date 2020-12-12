@@ -134,7 +134,7 @@ def test_simple_rlrq_with_ciphered_initiate_request():
         "6239800100BE34043221303001234567801302FF8A7874133D414CED25B42534D28DB0047720606B175BD52211BE6841DB204D39EE6FDB8E356855"
     )
     # TODO: We don't have support for globaly ciphered initiate request
-    with pytest.raises(KeyError):
+    with pytest.raises(ValueError):
         rlrq = ReleaseRequestApdu.from_bytes(data)
         print(rlrq)
         print(rlrq.reason.value)

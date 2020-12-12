@@ -15,6 +15,7 @@ class ReleaseRequestReason(IntEnum):
     URGENT = 1
     USER_DEFINED = 30
 
+
 # TODO: It might be a better approach to give the callable and not the class to make a
 #   object from bytes. This means we could jack into the creation if needed
 #   and also using partials and other for integers etc.
@@ -68,7 +69,6 @@ class ReleaseRequestApdu(AbstractAcseApdu):
         object_dict = dict()
         # use the data in tags to go through the bytes and create objects.
         while True:
-            # TODO: this does not take into account when defining objects in dict and not using them.
             object_tag = rlrq_data.pop(0)
             object_desc = ReleaseRequestApdu.PARSE_TAGS.get(object_tag, None)
             if object_desc is None:

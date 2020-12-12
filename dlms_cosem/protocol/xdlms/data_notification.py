@@ -3,13 +3,13 @@ from typing import *
 import attr
 
 from dlms_cosem.protocol.a_xdr import (
-    AttributeEncoding,
+    Attribute,
     AXdrDecoder,
     DlmsDataToPythonConverter,
     EncodingConf,
-    SequenceEncoding,
+    Sequence,
 )
-from dlms_cosem.protocol.dlms_data import DlmsData, DateTimeData
+from dlms_cosem.protocol.dlms_data import BaseDlmsData, DateTimeData
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 
 
@@ -70,10 +70,10 @@ class NotificationBody:
     """
 
     ENCODING_CONF = EncodingConf(
-        attributes=[SequenceEncoding(attribute_name="encoding_conf")]
+        attributes=[Sequence(attribute_name="encoding_conf")]
     )
 
-    data: List[DlmsData] = attr.ib(default=None)
+    data: List[BaseDlmsData] = attr.ib(default=None)
     encoding_conf: EncodingConf = attr.ib(
         default=None
     )  # To store the data structure to be able to encode it again after initial decode.
@@ -116,21 +116,21 @@ class DataNotificationApdu(AbstractXDlmsApdu):
 
     ENCODING_CONF = EncodingConf(
         attributes=[
-            AttributeEncoding(
+            Attribute(
                 attribute_name="long_invoke_id_and_priority",
-                instance_class=LongInvokeIdAndPriority,
+                create_instance=LongInvokeIdAndPriority.from_bytes,
                 length=4,
             ),
-            AttributeEncoding(
+            Attribute(
                 attribute_name="date_time",
-                instance_class=DateTimeData,
+                create_instance=DateTimeData.from_bytes,
                 optional=True,
                 length=12,
             ),
-            AttributeEncoding(
+            Sequence(
                 attribute_name="notification_body",
-                instance_class=NotificationBody,
-                wrap_end=True,
+                #create_instance=NotificationBody.from_bytes,
+                #wrap_end=True,
             ),
         ]
     )

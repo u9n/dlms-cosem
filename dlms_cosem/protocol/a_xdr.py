@@ -40,7 +40,10 @@ integer data. ex 0b10000010 -> 2 bytes after this is the integer. 0x820xff0xff =
 
 import attr
 from typing import *
-from dlms_cosem.protocol.dlms_data import DlmsDataFactory, DlmsData
+from dlms_cosem.protocol.dlms_data import DlmsDataFactory, BaseDlmsData
+import asn1crypto
+
+VARIABLE_LENGTH = -1
 
 
 def decode_variable_integer(bytes_input: bytes):
@@ -60,8 +63,8 @@ def decode_variable_integer(bytes_input: bytes):
     is_mutliple_bytes = bool(bytes_input[0] & 0b10000000)
     if is_mutliple_bytes:
         length_length = int(bytes_input[0] & 0b01111111)
-        length = int(bytes_input[1:(length_length + 1)])
-        return length, bytes_input[length_length + 1:]
+        length = int(bytes_input[1 : (length_length + 1)])
+        return length, bytes_input[length_length + 1 :]
 
     else:
         length = int(bytes_input[0] & 0b01111111)
@@ -73,163 +76,148 @@ class DataSequenceEncoding:
     attribute_name: str = attr.ib()
 
 
-class AXdrEncoding:
-    attribute_name = attr.ib()
+@attr.s(auto_attribs=True)
+class Attribute:
+    attribute_name: str
+    create_instance: Callable
+    length: int = attr.ib(default=VARIABLE_LENGTH)
+    return_value: Optional[bool] = attr.ib(default=False)
+    wrap_end: Optional[bool] = attr.ib(default=False)  # Maybe name wrapper?
+    default: Optional[Any] = attr.ib(default=None)
+    optional: Optional[bool] = attr.ib(default=False)
 
 
-@attr.s
-class AttributeEncoding(AXdrEncoding):
-    attribute_name: str = attr.ib()
-    instance_class = attr.ib()
-    return_value = attr.ib(default=False)
-    wrap_end = attr.ib(default=False)  # Maybe name wrapper?
-    length: int = attr.ib(default=None)
-    default: Any = attr.ib(default=None)
-    optional: bool = attr.ib(default=False)
-
-
-@attr.s
-class SequenceEncoding(AXdrEncoding):
-    attribute_name: str = attr.ib()
+@attr.s(auto_attribs=True)
+class Sequence:
+    attribute_name: str
     instance_factory: DlmsDataFactory = attr.ib(factory=DlmsDataFactory)
 
 
-@attr.s
+@attr.s(auto_attribs=True)
+class Choice:
+    choices: Dict[bytes, Union[Attribute, Sequence]]
+
+
+@attr.s(auto_attribs=True)
 class EncodingConf:
-    attributes: List[AXdrEncoding] = attr.ib()
+    attributes: List[Union[Attribute, Sequence, Choice]]
 
+# TODO: we need to be able to fix the lenght of variable lenght data.
+# TODO: if it is the last element give it all data left.
 
+@attr.s(auto_attribs=True)
 class AXdrDecoder:
+    encoding_conf: EncodingConf
+    buffer: bytearray = attr.ib(factory=bytearray)
+    pointer: int = attr.ib(default=0)
+    result: Dict[str, Any] = attr.ib(factory=list)
 
-    def __init__(self, encoding_conf):
+    @property
+    def buffer_empty(self) -> bool:
+        return self.pointer == len(self.buffer)
 
-        self.encoding_conf: EncodingConf = encoding_conf
+    def decode(self, data: bytes):
+        # clear previous results
+        self.result = dict()
+        # fill the buffer
+        self.buffer += data
+        for index, data_attribute in enumerate(self.encoding_conf.attributes):
+            self.result.update(self.decode_single(data_attribute, index))
 
-    def decode(self, bytes_data: bytes):
-        """
-        return a dict to instantiate the class with
-        """
-        # print(bytes_data)
-        in_data = bytes_data[:]  # copy so we don't work in the actual data.
-        # print(in_data)
+        return self.result
 
-        out_dict = dict()
+    def is_last_encoding_element(self, index: int) -> bool:
+        return index == len(self.encoding_conf.attributes)
 
-        for attribute in self.encoding_conf.attributes:
+    def get_buffer_tail(self) -> bytearray:
+        return self.buffer[self.pointer:]
 
-            key = attribute.attribute_name
+    def decode_single(self, _type, index: int) -> Dict:
 
-            # print(b'To decode' + in_data)
+        if isinstance(_type, Attribute):
+            return {_type.attribute_name: self.decode_attribute(_type, index)}
 
-            if isinstance(attribute, AttributeEncoding):
+        elif isinstance(_type, Choice):
+            choice = _type.choices[bytes(self.get_bytes(1))]
+            return self.decode_single(choice, index)
 
-                data, rest = self._decode_attribute(in_data, attribute)
-
-                if attribute.return_value:
-                    data = data.value
-
-            elif isinstance(attribute, SequenceEncoding):
-
-                data, rest = self._decode_sequence(in_data, attribute)
-            else:
-                raise NotImplementedError(f'Attribute: {attribute} is not supported')
-
-            in_data = rest
-            out_dict.update({key: data})
-
-        return out_dict
-
-    def _decode_attribute(self, in_data, attribute):
-
-        #print(b'parsing data: ' + in_data)
-        #print(f'Attribute: {attribute}')
-
-        first_byte = in_data[0]
-
-        if first_byte == 0 and attribute.optional:
-            data = None  # Should this be a nulldata instead?
-            return data, in_data[1:]
-
-        elif first_byte == 0 and attribute.default is not None:
-            data = attribute.default
-            return data, in_data[1:]
-
-        elif first_byte == 1 and (attribute.optional or attribute.default):
-            # a value is existing and is after the 0x01
-            in_data = in_data[1:]  # remove the first byte
-
-        # Check if length is known.
-        if attribute.length:
-            attribute_data = in_data[:attribute.length]
-            data = attribute.instance_class.from_bytes(attribute_data)
-            return data, in_data[attribute.length:]
-
-        if attribute.wrap_end:
-            attribute_data = in_data
-            data = attribute.instance_class.from_bytes(attribute_data)
-            return data, b''
-
-        # first byte indicates length.
-        attribute_data = in_data[1:(first_byte + 1)]
-        data = attribute.instance_class.from_bytes(attribute_data)
-        return data, in_data[(first_byte + 1):]
-
-    def _decode_sequence(self, bytes_data: bytes, attribute):
-        in_data = bytes_data[:]  # copy so not to mess with initial data
-        data_list = list()
-
-        while in_data:
-            first_obj, rest = self._get_first(in_data)
-
-            data_list.append(first_obj)
-            in_data = rest
-
-        return data_list, in_data
-
-    def _get_tag(self, bytes_data: bytes):
-        return bytes_data[0]
-
-    def _get_length(self, tag, bytes_data):
-        """
-        If we know the length of the data it will not be encoded. But it the data is
-        of a type where the length cannot be predetermined we need to decode the
-        lenght. This is done by the same way the DLMS way to encode and decode
-        variable integers
-
-        """
-        data_cls = DlmsDataFactory.get_data_class(tag)
-        if data_cls.LENGTH is None:
-            length, rest = decode_variable_integer(bytes_data[1:])
-            return length, rest
-
+        elif isinstance(_type, Sequence):
+            return self.decode_sequence(_type)
         else:
-            return data_cls.LENGTH, bytes_data[1:]
+            raise ValueError("No valid class type")
 
-    def _get_tag_length_value(self, bytes_data: bytes):
+    def decode_attribute(self, attribute: Attribute, index: int) -> Optional[Any]:
+        if attribute.optional:
+            indicator = self.get_bytes(1)
+            if indicator == b"\x00":
+                # Not used.
+                return None
 
-        tag = self._get_tag(bytes_data)
-        length, rest = self._get_length(tag, bytes_data)
-        value = rest[:length]
-        rest = rest[length:]
-        return tag, length, value, rest
+        if attribute.default is not None:
+            indicator = self.get_bytes(1)
+            if indicator == b"\x00":
+                # use the default
+                return attribute.default
 
-    def _get_first(self, bytes_data: bytes):
+        # fixed lenght?  # TODO: Is all attributes of fixed lenght in X-ADR?
+        if attribute.length != VARIABLE_LENGTH:
+            data = self.get_bytes(attribute.length)
+            return attribute.create_instance(data)
+        else:
+            # check if last element
+            if self.is_last_encoding_element(index):
+                return attribute.create_instance()
+            # We know hot to create the instance (just not how long it is)
+            length = int.from_bytes(self.get_bytes(1), 'big')
+            data = self.get_bytes(length)
+            return attribute.create_instance(data)
 
-        tag, length, value, rest = self._get_tag_length_value(bytes_data)
+    def decode_fixed_length_attribute(self, encoding: Attribute, data) -> Any:
+        """
+        When we know the encoding of a fixed length value we can just feed the data to the instance_creator
+        """
+        return encoding.create_instance(data)
 
-        data_cls = DlmsDataFactory.get_data_class(tag)
+    def decode_sequence(self, seq: Sequence) -> Dict:
+        parsed_data = list()
 
-        data = data_cls(value, length=length)
+        while not self.buffer_empty:
 
-        return data, rest
+            tag = self.get_bytes(1)
 
-    def encode(self, to_encode):
-        raise NotImplemented('Encoding objects to A-XDR is not yet supported.')
+            data_class = DlmsDataFactory.get_data_class(int.from_bytes(tag, "big"))
+            if data_class.LENGTH != VARIABLE_LENGTH:
+                parsed_data.append(
+                    data_class.from_bytes(bytes(self.get_bytes(data_class.LENGTH))).to_python()
+                )
+                continue
+
+            # TODO: should have a function to get variable intefer incase it is longer
+            #   than what a normal byte can handle.
+
+            length_or_items = self.get_bytes(1)
+            parsed_data.append(
+                data_class.from_bytes(
+                    bytes(self.get_bytes(int.from_bytes(length_or_items, "big")))
+                ).to_python()
+            )
+            continue
+
+        if len(parsed_data) == 1:
+            return {seq.attribute_name: parsed_data[0]}
+
+        return {seq.attribute_name: parsed_data}
+
+    def get_bytes(self, length: int) -> bytearray:
+        """Gets some bytes from the buffer and moves the pointer forward."""
+        part = self.buffer[self.pointer : self.pointer + length]
+        self.pointer += length
+        return part
+
 
 
 class DlmsDataToPythonConverter:
-
-    def __init__(self, encoding_conf: List[DlmsData]):
+    def __init__(self, encoding_conf: List[BaseDlmsData]):
         self.encoding_conf = encoding_conf
 
     def to_python(self):
@@ -240,5 +228,4 @@ class DlmsDataToPythonConverter:
         return out_list
 
     def to_dlms(self, data: List):
-        raise NotImplementedError(
-            'Not yet supported to convert python values to DLMS')
+        raise NotImplementedError("Not yet supported to convert python values to DLMS")

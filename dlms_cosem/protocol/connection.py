@@ -3,7 +3,11 @@ from typing import *
 import attr
 
 from dlms_cosem.protocol.xdlms.conformance import Conformance
-from dlms_cosem.protocol import acse, xdlms, dlms, state
+from dlms_cosem.protocol import acse, xdlms, dlms
+from dlms_cosem.protocol import state as dlms_state
+import logging
+
+LOG = logging.getLogger(__name__)
 
 
 @attr.s(auto_attribs=True)
@@ -21,16 +25,19 @@ class DlmsConnection:
     # conformance block.
     conformance: Conformance
 
+    buffer: bytearray = attr.ib(factory=bytearray)
+    state: dlms_state.DlmsConnectionState = attr.ib(
+        factory=dlms_state.DlmsConnectionState
+    )
+
     # The encryption key used to global cipher service.
-    global_encryption_key: Optional[bytes]
+    global_encryption_key: Optional[bytes] = attr.ib(default=None)
+    global_invocation_counter: Optional[int] = attr.ib(default=None)
 
     # the max pdu size controls when we need to use block transfer. If the message is
     # larger than max_pdu_size we automatically use the general block service.
     # Unless it is not suppoeted in conformance. Then raise error.
     max_pdu_size: int = attr.ib(default=65535)
-
-    buffer: bytearray = attr.ib(factory=bytearray)
-    state: state.DlmsConnectionState = attr.ib(factory=state.DlmsConnectionState)
 
     def send(self, event) -> bytes:
         """
@@ -56,6 +63,7 @@ class DlmsConnection:
         After this you could call next_event
         """
         if data:
+            LOG.debug(f"Received DLMS data: {data!r}")
             self.buffer += data
 
     def next_event(self):
@@ -78,16 +86,19 @@ class DlmsConnection:
         if self.use_protection:
             apdu = self.unprotect(apdu)
 
-        # Update the connection with the negotiated parameters.
         if (
-            self.state.current_state == state.AWAITING_ASSOCIATION_RESPONSE
+            self.state.current_state == dlms_state.AWAITING_ASSOCIATION_RESPONSE
             and isinstance(apdu, acse.ApplicationAssociationResponseApdu)
         ):
-            self.process_aare(apdu)
+            self.update_negotiated_parameters(apdu)
 
         self.state.process_event(apdu)
+        self.clear_buffer()
 
         return apdu
+
+    def clear_buffer(self):
+        self.buffer = bytearray()
 
     @property
     def use_protection(self) -> bool:
@@ -144,12 +155,18 @@ class DlmsConnection:
             user_information=acse.UserInformation(content=initiate_request),
         )
 
-    def process_aare(self, aare: acse.ApplicationAssociationResponseApdu) -> None:
+    def update_negotiated_parameters(
+        self, aare: acse.ApplicationAssociationResponseApdu
+    ) -> None:
         """
         When the AARE is received we need to update the connection to the negotiated
         parameters from the server (meter)
         :param aare:
         :return:
         """
-        self.conformance = aare.user_information.content.negotiated_conformance
-        self.max_pdu_size = aare.user_information.content.server_max_receive_pdu_size
+        if aare.user_information:
+            assert isinstance(aare.user_information.content, xdlms.InitiateResponseApdu)
+            self.conformance = aare.user_information.content.negotiated_conformance
+            self.max_pdu_size = (
+                aare.user_information.content.server_max_receive_pdu_size
+            )

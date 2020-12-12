@@ -52,13 +52,13 @@ class ReleaseResponseApdu(AbstractAcseApdu):
 
         rlrq_tag = rlrq_data.pop(0)
         if not rlrq_tag == cls.TAG:
-            raise ValueError("Bytes are not an AARQ APDU. TAg is not int(96)")
+            raise ValueError("Bytes are not an RLRE APDU. TAg is not int(96)")
 
         rlrq_length = rlrq_data.pop(0)
 
         if not len(rlrq_data) == rlrq_length:
             raise ValueError(
-                "The APDU Data lenght does not correspond " "to length byte"
+                f"The APDU Data lenght does not correspond to length byte, should be {rlrq_length} but is {len(rlrq_data)}"
             )
 
         # Assumes that the protocol-version is 1 and we don't need to decode it

@@ -20,9 +20,6 @@ class WriteResponseApdu:
     pass
 
 
-class ConfirmedServiceErrorApdu:
-    pass
-
 
 class XDlmsApduFactory:
     """
@@ -39,7 +36,7 @@ class XDlmsApduFactory:
         8: xdlms.InitiateResponseApdu,
         12: ReadResponseApdu,
         13: WriteResponseApdu,
-        14: ConfirmedServiceErrorApdu,
+        14: xdlms.ConfirmedServiceErrorApdu,
         15: xdlms.DataNotificationApdu,
         219: xdlms.GeneralGlobalCipherApdu,
         # ACSE APDUs:
@@ -47,6 +44,8 @@ class XDlmsApduFactory:
         97: acse.ApplicationAssociationResponseApdu,
         98: acse.ReleaseRequestApdu,
         99: acse.ReleaseResponseApdu,
+        192: xdlms.GetRequest,
+        196: xdlms.GetResponse,
     }
 
     def __init__(self):
@@ -59,7 +58,6 @@ class XDlmsApduFactory:
             apdu_class = self.APDU_MAP[tag]
         except KeyError as e:
             raise KeyError(f"Tag {tag!r} is not available in DLMS APDU Factory") from e
-
         return apdu_class.from_bytes(apdu_bytes)
 
 
