@@ -2,8 +2,10 @@ import datetime
 import abc
 from typing import *
 import attr
+from dlms_cosem.protocol import time
 
 VARIABLE_LENGTH = -1
+
 
 
 class AbstractDlmsData(abc.ABC):
@@ -29,7 +31,7 @@ class BaseDlmsData(AbstractDlmsData):
         raise NotImplementedError()
 
     def to_python(self) -> Any:
-        raise NotImplementedError()
+        return self.value
 
 
 @attr.s(auto_attribs=True)
@@ -264,14 +266,18 @@ class Float64Data(BaseDlmsData):
 
 @attr.s(auto_attribs=True)
 class DateTimeData(BaseDlmsData):
-    """Octet string of 12 bytes"""
+    """Octet string of 12 bytes
+    """
 
     TAG = 25
     LENGTH = 12
 
     @classmethod
-    def from_bytes(cls, bytes_data):
-        raise NotImplementedError("Need to implement Datetime parsing")
+    def from_bytes(cls, bytes_data: bytes):
+        if len(bytes_data) != cls.LENGTH:
+            raise ValueError(f"Datetime should be 12 bytes long, got {len(bytes_data)}")
+        return cls(time.datetime_from_bytes(bytes_data))
+
 
 
 @attr.s(auto_attribs=True)
@@ -281,6 +287,12 @@ class DateData(BaseDlmsData):
     TAG = 26
     LENGTH = 5
 
+    @classmethod
+    def from_bytes(cls, bytes_data: bytes):
+        if len(bytes_data) != cls.LENGTH:
+            raise ValueError(f"Date should be 5 bytes long, got {len(bytes_data)}")
+        return cls(time.date_from_bytes(bytes_data))
+
 
 @attr.s(auto_attribs=True)
 class TimeData(BaseDlmsData):
@@ -288,6 +300,12 @@ class TimeData(BaseDlmsData):
 
     TAG = 27
     LENGTH = 4
+
+    @classmethod
+    def from_bytes(cls, bytes_data: bytes):
+        if len(bytes_data) != cls.LENGTH:
+            raise ValueError(f"Time should be 4 bytes long, got {len(bytes_data)}")
+        return cls(time.time_from_bytes(bytes_data))
 
 
 @attr.s(auto_attribs=True)

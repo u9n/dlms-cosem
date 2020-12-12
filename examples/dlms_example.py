@@ -5,7 +5,7 @@ from dlms_cosem.protocol.acse.base import UserInformation, AppContextName
 
 from dlms_cosem.protocol.xdlms.conformance import Conformance
 from dlms_cosem.protocol.xdlms.initiate_request import InitiateRequestApdu
-from dlms_cosem.protocol import cosem
+from dlms_cosem.protocol import cosem, time
 import logging
 
 # set up logging so you get a bit nicer printout of what is happening.

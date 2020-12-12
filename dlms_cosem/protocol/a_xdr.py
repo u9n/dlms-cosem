@@ -40,7 +40,7 @@ integer data. ex 0b10000010 -> 2 bytes after this is the integer. 0x820xff0xff =
 
 import attr
 from typing import *
-from dlms_cosem.protocol.dlms_data import DlmsDataFactory, BaseDlmsData
+from dlms_cosem.protocol import dlms_data
 import asn1crypto
 
 VARIABLE_LENGTH = -1
@@ -89,8 +89,19 @@ class Attribute:
 
 @attr.s(auto_attribs=True)
 class Sequence:
+    """A sequence acts as a structure (dict) since we can have differenct objects in
+    the sequence."""
     attribute_name: str
-    instance_factory: DlmsDataFactory = attr.ib(factory=DlmsDataFactory)
+    instance_factory: dlms_data.DlmsDataFactory = attr.ib(factory=dlms_data.DlmsDataFactory)
+
+@attr.s(auto_attribs=True)
+class SequenceOf:
+    """
+    A sequence OF behaves like a list since we only have the same objects in it.
+    In A-XDR the length is also not the number of bytes but the number of elementns in
+    the Sequence.
+    """
+    pass
 
 
 @attr.s(auto_attribs=True)
@@ -102,8 +113,10 @@ class Choice:
 class EncodingConf:
     attributes: List[Union[Attribute, Sequence, Choice]]
 
+
 # TODO: we need to be able to fix the lenght of variable lenght data.
 # TODO: if it is the last element give it all data left.
+
 
 @attr.s(auto_attribs=True)
 class AXdrDecoder:
@@ -130,7 +143,7 @@ class AXdrDecoder:
         return index == len(self.encoding_conf.attributes)
 
     def get_buffer_tail(self) -> bytearray:
-        return self.buffer[self.pointer:]
+        return self.buffer[self.pointer :]
 
     def decode_single(self, _type, index: int) -> Dict:
 
@@ -168,7 +181,7 @@ class AXdrDecoder:
             if self.is_last_encoding_element(index):
                 return attribute.create_instance()
             # We know hot to create the instance (just not how long it is)
-            length = int.from_bytes(self.get_bytes(1), 'big')
+            length = int.from_bytes(self.get_bytes(1), "big")
             data = self.get_bytes(length)
             return attribute.create_instance(data)
 
@@ -185,10 +198,21 @@ class AXdrDecoder:
 
             tag = self.get_bytes(1)
 
-            data_class = DlmsDataFactory.get_data_class(int.from_bytes(tag, "big"))
+            data_class = dlms_data.DlmsDataFactory.get_data_class(int.from_bytes(tag, "big"))
+
+            if data_class == dlms_data.DataArray:
+                parsed_data.append(self.decode_array())
+                continue
+
+            if data_class == dlms_data.DataStructure:
+                parsed_data.append(self.decode_structure)
+                continue
+
             if data_class.LENGTH != VARIABLE_LENGTH:
                 parsed_data.append(
-                    data_class.from_bytes(bytes(self.get_bytes(data_class.LENGTH))).to_python()
+                    data_class.from_bytes(
+                        bytes(self.get_bytes(data_class.LENGTH))
+                    ).to_python()
                 )
                 continue
 
@@ -208,16 +232,59 @@ class AXdrDecoder:
 
         return {seq.attribute_name: parsed_data}
 
+    def decode_sequence_of(self):
+
+        tag = int.from_bytes(self.get_bytes(1), 'big')
+        data_class = dlms_data.DlmsDataFactory.get_data_class(tag)
+
+        if data_class == dlms_data.DataArray:
+            return self.decode_array()
+
+        if data_class == dlms_data.DataStructure:
+            return self.decode_structure()
+
+        else:
+            return self.decode_data(data_class)
+
+
+    def decode_data(self, data_class):
+        assert data_class not in [dlms_data.DataArray, dlms_data.DataStructure]
+
+        if data_class.LENGTH == VARIABLE_LENGTH:
+            length = int.from_bytes(self.get_bytes(1), 'big')
+            return data_class.from_bytes(self.get_bytes(length)).to_python()
+        else:
+            return data_class.from_bytes(self.get_bytes(data_class.LENGTH)).to_python()
+
+    def decode_array(self):
+        item_count = int.from_bytes(self.get_bytes(1), "big")
+        elements = list()
+        for _ in range(0, item_count):
+            elements.append(self.decode_sequence_of())
+        return elements
+
+
+    def decode_structure(self):
+        item_count = int.from_bytes(self.get_bytes(1), 'big')
+        elements = list()
+        for _ in range(0, item_count):
+            elements.append(self.decode_sequence_of())
+
+        return elements
+
     def get_bytes(self, length: int) -> bytearray:
         """Gets some bytes from the buffer and moves the pointer forward."""
         part = self.buffer[self.pointer : self.pointer + length]
         self.pointer += length
         return part
 
+    @property
+    def remaining_buffer(self) -> bytearray:
+        return self.buffer[self.pointer:]
 
 
 class DlmsDataToPythonConverter:
-    def __init__(self, encoding_conf: List[BaseDlmsData]):
+    def __init__(self, encoding_conf: List[dlms_data.BaseDlmsData]):
         self.encoding_conf = encoding_conf
 
     def to_python(self):
