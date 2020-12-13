@@ -49,7 +49,7 @@ client = SerialDlmsClient(
 #    client.get()
 client.associate()
 result = client.get(
-    ic=cosem.CosemInterface.DATA, instance=cosem.Obis(0, 0, 0x2A, 0, 0), attribute=2
+    ic=cosem.CosemInterface.DATA, instance=cosem.Obis(0, 0, 0x2b, 1, 0), attribute=2
 )
 print(result)
 #bytes.fromhex("C001C1000100002A0000FF0200")

@@ -2,6 +2,7 @@ from typing import *
 from enum import IntEnum
 import attr
 from dlms_cosem.protocol.acse import base as acse_base
+from dlms_cosem.protocol.acse.aarq import aarq_should_set_authenticated
 from dlms_cosem.protocol.ber import BER
 from asn1crypto.core import Choice, Integer
 
@@ -135,8 +136,8 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
         165: ("responding_ae_qualifier", None),
         166: ("responding_ap_invocation_id", None),
         167: ("responding_ae_invocation_id", None),
-        168: ("responder_acse_requirements", None),
-        169: ("mechanism_name", acse_base.MechanismName),
+        0x88: ("responder_acse_requirements", None),
+        0x89: ("mechanism_name", acse_base.MechanismName),
         170: ("responding_authentication_value", acse_base.AuthenticationValue),
         189: ("implementation_information", None),
         0xBE: (
@@ -145,23 +146,45 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
         ),  # Context specific, constructed 30
     }
 
+    # TODO: same auth handling as AARQ
     result: AssociationResult
     result_source_diagnostics: Union[
         AcseServiceUserDiagnostics, AcseServiceProviderDiagnostics
     ]
     ciphered: bool = attr.ib(default=False)
+    authentication: Optional[acse_base.AuthenticationMechanism] = attr.ib(default=None)
     responding_ap_title: Optional[bytes] = attr.ib(default=None)
     responding_ae_qualifier: Optional[bytes] = attr.ib(default=None)
-
-    responder_acse_requirements: Optional[bytes] = attr.ib(default=None)
-    mechanism_name: Optional[acse_base.MechanismName] = attr.ib(default=None)
-    responding_authentication_value: Optional[bytes] = attr.ib(default=None)
+    responding_authentication_value: Optional[acse_base.AuthenticationValue] = attr.ib(default=None)
     user_information: Optional[acse_base.UserInformation] = attr.ib(default=None)
 
     # Not really used.
     implementation_information: Optional[bytes] = attr.ib(default=None)
     responding_ap_invocation_id: Optional[bytes] = attr.ib(default=None)  # Not used.
     responding_ae_invocation_id: Optional[bytes] = attr.ib(default=None)  # Not used.
+
+    @property
+    def responder_acse_requirements(self) -> Optional[acse_base.AuthFunctionalUnit]:
+        """
+        Is only sent if the AuthFunctionalUnit needs to indicate authentication.
+        """
+        if aarq_should_set_authenticated(self.authentication):
+            return acse_base.AuthFunctionalUnit(True)
+
+        return None
+
+    @property
+    def mechanism_name(self) -> Optional[acse_base.MechanismName]:
+        """
+        The mechanism_name field should only be present if the AuthFunctionalUnit
+        indicates authenticated.
+        :return:
+        """
+        if (
+                self.responder_acse_requirements is not None and self.authentication is not None):
+            return acse_base.MechanismName(mechanism=self.authentication)
+
+        return None
 
     @property
     def application_context_name(self) -> acse_base.AppContextName:
@@ -212,7 +235,6 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
                     f"Could not find object with tag {object_tag} "
                     f"in AARQ definition"
                 )
-
             object_length = aare_data.pop(0)
             object_data = bytes(aare_data[:object_length])
             aare_data = aare_data[object_length:]
@@ -260,6 +282,16 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
 
         else:
             raise ValueError("Not a valid choice of result_source_diagnostics")
+
+        responder_acse_requirements: Optional[
+            acse_base.AuthFunctionalUnit] = object_dict.pop("responder_acse_requirements",
+                                                            None)
+
+        mechanism_name: Optional[acse_base.MechanismName] = object_dict.pop(
+            "mechanism_name", None)
+
+        if responder_acse_requirements and mechanism_name:
+            object_dict["authentication"] = mechanism_name.mechanism
 
         return cls(**object_dict)
 
@@ -311,11 +343,11 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
         if self.responding_ae_invocation_id is not None:
             aare_data.extend(BER.encode(167, self.responding_ae_invocation_id))
         if self.responder_acse_requirements is not None:
-            aare_data.extend(BER.encode(168, self.responder_acse_requirements))
+            aare_data.extend(BER.encode(0x88, self.responder_acse_requirements.to_bytes()))
         if self.mechanism_name is not None:
-            aare_data.extend(BER.encode(169, self.mechanism_name.to_bytes()))
+            aare_data.extend(BER.encode(0x89, self.mechanism_name.to_bytes()))
         if self.responding_authentication_value is not None:
-            aare_data.extend(BER.encode(0x170, self.responding_authentication_value))
+            aare_data.extend(BER.encode(170, self.responding_authentication_value.to_bytes()))
 
         if self.implementation_information is not None:
             aare_data.extend(BER.encode(189, self.implementation_information))

@@ -38,10 +38,10 @@ class BaseDlmsData(AbstractDlmsData):
 class NullData(BaseDlmsData):
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
-        pass
+        return cls(None)
 
     def to_python(self) -> Any:
-        pass
+        return None
 
     TAG = 0
 

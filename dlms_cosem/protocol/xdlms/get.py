@@ -8,7 +8,6 @@ from dlms_cosem.protocol import cosem
 from dlms_cosem.protocol.a_xdr import (
     Attribute,
     AXdrDecoder,
-    AXdrDecoder,
     EncodingConf,
     Sequence,
     Choice,
