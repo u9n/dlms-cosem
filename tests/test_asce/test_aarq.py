@@ -25,7 +25,7 @@ class TestParseAARQ:
         assert not aarq.ciphered
         assert aarq.authentication == AuthenticationMechanism.LLS
         # Password is used in LLS
-        assert aarq.calling_authentication_value is not None
+        assert aarq.authentication_value is not None
 
     def test_parse_no_ciphering_high_security(self):
         data = b"`6\xa1\t\x06\x07`\x85t\x05\x08\x01\x01\x8a\x02\x07\x80\x8b\x07`\x85t\x05\x08\x02\x05\xac\n\x80\x08K56iVagY\xbe\x10\x04\x0e\x01\x00\x00\x00\x06_\x1f\x04\x00\x00~\x1f\x04\xb0"
@@ -34,7 +34,7 @@ class TestParseAARQ:
         assert not aarq.ciphered
         assert aarq.authentication == AuthenticationMechanism.HLS_GMAC
         # Password is used in LLS
-        assert aarq.calling_authentication_value is not None
+        assert aarq.authentication_value is not None
 
     def test_parse_ciphered_low_security(self):
         data = b'`f\xa1\t\x06\x07`\x85t\x05\x08\x01\x03\xa6\n\x04\x08MMM\x00\x00\xbcaN\x8a\x02\x07\x80\x8b\x07`\x85t\x05\x08\x02\x01\xac\n\x80\x0812345678\xbe4\x042!00\x01#Eg\x80\x13\x02\xff\x8axt\x13=AL\xed%\xb4%4\xd2\x8d\xb0\x04w `k\x17[\xd5"\x11\xbehA\xdb M9\xeeo\xdb\x8e5hU'
@@ -45,9 +45,9 @@ class TestParseAARQ:
             assert aarq.ciphered
             assert aarq.authentication == AuthenticationMechanism.LLS
             # you need to set a system title when ciphering
-            assert aarq.called_ap_title is not None
+            assert aarq.client_system_title is not None
             # Password is used in LLS
-            assert aarq.calling_authentication_value is not None
+            assert aarq.authentication_value is not None
 
 
 class TestEncodeAARE:
@@ -57,10 +57,10 @@ class TestEncodeAARE:
         )
         aarq = ApplicationAssociationRequestApdu(
             ciphered=False,
-            calling_ap_title=None,
-            calling_ae_qualifier=None,
+            client_system_title=None,
+            client_public_cert=None,
             authentication=None,
-            calling_authentication_value=None,
+            authentication_value=None,
             user_information=UserInformation(
                 content=InitiateRequestApdu(
                     proposed_conformance=Conformance(
@@ -96,11 +96,11 @@ class TestEncodeAARE:
     def test_parse_no_ciphering_no_sercurity(self):
         data = b"`\x1d\xa1\t\x06\x07`\x85t\x05\x08\x01\x01\xbe\x10\x04\x0e\x01\x00\x00\x00\x06_\x1f\x04\x00\x00~\x1f\x04\xb0"
         aarq = ApplicationAssociationRequestApdu(
-            calling_ap_title=None,
-            calling_ae_qualifier=None,
+            client_system_title=None,
+            client_public_cert=None,
             authentication=None,
             ciphered=False,
-            calling_authentication_value=None,
+            authentication_value=None,
             user_information=UserInformation(
                 content=InitiateRequestApdu(
                     proposed_conformance=Conformance(
@@ -142,11 +142,11 @@ class TestEncodeAARE:
     def test_encode_no_ciphering_high_security(self):
         data = b"`6\xa1\t\x06\x07`\x85t\x05\x08\x01\x01\x8a\x02\x07\x80\x8b\x07`\x85t\x05\x08\x02\x05\xac\n\x80\x08K56iVagY\xbe\x10\x04\x0e\x01\x00\x00\x00\x06_\x1f\x04\x00\x00~\x1f\x04\xb0"
         aarq = ApplicationAssociationRequestApdu(
-            calling_ap_title=None,
-            calling_ae_qualifier=None,
+            client_system_title=None,
+            client_public_cert=None,
             authentication=AuthenticationMechanism.HLS_GMAC,
             ciphered=False,
-            calling_authentication_value=AuthenticationValue(
+            authentication_value=AuthenticationValue(
                 password=bytearray(b"K56iVagY"), password_type="chars"
             ),
             user_information=UserInformation(
@@ -191,11 +191,11 @@ class TestEncodeAARE:
     def test_encode_no_ciphering_low_security(self):
         data = b"`6\xa1\t\x06\x07`\x85t\x05\x08\x01\x01\x8a\x02\x07\x80\x8b\x07`\x85t\x05\x08\x02\x01\xac\n\x80\x0812345678\xbe\x10\x04\x0e\x01\x00\x00\x00\x06_\x1f\x04\x00\x00~\x1f\x04\xb0"
         aarq = ApplicationAssociationRequestApdu(
-            calling_ap_title=None,
-            calling_ae_qualifier=None,
+            client_system_title=None,
+            client_public_cert=None,
             authentication=AuthenticationMechanism.LLS,
             ciphered=False,
-            calling_authentication_value=AuthenticationValue(
+            authentication_value=AuthenticationValue(
                 password=bytearray(b"12345678"), password_type="chars"
             ),
             user_information=UserInformation(

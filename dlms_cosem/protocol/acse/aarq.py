@@ -38,9 +38,6 @@ def aarq_should_set_authenticated(
     return True
 
 
-
-
-
 @attr.s(auto_attribs=True)
 class ApplicationAssociationRequestApdu:
     """
@@ -65,18 +62,21 @@ class ApplicationAssociationRequestApdu:
 
     :parameter ciphered: Sets the AppContextName to indicate ciphered apdus.
 
-    :parameter calling_ap_title:  If the `application_context_name` uses ciphering
-        `calling_ap_title` should contain the clients system title. Also if the
+    :parameter client_system_title:  Is transferred in the `calling_ap_title` part of
+        AARQ as defined in the DLMS ASN1 Specs.If the `application_context_name` uses
+        ciphering `calling_ap_title` should contain the clients system title. Also if the
         proposed HLS (High Level Security) auth mechanism uses the system title it
         should be present.
 
-    :parameter calling_ae_qualifier: If the `application_context_name` indicates the
-        use of ciphered APDUs the `calling_ae_qualifier` may hold the public digital
-        signature key certificate of the client.
+    :parameter client_public_cert:  Is transferred in the `calling_ae_qualifier`part of
+        the AARQ as defiened in the DLMS ASN1 Specs.If the `application_context_name`
+        indicates the use of ciphered APDUs the `calling_ae_qualifier` may hold the
+        public digital signature key certificate of the client.
 
     :parameter authentication: Defines the type of authentication that is used.
 
-    :parameter calling_authentication_value: Shall only be present if
+    :parameter authentication_value: Is tranferred in the `calling_authentication_value`
+        part of the AARQ as defined in the DLMS ASN1 specs.Shall only be present if
         `sender_acse_requirements` indicates authentication. It holds the client
         authentication value appropriat to the selected `mechanism_name`.
 
@@ -141,13 +141,12 @@ class ApplicationAssociationRequestApdu:
         ),  # Context specific, constructed 30
     }
 
-    calling_ap_title: Optional[bytes] = attr.ib(default=None)
-    # TODO: Can we rename this to client public certificate?
-    calling_ae_qualifier: Optional[bytes] = attr.ib(default=None)
+    client_system_title: Optional[bytes] = attr.ib(default=None)
+    client_public_cert: Optional[bytes] = attr.ib(default=None)
     authentication: Optional[acse_base.AuthenticationMechanism] = attr.ib(default=None)
     ciphered: bool = attr.ib(default=False)
     # TODO: Can we rename this to password? Would be nice to pass it as bytes or str.
-    calling_authentication_value: Optional[acse_base.AuthenticationValue] = attr.ib(
+    authentication_value: Optional[acse_base.AuthenticationValue] = attr.ib(
         default=None
     )
     # TODO: validate that a ciphered InitiateReqest is used when ciphering is True.
@@ -155,7 +154,6 @@ class ApplicationAssociationRequestApdu:
         default=None, validator=[user_information_holds_initiate_request]
     )
     calling_ae_invocation_identifier: Optional[bytes] = attr.ib(default=None)
-
 
     # Not really used
     # TODO: Should we keep them?
@@ -278,6 +276,15 @@ class ApplicationAssociationRequestApdu:
         if sender_acse_requirements and mechanism_name:
             object_dict["authentication"] = mechanism_name.mechanism
 
+        # rename some elements
+        object_dict["client_system_title"] = object_dict.pop("calling_ap_title", None)
+        object_dict["client_public_cert"] = object_dict.pop(
+            "calling_ae_qualifier", None
+        )
+        object_dict["authentication_value"] = object_dict.pop(
+            "calling_authentication_value", None
+        )
+
         return cls(**object_dict)
 
     def to_bytes(self):
@@ -293,10 +300,10 @@ class ApplicationAssociationRequestApdu:
             aarq_data.extend(BER.encode(164, self.called_ap_invocation_identifier))
         if self.called_ae_invocation_identifier is not None:
             aarq_data.extend(BER.encode(165, self.called_ae_invocation_identifier))
-        if self.calling_ap_title is not None:
-            aarq_data.extend(BER.encode(166, self.calling_ap_title))
-        if self.calling_ae_qualifier is not None:
-            aarq_data.extend(BER.encode(167, self.calling_ae_qualifier))
+        if self.client_system_title is not None:
+            aarq_data.extend(BER.encode(166, self.client_system_title))
+        if self.client_public_cert is not None:
+            aarq_data.extend(BER.encode(167, self.client_public_cert))
         if self.calling_ap_invocation_identifier is not None:
             aarq_data.extend(BER.encode(168, self.calling_ap_invocation_identifier))
         if self.calling_ae_invocation_identifier is not None:
@@ -305,10 +312,8 @@ class ApplicationAssociationRequestApdu:
             aarq_data.extend(BER.encode(0x8A, self.sender_acse_requirements.to_bytes()))
         if self.mechanism_name is not None:
             aarq_data.extend(BER.encode(0x8B, self.mechanism_name.to_bytes()))
-        if self.calling_authentication_value is not None:
-            aarq_data.extend(
-                BER.encode(0xAC, self.calling_authentication_value.to_bytes())
-            )
+        if self.authentication_value is not None:
+            aarq_data.extend(BER.encode(0xAC, self.authentication_value.to_bytes()))
         if self.implementation_information is not None:
             aarq_data.extend(BER.encode(0xBD, self.implementation_information))
         if self.user_information is not None:

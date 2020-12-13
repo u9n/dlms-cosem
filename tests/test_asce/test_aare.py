@@ -68,10 +68,9 @@ class TestDecodeAARE:
             aare.result_source_diagnostics
             == AcseServiceUserDiagnostics.AUTHENTICATION_REQUIRED
         )
-        assert aare.responding_authentication_value is not None
+        assert aare.authentication_value is not None
         assert aare.authentication == acse.AuthenticationMechanism.HLS_GMAC
         assert isinstance(aare.user_information.content, InitiateResponseApdu)
-
 
 
 class TestEncodeAARE:
@@ -84,9 +83,9 @@ class TestEncodeAARE:
             result_source_diagnostics=AcseServiceUserDiagnostics.NULL,
             ciphered=False,
             authentication=None,
-            responding_ap_title=None,
-            responding_ae_qualifier=None,
-            responding_authentication_value=None,
+            meter_system_title=None,
+            meter_public_cert=None,
+            authentication_value=None,
             user_information=acse.UserInformation(
                 content=InitiateResponseApdu(
                     negotiated_conformance=Conformance(
@@ -129,9 +128,9 @@ class TestEncodeAARE:
             result_source_diagnostics=AcseServiceUserDiagnostics.APPLICATION_CONTEXT_NAME_NOT_SUPPORTED,
             ciphered=False,
             authentication=None,
-            responding_ap_title=None,
-            responding_ae_qualifier=None,
-            responding_authentication_value=None,
+            meter_system_title=None,
+            meter_public_cert=None,
+            authentication_value=None,
             user_information=acse.UserInformation(
                 content=InitiateResponseApdu(
                     negotiated_conformance=Conformance(
@@ -175,9 +174,9 @@ class TestEncodeAARE:
             result_source_diagnostics=AcseServiceUserDiagnostics.NO_REASON_GIVEN,
             ciphered=False,
             authentication=None,
-            responding_ap_title=None,
-            responding_ae_qualifier=None,
-            responding_authentication_value=None,
+            meter_system_title=None,
+            meter_public_cert=None,
+            authentication_value=None,
             user_information=acse.UserInformation(
                 content=ConfirmedServiceErrorApdu(
                     error=InitiateError.DLMS_VERSION_TOO_LOW
@@ -200,9 +199,9 @@ class TestEncodeAARE:
             result_source_diagnostics=AcseServiceUserDiagnostics.AUTHENTICATION_REQUIRED,
             ciphered=False,
             authentication=AuthenticationMechanism.HLS_GMAC,
-            responding_ap_title=None,
-            responding_ae_qualifier=None,
-            responding_authentication_value=AuthenticationValue(
+            meter_public_cert=None,
+            meter_system_title=None,
+            authentication_value=AuthenticationValue(
                 password=bytearray(b"P6wRJ21F"), password_type="chars"
             ),
             user_information=UserInformation(

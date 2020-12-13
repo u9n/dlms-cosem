@@ -130,11 +130,6 @@ Communication profiles are available for:
 
 # Development of this library
 
-We are developing this library as an ongoing project to support DLMS/COSEM in
-our AMR (Automatic Meter Reading) system Utilitarian.
-
-We are focusing our efforts on supporting DLMS over IP-based transports.
-
 As of now we support:
 
     * Parsing DataNotification via UDP.

@@ -113,14 +113,22 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
     # TODO: Exactly what is the difference between remot and local confirmation.
     # My guess is that it is always remote for this library's usage.
 
-     :parameter responding_ap_title:  If the negotiated `application_context_name` uses
+     :parameter meter_system_title:  It is transferred in the `responding_ap_title`
+        portion from the DLMS ASN1 specs.
+        If the negotiated `application_context_name` uses
         ciphering `responding_ap_title` should contain the server system title. Also if
         the negotiated HLS (High Level Security) auth mechanism uses the server system
         title it should be present.
 
-    :parameter responding_ae_qualifier: If the `application_context_name` indicates the
+    :parameter meter_public_cert: Is transferred in the `responding_ae_qualifier` of the
+        ASN1 DLMS Spec `responding_ae_qualifier`. If the `application_context_name`
+        indicates the
         use of ciphered APDUs the `responding_ae_qualifier` may hold the public digital
         signature key certificate of the server (meter).
+
+    :parameter authentication_value: Is transferred in the
+        `responding_authentication_value` field from the ASN1 DLMS specs. Hold the
+        server (meter) challenge to the current authentication scheme.
 
     """
 
@@ -146,16 +154,17 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
         ),  # Context specific, constructed 30
     }
 
-    # TODO: same auth handling as AARQ
     result: AssociationResult
     result_source_diagnostics: Union[
         AcseServiceUserDiagnostics, AcseServiceProviderDiagnostics
     ]
     ciphered: bool = attr.ib(default=False)
     authentication: Optional[acse_base.AuthenticationMechanism] = attr.ib(default=None)
-    responding_ap_title: Optional[bytes] = attr.ib(default=None)
-    responding_ae_qualifier: Optional[bytes] = attr.ib(default=None)
-    responding_authentication_value: Optional[acse_base.AuthenticationValue] = attr.ib(default=None)
+    meter_system_title: Optional[bytes] = attr.ib(default=None)
+    meter_public_cert: Optional[bytes] = attr.ib(default=None)
+    authentication_value: Optional[acse_base.AuthenticationValue] = attr.ib(
+        default=None
+    )
     user_information: Optional[acse_base.UserInformation] = attr.ib(default=None)
 
     # Not really used.
@@ -181,7 +190,9 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
         :return:
         """
         if (
-                self.responder_acse_requirements is not None and self.authentication is not None):
+            self.responder_acse_requirements is not None
+            and self.authentication is not None
+        ):
             return acse_base.MechanismName(mechanism=self.authentication)
 
         return None
@@ -284,21 +295,35 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
             raise ValueError("Not a valid choice of result_source_diagnostics")
 
         responder_acse_requirements: Optional[
-            acse_base.AuthFunctionalUnit] = object_dict.pop("responder_acse_requirements",
-                                                            None)
+            acse_base.AuthFunctionalUnit
+        ] = object_dict.pop("responder_acse_requirements", None)
 
         mechanism_name: Optional[acse_base.MechanismName] = object_dict.pop(
-            "mechanism_name", None)
+            "mechanism_name", None
+        )
 
         if responder_acse_requirements and mechanism_name:
             object_dict["authentication"] = mechanism_name.mechanism
 
+        # rename responding_ap_title to meter_system_title for cleaner API
+        object_dict["meter_system_title"] = object_dict.pop(
+            "responding_ap_title", None
+        )
+
+        # rename responding_ae_qualifier to meter_public_cert
+        object_dict["meter_public_cert"] = object_dict.pop(
+            "responding_ae_qualifier", None
+        )
+
+        # rename responding_authentication_value to just authentication_value
+        object_dict["authentication_value"] = object_dict.pop(
+            "responding_authentication_value", None
+        )
+
         return cls(**object_dict)
 
     def to_bytes(self) -> bytes:
-        # if we created the object from bytes we can just return the same bytes
-        # if self._raw_bytes is not None:
-        #    return self._raw_bytes
+
         aare_data = bytearray()
         # default value of protocol_version is 1. Only decode if other than 1
         # No need to use protocol version
@@ -334,20 +359,24 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
                     )
                 )
 
-        if self.responding_ap_title is not None:
-            aare_data.extend(BER.encode(164, self.responding_ap_title))
-        if self.responding_ae_qualifier is not None:
-            aare_data.extend(BER.encode(165, self.responding_ae_qualifier))
+        if self.meter_system_title is not None:
+            aare_data.extend(BER.encode(164, self.meter_system_title))
+        if self.meter_public_cert is not None:
+            aare_data.extend(BER.encode(165, self.meter_public_cert))
         if self.responding_ap_invocation_id is not None:
             aare_data.extend(BER.encode(166, self.responding_ap_invocation_id))
         if self.responding_ae_invocation_id is not None:
             aare_data.extend(BER.encode(167, self.responding_ae_invocation_id))
         if self.responder_acse_requirements is not None:
-            aare_data.extend(BER.encode(0x88, self.responder_acse_requirements.to_bytes()))
+            aare_data.extend(
+                BER.encode(0x88, self.responder_acse_requirements.to_bytes())
+            )
         if self.mechanism_name is not None:
             aare_data.extend(BER.encode(0x89, self.mechanism_name.to_bytes()))
-        if self.responding_authentication_value is not None:
-            aare_data.extend(BER.encode(170, self.responding_authentication_value.to_bytes()))
+        if self.authentication_value is not None:
+            aare_data.extend(
+                BER.encode(170, self.authentication_value.to_bytes())
+            )
 
         if self.implementation_information is not None:
             aare_data.extend(BER.encode(189, self.implementation_information))
