@@ -10,7 +10,7 @@ from dlms_cosem.protocol import enumerations
 
 class ErrorFactory:
 
-    ERROR_TYPE_MAP: ClassVar[Dict[int, IntEnum]] = {
+    ERROR_TYPE_MAP: ClassVar[Dict[int, Type[IntEnum]]] = {
         0: enumerations.ApplicationReferenceError,
         1: enumerations.HardwareResourceError,
         2: enumerations.VdeStateError,

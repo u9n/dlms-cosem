@@ -81,7 +81,7 @@ class DlmsConnection:
     def with_pre_established_association(
         cls,
         conformance: Conformance,
-        max_pdu_size: Optional[int] = None,
+        max_pdu_size: int = 65535,
         global_encryption_key: Optional[bytes] = None,
         use_dedicated_ciphering: bool = False,
     ):

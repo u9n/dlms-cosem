@@ -24,6 +24,7 @@ class ExceptionResponseApdu:
             )
         state_error = enumerations.StateException(data.pop(0))
         service_error = enumerations.ServiceException(data.pop(0))
+
         if service_error == enumerations.ServiceException.INVOCATION_COUNTER_ERROR:
             invocation_counter_data = int.from_bytes(data, "big")
         else:

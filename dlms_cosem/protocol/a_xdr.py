@@ -41,7 +41,6 @@ integer data. ex 0b10000010 -> 2 bytes after this is the integer. 0x820xff0xff =
 import attr
 from typing import *
 from dlms_cosem.protocol import dlms_data
-import asn1crypto
 
 VARIABLE_LENGTH = -1
 
