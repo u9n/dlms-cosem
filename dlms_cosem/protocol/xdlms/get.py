@@ -1,28 +1,24 @@
-from enum import IntEnum, unique
 from functools import partial
 from typing import *
 
 import attr
 
-from dlms_cosem.protocol import cosem
+from dlms_cosem.protocol import cosem, enumerations
 from dlms_cosem.protocol.a_xdr import (
     Attribute,
     AXdrDecoder,
-    AXdrDecoder,
+    Choice,
     EncodingConf,
     Sequence,
-    Choice,
 )
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 
-
-class GetType(IntEnum):
-    NORMAL = 1
-    NEXT = 2
-    WITH_LIST = 3
+get_type_from_bytes = partial(enumerations.GetType.from_bytes, byteorder="big")
 
 
-get_type_from_bytes = partial(GetType.from_bytes, byteorder="big")
+class NullValue:
+    def __call__(self):
+        return None
 
 
 @attr.s(auto_attribs=True)
@@ -100,22 +96,22 @@ class GetRequest(AbstractXDlmsApdu):
             Attribute(
                 attribute_name="cosem_attribute",
                 create_instance=cosem.CosemObject.from_bytes,
-                optional=True,
-                length=6,
+                length=9,
             ),
             Attribute(
                 attribute_name="access_selection",
                 create_instance=bytes,
-                wrap_end=True,
-                default=None,
+                default=b"\x00",
             ),
         ]
     )
 
     cosem_attribute: cosem.CosemObject
-    request_type: GetType = attr.ib(default=GetType.NORMAL)
+    request_type: enumerations.GetType = attr.ib(default=enumerations.GetType.NORMAL)
     invoke_id_and_priority: InvokeIdAndPriority = attr.ib(factory=InvokeIdAndPriority)
-    access_selection: Optional[bytes] = attr.ib(default=b"\x00")
+    access_selection: Optional[bytes] = attr.ib(
+        default=None, converter=attr.converters.default_if_none(default=b"\x00")
+    )
 
     @classmethod
     def from_bytes(cls, source_bytes: bytes):
@@ -126,44 +122,29 @@ class GetRequest(AbstractXDlmsApdu):
                 f"Tag for GET request is not correct. Got {tag}, should be {cls.TAG}"
             )
 
-        type_choice = GetType(data.pop(0))
-
-        pass
+        type_choice = enumerations.GetType(data.pop(0))
+        decoder = AXdrDecoder(encoding_conf=cls.ENCODING_CONF)
+        out_dict = decoder.decode(data)
+        print(out_dict)
+        return cls(**out_dict, request_type=type_choice)
 
     def to_bytes(self):
         # automatically adding the choice for GetRequestNormal.
-        return b"".join(
-            [
-                bytes([self.TAG, self.request_type.value]),
-                self.invoke_id_and_priority.to_bytes(),
-                self.cosem_attribute.to_bytes(),
-                self.access_selection,
-            ]
-        )
+        out = [
+            bytes([self.TAG, self.request_type.value]),
+            self.invoke_id_and_priority.to_bytes(),
+            self.cosem_attribute.to_bytes(),
+        ]
+        if self.access_selection:
+            out.append(self.access_selection)
+        else:
+            out.append(b"\x00")
 
-
-@unique
-class DataAccessResult(IntEnum):
-    SUCCESS = 0
-    HARDWARE_FAULT = 1
-    TEMPORARY_FAILURE = 2
-    READ_WRITE_DENIED = 3
-    OBJECT_UNDEFINED = 4
-    OBJECT_CLASS_INCONSISTENT = 9
-    OBJECT_UNAVAILABLE = 11
-    TYPE_UNMATCHED = 12
-    SCOPE_OF_ACCESS_VIOLATED = 13
-    DATA_BLOCK_UNAVAILABLE = 14
-    LONG_GET_ABORTED = 15
-    NO_LONG_GET_IN_PROGRESS = 16
-    LONG_SET_ABORTED = 17
-    NO_LONG_SET_IN_PROGRESS = 18
-    DATA_BLOCK_NUMBER_INVALID = 19
-    OTHER_REASON = 250
+        return b"".join(out)
 
 
 get_data_access_result_from_bytes = partial(
-    DataAccessResult.from_bytes, byteorder="big"
+    enumerations.DataAccessResult.from_bytes, byteorder="big"
 )
 
 
@@ -197,8 +178,8 @@ class GetResponse(AbstractXDlmsApdu):
         ]
     )
 
-    result: bytes
-    response_type: GetType = attr.ib(default=GetType.NORMAL)
+    result: Any
+    response_type: enumerations.GetType = attr.ib(default=enumerations.GetType.NORMAL)
     invoke_id_and_priority: InvokeIdAndPriority = attr.ib(factory=InvokeIdAndPriority)
 
     @classmethod

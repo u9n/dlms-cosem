@@ -1,14 +1,22 @@
 import attr
 from typing import *
 from dlms_cosem.clients.serial_hdlc import SerialHdlcClient
+from dlms_cosem.protocol.acse.aare import AssociationResult
 from dlms_cosem.protocol.connection import DlmsConnection
 from dlms_cosem.protocol.state import NEED_DATA
-from dlms_cosem.protocol import xdlms, cosem
+from dlms_cosem.protocol import xdlms, cosem, exceptions
 from dlms_cosem.protocol import acse
 import logging
 import contextlib
 
+from dlms_cosem.protocol.xdlms import ConfirmedServiceErrorApdu
+from dlms_cosem.protocol.xdlms.get import DataAccessResult
+
 LOG = logging.getLogger(__name__)
+
+
+class DataResultError(Exception):
+    """ Error retrieveing data"""
 
 
 @attr.s(auto_attribs=True)
@@ -56,6 +64,8 @@ class SerialDlmsClient:
             )
         )
         get_response = self.next_event()
+        if isinstance(get_response.result, DataAccessResult):
+            raise DataResultError(f"Could not perform GET request: {get_response.result!r}")
         return get_response.result
 
     def set(self):
@@ -73,6 +83,16 @@ class SerialDlmsClient:
         aarq = association_request or self.dlms_connection.get_aarq()
         self.send(aarq)
         aare = self.next_event()
+        if isinstance(aare, xdlms.ExceptionResponseApdu):
+            raise Exception(f"DLMS Exception: {aare.state_error!r}:{aare.service_error!r}:{aare.invocation_counter_data}")
+        if aare.result is not AssociationResult.ACCEPTED:
+            raise exceptions.ApplicationAssociationError(
+                f"Unable to perform Association: {aare.result!r} and "
+                f"{aare.result_source_diagnostics!r}"
+            )
+        if aare.user_information:
+            if isinstance(aare.user_information.content, ConfirmedServiceErrorApdu):
+                raise exceptions.ApplicationAssociationError(f"Unable to perform Association: {aare.user_information.content.error}")
         return aare
 
     def release_association(

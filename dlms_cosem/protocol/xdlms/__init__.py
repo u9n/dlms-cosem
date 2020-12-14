@@ -5,6 +5,7 @@ from dlms_cosem.protocol.xdlms.initiate_response import InitiateResponseApdu
 from dlms_cosem.protocol.xdlms.confirmed_service_error import ConfirmedServiceErrorApdu
 from dlms_cosem.protocol.xdlms.get import GetRequest, GetResponse
 from dlms_cosem.protocol.xdlms.conformance import Conformance
+from dlms_cosem.protocol.xdlms.exception_response import ExceptionResponseApdu
 
 __all__ = [
     "InitiateRequestApdu",
@@ -15,4 +16,5 @@ __all__ = [
     "Conformance",
     "GetRequest",
     "GetResponse",
+    "ExceptionResponseApdu",
 ]

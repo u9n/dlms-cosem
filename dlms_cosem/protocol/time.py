@@ -75,34 +75,40 @@ class ClockStatus:
         return value.to_bytes(1, "big")
 
 
-def validate_day(value: int):
-    if 1 > value > 31:
-        raise ValueError(f"Day can only be within 1-31")
+def validate_day(value: Optional[int]):
+    if value:
+        if 1 > value > 31:
+            raise ValueError(f"Day can only be within 1-31")
 
 
-def validate_month(value: int):
-    if 1 > value > 12:
-        raise ValueError(f"Month can only be within 1-12")
+def validate_month(value: Optional[int]):
+    if value:
+        if 1 > value > 12:
+            raise ValueError(f"Month can only be within 1-12")
 
 
-def validate_weekday(value: int):
-    if 1 > value > 7:
-        raise ValueError(f"Day can only be within 1-7")
+def validate_weekday(value: Optional[int]):
+    if value:
+        if 1 > value > 7:
+            raise ValueError(f"Day can only be within 1-7")
 
 
-def validate_hour(value: int):
-    if 0 > value > 23:
-        raise ValueError(f"Minutes and seconds can only be within 0-23")
+def validate_hour(value: Optional[int]):
+    if value:
+        if 0 > value > 23:
+            raise ValueError(f"Minutes and seconds can only be within 0-23")
 
 
-def validate_minute_or_second(value: int):
-    if 0 > value > 59:
-        raise ValueError(f"Minutes and seconds can only be within 0-59")
+def validate_minute_or_second(value: Optional[int]):
+    if value:
+        if 0 > value > 59:
+            raise ValueError(f"Minutes and seconds can only be within 0-59")
 
 
-def validate_hundredths(value: int):
-    if 0 > value > 99:
-        raise ValueError(f"Hundredths can only be within 0-59")
+def validate_hundredths(value: Optional[int]):
+    if value:
+        if 0 > value > 99:
+            raise ValueError(f"Hundredths can only be within 0-59")
 
 
 def get_optional_value(

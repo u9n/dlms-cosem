@@ -1,12 +1,10 @@
-from enum import IntEnum
-from typing import *
 import abc
+from typing import *
 
 import attr
 
+from dlms_cosem.protocol import enumerations, xdlms
 from dlms_cosem.protocol.ber import BER
-
-from dlms_cosem.protocol import xdlms
 
 
 class AbstractAcseApdu(abc.ABC):
@@ -100,22 +98,11 @@ class AppContextName(DLMSObjectIdentifier):
         return settings_dict.get(context_id)
 
 
-class AuthenticationMechanism(IntEnum):
-    NONE = 0
-    LLS = 1
-    HLS = 2
-    HLS_MD5 = 3  # Insecure. Don't use with new meters
-    HLS_SHA1 = 4  # Insecure. Don't use with new meters
-    HLS_GMAC = 5
-    HLS_SHA256 = 6
-    HLS_ECDSA = 7
-
-
 @attr.s(auto_attribs=True)
 class MechanismName(DLMSObjectIdentifier):
     app_context: ClassVar[int] = 2
 
-    mechanism: AuthenticationMechanism
+    mechanism: enumerations.AuthenticationMechanism
 
     @classmethod
     def from_bytes(cls, _bytes: bytes):
@@ -134,7 +121,7 @@ class MechanismName(DLMSObjectIdentifier):
                 f" according to DLMS: {total_prefix!r}"
             )
 
-        return cls(mechanism=AuthenticationMechanism(mechanism_id))
+        return cls(mechanism=enumerations.AuthenticationMechanism(mechanism_id))
 
     def to_bytes(self):
         total_data = self.PREFIX + bytes([self.app_context, self.mechanism.value])
