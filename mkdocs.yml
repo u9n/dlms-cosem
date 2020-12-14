@@ -1,0 +1,9 @@
+site_name: My Docs
+
+theme:
+  name: material
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - admonition
