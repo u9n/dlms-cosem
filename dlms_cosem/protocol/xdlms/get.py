@@ -24,6 +24,11 @@ class GetType(IntEnum):
 get_type_from_bytes = partial(GetType.from_bytes, byteorder="big")
 
 
+class NullValue:
+    def __call__(self):
+        return None
+
+
 @attr.s(auto_attribs=True)
 class InvokeIdAndPriority:
     """
@@ -99,14 +104,12 @@ class GetRequest(AbstractXDlmsApdu):
             Attribute(
                 attribute_name="cosem_attribute",
                 create_instance=cosem.CosemObject.from_bytes,
-                optional=True,
-                length=6,
+                length=9,
             ),
             Attribute(
                 attribute_name="access_selection",
                 create_instance=bytes,
-                wrap_end=True,
-                default=None,
+                default=b"\x00",
             ),
         ]
     )
@@ -114,7 +117,9 @@ class GetRequest(AbstractXDlmsApdu):
     cosem_attribute: cosem.CosemObject
     request_type: GetType = attr.ib(default=GetType.NORMAL)
     invoke_id_and_priority: InvokeIdAndPriority = attr.ib(factory=InvokeIdAndPriority)
-    access_selection: Optional[bytes] = attr.ib(default=b"\x00")
+    access_selection: Optional[bytes] = attr.ib(
+        default=None, converter=attr.converters.default_if_none(default=b"\x00")
+    )
 
     @classmethod
     def from_bytes(cls, source_bytes: bytes):
@@ -126,19 +131,24 @@ class GetRequest(AbstractXDlmsApdu):
             )
 
         type_choice = GetType(data.pop(0))
-
-        pass
+        decoder = AXdrDecoder(encoding_conf=cls.ENCODING_CONF)
+        out_dict = decoder.decode(data)
+        print(out_dict)
+        return cls(**out_dict, request_type=type_choice)
 
     def to_bytes(self):
         # automatically adding the choice for GetRequestNormal.
-        return b"".join(
-            [
-                bytes([self.TAG, self.request_type.value]),
-                self.invoke_id_and_priority.to_bytes(),
-                self.cosem_attribute.to_bytes(),
-                self.access_selection,
-            ]
-        )
+        out = [
+            bytes([self.TAG, self.request_type.value]),
+            self.invoke_id_and_priority.to_bytes(),
+            self.cosem_attribute.to_bytes(),
+        ]
+        if self.access_selection:
+            out.append(self.access_selection)
+        else:
+            out.append(b"\x00")
+
+        return b"".join(out)
 
 
 @unique
@@ -196,7 +206,7 @@ class GetResponse(AbstractXDlmsApdu):
         ]
     )
 
-    result: bytes
+    result: Any
     response_type: GetType = attr.ib(default=GetType.NORMAL)
     invoke_id_and_priority: InvokeIdAndPriority = attr.ib(factory=InvokeIdAndPriority)
 

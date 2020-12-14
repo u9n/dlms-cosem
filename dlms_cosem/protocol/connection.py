@@ -10,6 +10,40 @@ import logging
 LOG = logging.getLogger(__name__)
 
 
+class PreEstablishedAssociationError(Exception):
+    """An error when doing illeagal things to the connection if it pre established"""
+
+
+def make_conformance(encryption_key: Optional[bytes], use_block_transfer: bool):
+    """
+    Return a default conformance with general_protection set if a
+    encryption key is passed.
+    """
+    return Conformance(
+        general_protection=bool(encryption_key),
+        general_block_transfer=use_block_transfer,
+        delta_value_encoding=False,
+        attribute_0_supported_with_set=False,
+        priority_management_supported=True,
+        attribute_0_supported_with_get=False,
+        block_transfer_with_get_or_read=False,
+        block_transfer_with_set_or_write=False,
+        block_transfer_with_action=False,
+        multiple_references=False,
+        data_notification=False,
+        access=True,
+        get=True,
+        set=True,
+        selective_access=True,
+        event_notification=True,
+        action=True,
+    )
+
+
+class ConformanceError(Exception):
+    """If APDUs does not match connection Conformance"""
+
+
 @attr.s(auto_attribs=True)
 class DlmsConnection:
     """
@@ -20,24 +54,54 @@ class DlmsConnection:
     # The state as it would have done the ACSE protocol. (use classmethod)
     """
 
-    # The conformance is the negotiated conformance. From this we can find what services
-    # we should use and if we should reject a service request since it is not in the
-    # conformance block.
-    conformance: Conformance
-
-    buffer: bytearray = attr.ib(factory=bytearray)
-    state: dlms_state.DlmsConnectionState = attr.ib(
-        factory=dlms_state.DlmsConnectionState
-    )
-
     # The encryption key used to global cipher service.
     global_encryption_key: Optional[bytes] = attr.ib(default=None)
     global_invocation_counter: Optional[int] = attr.ib(default=None)
+
+    # TODO: Support dedicated ciphers
+    use_dedicated_ciphering: bool = attr.ib(default=False)
+    # TODO: when supported we should have it as default True.
+    use_block_transfer: bool = attr.ib(default=False)
 
     # the max pdu size controls when we need to use block transfer. If the message is
     # larger than max_pdu_size we automatically use the general block service.
     # Unless it is not suppoeted in conformance. Then raise error.
     max_pdu_size: int = attr.ib(default=65535)
+
+    # When a connection is preestablished we wont allow any ACSE adpus.
+    is_pre_established: bool = attr.ib(default=False)
+
+    buffer: bytearray = attr.ib(init=False, factory=bytearray)
+    state: dlms_state.DlmsConnectionState = attr.ib(
+        factory=dlms_state.DlmsConnectionState
+    )
+
+    conformance: Conformance = attr.ib(
+        default=attr.Factory(
+            lambda self: make_conformance(
+                self.global_encryption_key, self.use_block_transfer
+            ),
+            takes_self=True,
+        )
+    )
+
+    @classmethod
+    def with_pre_established_association(
+        cls,
+        conformance: Conformance,
+        max_pdu_size: Optional[int] = None,
+        global_encryption_key: Optional[bytes] = None,
+        use_dedicated_ciphering: bool = False,
+    ):
+        return cls(
+            global_encryption_key=global_encryption_key,
+            # Moves the state into ready.
+            state=dlms_state.DlmsConnectionState(current_state=dlms_state.READY),
+            is_pre_established=True,
+            conformance=conformance,
+            max_pdu_size=max_pdu_size,
+            use_dedicated_ciphering=use_dedicated_ciphering,
+        )
 
     def send(self, event) -> bytes:
         """
@@ -46,16 +110,73 @@ class DlmsConnection:
         :param event:
         :return: bytes
         """
+
+        if self.is_pre_established:
+            # When we are in a pre established association state starts as READY.
+            # Only valid state change is to send the ReleaseRequestApdu. But it is not
+            # possible to close a pre-established association.
+            if isinstance(event, acse.ReleaseRequestApdu):
+                raise PreEstablishedAssociationError(
+                    f"You cannot send a {type(event)} when the association is"
+                    f"pre-established "
+                )
+
+        self.validate_event_conformance(event)
+
         self.state.process_event(event)
 
+        out_data = event.to_bytes()
+
         if self.use_protection:
-            event = self.protect(event)
+            out_data = self.protect(type(event), out_data)
 
         if self.use_blocks:
-            blocks = self.make_blocks(event)
+            blocks = self.make_blocks(out_data)
             # TODO: How to handle the subcase of sending blocks?
 
-        return event.to_bytes()
+        return out_data
+
+    def validate_event_conformance(self, event):
+        """
+        Will check for each APDU type that it corresponds to the correct parameters for
+        the connection.
+        """
+
+        if isinstance(event, acse.ApplicationAssociationRequestApdu):
+            if self.global_encryption_key and not event.ciphered:
+                raise ConformanceError(
+                    "Connection is ciphered but AARQ does not indicate ciphering."
+                )
+            if self.global_encryption_key and not event.user_information:
+                raise ConformanceError(
+                    "Connection is ciphered but AARQ does not "
+                    "contain a InitiateRequest."
+                )
+            if (
+                self.global_encryption_key
+                and not event.user_information.content.proposed_conformance.general_protection
+            ):
+                raise ConformanceError(
+                    "Connection is ciphered but the conformance block in the "
+                    "InitiateRequest doesn't indicate support of general-protection"
+                )
+            if not self.global_encryption_key and event.ciphered:
+                raise ConformanceError(
+                    "Connection is not ciphered, but the AARQ indicates ciphering"
+                )
+
+        elif isinstance(event, acse.ApplicationAssociationResponseApdu):
+            if self.global_encryption_key and not event.ciphered:
+                raise ConformanceError(
+                    "Connection is ciphered but AARE does not indicate ciphering."
+                )
+
+        if isinstance(event, xdlms.GetRequest):
+            if not self.conformance.get:
+                raise ConformanceError(
+                    "Tried sending a get request during association that doesnt "
+                    "support the service."
+                )
 
     def receive_data(self, data: bytes):
         """
@@ -92,6 +213,7 @@ class DlmsConnection:
         ):
             self.update_negotiated_parameters(apdu)
 
+        self.validate_event_conformance(apdu)
         self.state.process_event(apdu)
         self.clear_buffer()
 
@@ -106,15 +228,17 @@ class DlmsConnection:
         If the Association is such that APDUs should be protected.
         :return:
         """
-        # TODO: add functionality
-        return False
+        if self.global_encryption_key is not None:
+            return True
+        else:
+            return False
 
-    def protect(self, event) -> Any:
+    def protect(self, event_type: Type, data: bytes) -> Any:
         """
         Will apply the correct protection to apdus depending on the security context
         Will return new objects, ciphered or partially ciphered.
         """
-        return event
+        return data
 
     def unprotect(self, event):
         """

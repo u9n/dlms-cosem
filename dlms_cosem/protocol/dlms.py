@@ -38,6 +38,7 @@ class XDlmsApduFactory:
         13: WriteResponseApdu,
         14: xdlms.ConfirmedServiceErrorApdu,
         15: xdlms.DataNotificationApdu,
+        216: xdlms.ExceptionResponseApdu,
         219: xdlms.GeneralGlobalCipherApdu,
         # ACSE APDUs:
         96: acse.ApplicationAssociationRequestApdu,

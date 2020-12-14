@@ -7,6 +7,7 @@ from dlms_cosem.protocol.xdlms.conformance import Conformance
 from dlms_cosem.protocol.xdlms.initiate_request import InitiateRequestApdu
 from dlms_cosem.protocol import cosem, time
 import logging
+from functools import partial
 
 # set up logging so you get a bit nicer printout of what is happening.
 logging.basicConfig(
@@ -36,11 +37,36 @@ c = Conformance(
 )
 
 
-port = "/dev/tty.usbserial-A704H8SO"
-client = SerialDlmsClient(
+def client_factory(
+    server_logical_address,
+    server_physical_address,
+    client_logical_address,
+    serial_port,
+    conformance,
+):
+    return SerialDlmsClient(
+        server_logical_address=server_logical_address,
+        server_physical_address=server_physical_address,
+        client_logical_address=client_logical_address,
+        serial_port=serial_port,
+        conformance=conformance,
+    )
+
+
+public_client = partial(
+    client_factory,
     server_logical_address=1,
     server_physical_address=17,
     client_logical_address=16,
+)
+
+management_client = partial( client_factory,
+    server_logical_address=1,
+    server_physical_address=17,
+    client_logical_address=1,)
+
+port = "/dev/tty.usbserial-A704H8SO"
+client = public_client(
     serial_port=port,
     conformance=c,
 )
@@ -49,9 +75,10 @@ client = SerialDlmsClient(
 #    client.get()
 client.associate()
 result = client.get(
-    ic=cosem.CosemInterface.DATA, instance=cosem.Obis(0, 0, 0x2b, 1, 0), attribute=2
+    ic=cosem.CosemInterface.DATA, instance=cosem.Obis(0, 0, 0x2B, 1, 0), attribute=2
 )
 print(result)
-#bytes.fromhex("C001C1000100002A0000FF0200")
+# bytes.fromhex("C001C1000100002A0000FF0200")
+# TODO: parse  b'~\xa0\x10!\x02#0\x85\xdd\xe6\xe7\x00\xd8\x01\x01<C~' and see where the error is.
 
 client.release_association()

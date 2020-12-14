@@ -182,13 +182,14 @@ class CosemObject:
 
     @classmethod
     def from_bytes(cls, source_bytes: bytes):
+        print("in cosem")
         if len(source_bytes) != cls.LENGTH:
             raise ValueError(
                 f"Data is not of correct lenght. Should be {cls.LENGTH} but is "
                 f"{len(source_bytes)}"
             )
-        interface = CosemInterface(int.from_bytes(source_bytes[:2]))
-        instance = Obis.from_bytes(source_bytes[2:5])
+        interface = CosemInterface(int.from_bytes(source_bytes[:2], 'big'))
+        instance = Obis.from_bytes(source_bytes[2:8])
         attribute = source_bytes[-1]
         return cls(interface, instance, attribute)
 

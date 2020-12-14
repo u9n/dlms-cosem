@@ -165,8 +165,6 @@ class InitiateRequestApdu(AbstractXDlmsApdu):
                 )
             object_dict[decoding_rule["attr"]] = object_instance
 
-        print(object_dict)
-
         return cls(**object_dict)
 
     def to_bytes(self):

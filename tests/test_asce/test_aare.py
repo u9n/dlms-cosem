@@ -72,6 +72,41 @@ class TestDecodeAARE:
         assert aare.authentication == acse.AuthenticationMechanism.HLS_GMAC
         assert isinstance(aare.user_information.content, InitiateResponseApdu)
 
+    def test_no_cipher_no_auth_conformance(self):
+        data = bytes.fromhex(
+            "6129a109060760857405080101a203020100a305a103020100be10040e0800065f1f0400001e1d04c80007"
+        )
+
+        aare = acse.ApplicationAssociationResponseApdu.from_bytes(data)
+
+        assert aare.result == AssociationResult.ACCEPTED
+        assert aare.result_source_diagnostics == AcseServiceUserDiagnostics.NULL
+        assert not aare.ciphered
+        assert not aare.authentication
+        assert aare.meter_system_title is None
+        assert aare.authentication_value is None
+        assert aare.meter_public_cert is None
+        assert isinstance(aare.user_information.content, InitiateResponseApdu)
+        assert aare.user_information.content.negotiated_conformance == Conformance(
+            general_protection=False,
+            general_block_transfer=False,
+            delta_value_encoding=False,
+            attribute_0_supported_with_set=False,
+            priority_management_supported=False,
+            attribute_0_supported_with_get=False,
+            block_transfer_with_get_or_read=True,
+            block_transfer_with_set_or_write=True,
+            block_transfer_with_action=True,
+            multiple_references=True,
+            data_notification=False,
+            access=False,
+            get=True,
+            set=True,
+            selective_access=True,
+            event_notification=False,
+            action=True,
+        )
+
 
 class TestEncodeAARE:
     def test_no_ciphering_no_security_ok_association(self):
@@ -201,9 +236,7 @@ class TestEncodeAARE:
             authentication=AuthenticationMechanism.HLS_GMAC,
             meter_public_cert=None,
             meter_system_title=None,
-            authentication_value=AuthenticationValue(
-                password=bytearray(b"P6wRJ21F"), password_type="chars"
-            ),
+            authentication_value=b"P6wRJ21F",
             user_information=UserInformation(
                 content=InitiateResponseApdu(
                     negotiated_conformance=Conformance(

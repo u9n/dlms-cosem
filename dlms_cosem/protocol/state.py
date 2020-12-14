@@ -49,13 +49,14 @@ DLMS_STATE_TRANSITIONS = {
     NO_ASSOCIATION: {
         acse.ApplicationAssociationRequestApdu: AWAITING_ASSOCIATION_RESPONSE
     },
-    AWAITING_ASSOCIATION_RESPONSE: {acse.ApplicationAssociationResponseApdu: READY},
+    AWAITING_ASSOCIATION_RESPONSE: {acse.ApplicationAssociationResponseApdu: READY, xdlms.ExceptionResponseApdu: NO_ASSOCIATION},
     READY: {
         acse.ReleaseRequestApdu: AWAITING_RELEASE_RESPONSE,
         xdlms.GetRequest: AWAITING_GET_RESPONSE,
+
     },
-    AWAITING_GET_RESPONSE: {xdlms.GetResponse: READY},
-    AWAITING_RELEASE_RESPONSE: {acse.ReleaseResponseApdu: NO_ASSOCIATION},
+    AWAITING_GET_RESPONSE: {xdlms.GetResponse: READY, xdlms.ExceptionResponseApdu: READY},
+    AWAITING_RELEASE_RESPONSE: {acse.ReleaseResponseApdu: NO_ASSOCIATION, xdlms.ExceptionResponseApdu: READY},
 }
 
 

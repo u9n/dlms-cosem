@@ -162,9 +162,7 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
     authentication: Optional[acse_base.AuthenticationMechanism] = attr.ib(default=None)
     meter_system_title: Optional[bytes] = attr.ib(default=None)
     meter_public_cert: Optional[bytes] = attr.ib(default=None)
-    authentication_value: Optional[acse_base.AuthenticationValue] = attr.ib(
-        default=None
-    )
+    authentication_value: Optional[bytes] = attr.ib(default=None)
     user_information: Optional[acse_base.UserInformation] = attr.ib(default=None)
 
     # Not really used.
@@ -211,7 +209,7 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
 
     @property
     def protocol_version(self) -> int:
-        return 1
+        return 0
 
     @classmethod
     def from_bytes(cls, source_bytes: bytes):
@@ -306,19 +304,20 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
             object_dict["authentication"] = mechanism_name.mechanism
 
         # rename responding_ap_title to meter_system_title for cleaner API
-        object_dict["meter_system_title"] = object_dict.pop(
-            "responding_ap_title", None
-        )
+        object_dict["meter_system_title"] = object_dict.pop("responding_ap_title", None)
 
         # rename responding_ae_qualifier to meter_public_cert
         object_dict["meter_public_cert"] = object_dict.pop(
             "responding_ae_qualifier", None
         )
 
-        # rename responding_authentication_value to just authentication_value
-        object_dict["authentication_value"] = object_dict.pop(
+        auth_value: Optional[acse_base.AuthenticationValue] = object_dict.pop(
             "responding_authentication_value", None
         )
+        if auth_value:
+            object_dict["authentication_value"] = auth_value.password
+        else:
+            object_dict["authentication_value"] = None
 
         return cls(**object_dict)
 
@@ -375,7 +374,12 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
             aare_data.extend(BER.encode(0x89, self.mechanism_name.to_bytes()))
         if self.authentication_value is not None:
             aare_data.extend(
-                BER.encode(170, self.authentication_value.to_bytes())
+                BER.encode(
+                    170,
+                    acse_base.AuthenticationValue(
+                        password=self.authentication_value
+                    ).to_bytes(),
+                )
             )
 
         if self.implementation_information is not None:
@@ -384,7 +388,3 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
             aare_data.extend(BER.encode(0xBE, self.user_information.to_bytes()))
 
         return BER.encode(self.TAG, aare_data)
-
-        # TODO: CAn we use an orderedDict to loopt through all elemetns of the aarq to be transformed.
-
-        # TODO: Add encoding of all values from ground up.

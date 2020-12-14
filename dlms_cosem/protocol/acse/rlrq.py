@@ -54,7 +54,7 @@ class ReleaseRequestApdu(AbstractAcseApdu):
 
         rlrq_tag = rlrq_data.pop(0)
         if not rlrq_tag == cls.TAG:
-            raise ValueError("Bytes are not an AARQ APDU. TAg is not int(96)")
+            raise ValueError("Bytes are not an RLRQ APDU. TAg is not int(98)")
 
         rlrq_length = rlrq_data.pop(0)
 

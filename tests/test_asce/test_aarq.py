@@ -146,9 +146,7 @@ class TestEncodeAARE:
             client_public_cert=None,
             authentication=AuthenticationMechanism.HLS_GMAC,
             ciphered=False,
-            authentication_value=AuthenticationValue(
-                password=bytearray(b"K56iVagY"), password_type="chars"
-            ),
+            authentication_value=b"K56iVagY",
             user_information=UserInformation(
                 content=InitiateRequestApdu(
                     proposed_conformance=Conformance(
@@ -195,9 +193,7 @@ class TestEncodeAARE:
             client_public_cert=None,
             authentication=AuthenticationMechanism.LLS,
             ciphered=False,
-            authentication_value=AuthenticationValue(
-                password=bytearray(b"12345678"), password_type="chars"
-            ),
+            authentication_value=b"12345678",
             user_information=UserInformation(
                 content=InitiateRequestApdu(
                     proposed_conformance=Conformance(

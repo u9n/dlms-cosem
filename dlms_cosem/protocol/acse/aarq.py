@@ -141,18 +141,14 @@ class ApplicationAssociationRequestApdu:
         ),  # Context specific, constructed 30
     }
 
+    user_information: acse_base.UserInformation = attr.ib(validator=[user_information_holds_initiate_request])
     client_system_title: Optional[bytes] = attr.ib(default=None)
     client_public_cert: Optional[bytes] = attr.ib(default=None)
     authentication: Optional[acse_base.AuthenticationMechanism] = attr.ib(default=None)
     ciphered: bool = attr.ib(default=False)
     # TODO: Can we rename this to password? Would be nice to pass it as bytes or str.
-    authentication_value: Optional[acse_base.AuthenticationValue] = attr.ib(
-        default=None
-    )
+    authentication_value: Optional[bytes] = attr.ib(default=None)
     # TODO: validate that a ciphered InitiateReqest is used when ciphering is True.
-    user_information: Optional[acse_base.UserInformation] = attr.ib(
-        default=None, validator=[user_information_holds_initiate_request]
-    )
     calling_ae_invocation_identifier: Optional[bytes] = attr.ib(default=None)
 
     # Not really used
@@ -203,7 +199,7 @@ class ApplicationAssociationRequestApdu:
 
     @property
     def protocol_version(self) -> int:
-        return 1
+        return 0
 
     @classmethod
     def from_bytes(cls, aarq_bytes):
@@ -281,9 +277,13 @@ class ApplicationAssociationRequestApdu:
         object_dict["client_public_cert"] = object_dict.pop(
             "calling_ae_qualifier", None
         )
-        object_dict["authentication_value"] = object_dict.pop(
+        auth_value: Optional[acse_base.AuthenticationValue] = object_dict.pop(
             "calling_authentication_value", None
         )
+        if auth_value:
+            object_dict["authentication_value"] = auth_value.password
+        else:
+            object_dict["authentication_value"] = None
 
         return cls(**object_dict)
 
@@ -313,7 +313,14 @@ class ApplicationAssociationRequestApdu:
         if self.mechanism_name is not None:
             aarq_data.extend(BER.encode(0x8B, self.mechanism_name.to_bytes()))
         if self.authentication_value is not None:
-            aarq_data.extend(BER.encode(0xAC, self.authentication_value.to_bytes()))
+            aarq_data.extend(
+                BER.encode(
+                    0xAC,
+                    acse_base.AuthenticationValue(
+                        password=self.authentication_value
+                    ).to_bytes(),
+                )
+            )
         if self.implementation_information is not None:
             aarq_data.extend(BER.encode(0xBD, self.implementation_information))
         if self.user_information is not None:
