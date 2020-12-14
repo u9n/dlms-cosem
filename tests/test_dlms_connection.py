@@ -1,12 +1,7 @@
 import pytest
 
-from dlms_cosem.protocol.acse.aare import AssociationResult, AcseServiceUserDiagnostics
-from dlms_cosem.protocol.connection import (
-    DlmsConnection,
-    PreEstablishedAssociationError,
-    ConformanceError,
-)
-from dlms_cosem.protocol import acse, xdlms, state
+from dlms_cosem.protocol.connection import DlmsConnection
+from dlms_cosem.protocol import acse, xdlms, state, enumerations, exceptions
 from dlms_cosem.protocol.exceptions import LocalDlmsProtocolError
 from dlms_cosem.protocol.xdlms import Conformance
 
@@ -29,8 +24,8 @@ def test_negotiated_conformance_is_updated():
     c.send(c.get_aarq())
     c.receive_data(
         acse.ApplicationAssociationResponseApdu(
-            result=AssociationResult.ACCEPTED,
-            result_source_diagnostics=AcseServiceUserDiagnostics.NULL,
+            result=enumerations.AssociationResult.ACCEPTED,
+            result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.NULL,
             user_information=acse.UserInformation(
                 content=xdlms.InitiateResponseApdu(
                     negotiated_conformance=Conformance(
@@ -83,21 +78,25 @@ def test_cannot_send_get_if_conformance_does_not_allow_it(get_request):
         state=state.DlmsConnectionState(current_state=state.READY),
         conformance=Conformance(get=False),
     )
-    with pytest.raises(ConformanceError):
+    with pytest.raises(exceptions.ConformanceError):
         c.send(get_request)
 
 
 def test_receive_get_response_sets_state_to_ready():
     c = DlmsConnection(
-        state=state.DlmsConnectionState(current_state=state.AWAITING_GET_RESPONSE))
-    c.receive_data(b'\xc4\x01\xc1\x00\x06\x00\x00\x13\x91')
+        state=state.DlmsConnectionState(current_state=state.AWAITING_GET_RESPONSE)
+    )
+    c.receive_data(b"\xc4\x01\xc1\x00\x06\x00\x00\x13\x91")
     c.next_event()
     assert c.state.current_state == state.READY
 
 
-def test_receive_exception_response_sets_state_to_ready(exception_response: xdlms.ExceptionResponseApdu):
+def test_receive_exception_response_sets_state_to_ready(
+    exception_response: xdlms.ExceptionResponseApdu
+):
     c = DlmsConnection(
-        state=state.DlmsConnectionState(current_state=state.AWAITING_GET_RESPONSE))
+        state=state.DlmsConnectionState(current_state=state.AWAITING_GET_RESPONSE)
+    )
     c.receive_data(exception_response.to_bytes())
     c.next_event()
     assert c.state.current_state == state.READY
@@ -132,5 +131,5 @@ class TestPreEstablishedAssociation:
     def test_not_able_to_send_rlrq(self, rlrq: acse.ReleaseRequestApdu):
         c = DlmsConnection.with_pre_established_association(conformance=Conformance())
 
-        with pytest.raises(PreEstablishedAssociationError):
+        with pytest.raises(exceptions.PreEstablishedAssociationError):
             c.send(rlrq)

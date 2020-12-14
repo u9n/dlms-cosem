@@ -1,22 +1,10 @@
 import pytest
-from dlms_cosem.protocol import acse
+from dlms_cosem.protocol import acse, enumerations
 
 # Example encodings from DLMS Green book v10 page:
-from dlms_cosem.protocol.acse import (
-    AuthenticationMechanism,
-    AuthenticationValue,
-    UserInformation,
-)
-from dlms_cosem.protocol.acse.aare import AssociationResult, AcseServiceUserDiagnostics
-from dlms_cosem.protocol.xdlms import (
-    InitiateRequestApdu,
-    InitiateResponseApdu,
-    Conformance,
-)
-from dlms_cosem.protocol.xdlms.confirmed_service_error import (
-    InitiateError,
-    ConfirmedServiceErrorApdu,
-)
+from dlms_cosem.protocol.acse import UserInformation
+from dlms_cosem.protocol.xdlms import InitiateResponseApdu, Conformance
+from dlms_cosem.protocol.xdlms.confirmed_service_error import ConfirmedServiceErrorApdu
 
 
 class TestDecodeAARE:
@@ -26,8 +14,11 @@ class TestDecodeAARE:
         )
         aare = acse.ApplicationAssociationResponseApdu.from_bytes(data)
         assert not aare.ciphered
-        assert aare.result == AssociationResult.ACCEPTED
-        assert aare.result_source_diagnostics == AcseServiceUserDiagnostics.NULL
+        assert aare.result == enumerations.AssociationResult.ACCEPTED
+        assert (
+            aare.result_source_diagnostics
+            == enumerations.AcseServiceUserDiagnostics.NULL
+        )
         assert aare.user_information is not None
 
     def test_no_ciphering_no_security_app_context_name_wrong(self):
@@ -36,10 +27,10 @@ class TestDecodeAARE:
         )
         aare = acse.ApplicationAssociationResponseApdu.from_bytes(data)
         assert not aare.ciphered
-        assert aare.result == AssociationResult.REJECTED_PERMANENT
+        assert aare.result == enumerations.AssociationResult.REJECTED_PERMANENT
         assert (
             aare.result_source_diagnostics
-            == AcseServiceUserDiagnostics.APPLICATION_CONTEXT_NAME_NOT_SUPPORTED
+            == enumerations.AcseServiceUserDiagnostics.APPLICATION_CONTEXT_NAME_NOT_SUPPORTED
         )
         assert isinstance(aare.user_information.content, InitiateResponseApdu)
 
@@ -49,13 +40,14 @@ class TestDecodeAARE:
         )
         aare = acse.ApplicationAssociationResponseApdu.from_bytes(data)
         assert not aare.ciphered
-        assert aare.result == AssociationResult.REJECTED_PERMANENT
+        assert aare.result == enumerations.AssociationResult.REJECTED_PERMANENT
         assert (
-            aare.result_source_diagnostics == AcseServiceUserDiagnostics.NO_REASON_GIVEN
+            aare.result_source_diagnostics
+            == enumerations.AcseServiceUserDiagnostics.NO_REASON_GIVEN
         )
         print(aare.user_information)
         assert aare.user_information.content is not None
-        assert aare.user_information.content.error == InitiateError.DLMS_VERSION_TOO_LOW
+        assert aare.user_information.content.error == enumerations.InitiateError.DLMS_VERSION_TOO_LOW
 
     def test_no_ciher_hls_ok(self):
         data = bytes.fromhex(
@@ -63,13 +55,13 @@ class TestDecodeAARE:
         )
         aare = acse.ApplicationAssociationResponseApdu.from_bytes(data)
         assert not aare.ciphered
-        assert aare.result == AssociationResult.ACCEPTED
+        assert aare.result == enumerations.AssociationResult.ACCEPTED
         assert (
             aare.result_source_diagnostics
-            == AcseServiceUserDiagnostics.AUTHENTICATION_REQUIRED
+            == enumerations.AcseServiceUserDiagnostics.AUTHENTICATION_REQUIRED
         )
         assert aare.authentication_value is not None
-        assert aare.authentication == acse.AuthenticationMechanism.HLS_GMAC
+        assert aare.authentication == enumerations.AuthenticationMechanism.HLS_GMAC
         assert isinstance(aare.user_information.content, InitiateResponseApdu)
 
     def test_no_cipher_no_auth_conformance(self):
@@ -79,8 +71,11 @@ class TestDecodeAARE:
 
         aare = acse.ApplicationAssociationResponseApdu.from_bytes(data)
 
-        assert aare.result == AssociationResult.ACCEPTED
-        assert aare.result_source_diagnostics == AcseServiceUserDiagnostics.NULL
+        assert aare.result == enumerations.AssociationResult.ACCEPTED
+        assert (
+            aare.result_source_diagnostics
+            == enumerations.AcseServiceUserDiagnostics.NULL
+        )
         assert not aare.ciphered
         assert not aare.authentication
         assert aare.meter_system_title is None
@@ -114,8 +109,8 @@ class TestEncodeAARE:
             "6129A109060760857405080101A203020100A305A103020100BE10040E0800065F1F040000501F01F40007"
         )
         aare = acse.ApplicationAssociationResponseApdu(
-            result=AssociationResult.ACCEPTED,
-            result_source_diagnostics=AcseServiceUserDiagnostics.NULL,
+            result=enumerations.AssociationResult.ACCEPTED,
+            result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.NULL,
             ciphered=False,
             authentication=None,
             meter_system_title=None,
@@ -159,8 +154,8 @@ class TestEncodeAARE:
             "6129A109060760857405080101A203020101A305A103020102BE10040E0800065F1F040000501F01F40007"
         )
         aare = acse.ApplicationAssociationResponseApdu(
-            result=AssociationResult.REJECTED_PERMANENT,
-            result_source_diagnostics=AcseServiceUserDiagnostics.APPLICATION_CONTEXT_NAME_NOT_SUPPORTED,
+            result=enumerations.AssociationResult.REJECTED_PERMANENT,
+            result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.APPLICATION_CONTEXT_NAME_NOT_SUPPORTED,
             ciphered=False,
             authentication=None,
             meter_system_title=None,
@@ -205,8 +200,8 @@ class TestEncodeAARE:
         )
 
         aare = acse.ApplicationAssociationResponseApdu(
-            result=AssociationResult.REJECTED_PERMANENT,
-            result_source_diagnostics=AcseServiceUserDiagnostics.NO_REASON_GIVEN,
+            result=enumerations.AssociationResult.REJECTED_PERMANENT,
+            result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.NO_REASON_GIVEN,
             ciphered=False,
             authentication=None,
             meter_system_title=None,
@@ -214,7 +209,7 @@ class TestEncodeAARE:
             authentication_value=None,
             user_information=acse.UserInformation(
                 content=ConfirmedServiceErrorApdu(
-                    error=InitiateError.DLMS_VERSION_TOO_LOW
+                    error=enumerations.InitiateError.DLMS_VERSION_TOO_LOW
                 )
             ),
             implementation_information=None,
@@ -230,10 +225,10 @@ class TestEncodeAARE:
         )
 
         aare = acse.ApplicationAssociationResponseApdu(
-            result=AssociationResult.ACCEPTED,
-            result_source_diagnostics=AcseServiceUserDiagnostics.AUTHENTICATION_REQUIRED,
+            result=enumerations.AssociationResult.ACCEPTED,
+            result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.AUTHENTICATION_REQUIRED,
             ciphered=False,
-            authentication=AuthenticationMechanism.HLS_GMAC,
+            authentication=enumerations.AuthenticationMechanism.HLS_GMAC,
             meter_public_cert=None,
             meter_system_title=None,
             authentication_value=b"P6wRJ21F",

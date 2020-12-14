@@ -1,13 +1,13 @@
 import pytest
 
-from dlms_cosem.protocol.acse import ReleaseRequestApdu, ReleaseRequestReason
+from dlms_cosem.protocol.acse import ReleaseRequestApdu, enumerations
 
 
 class TestDecodeRLRQ:
     def test_simple(self):
         data = bytes.fromhex("6203800100")  # Normal no user-information
         rlrq = ReleaseRequestApdu.from_bytes(data)
-        assert rlrq.reason == ReleaseRequestReason.NORMAL
+        assert rlrq.reason == enumerations.ReleaseRequestReason.NORMAL
         assert rlrq.user_information is None
         assert data == rlrq.to_bytes()
 
@@ -19,4 +19,4 @@ class TestDecodeRLRQ:
         with pytest.raises(ValueError):
 
             rlrq = ReleaseRequestApdu.from_bytes(data)
-            assert rlrq.reason == ReleaseRequestReason.NORMAL
+            assert rlrq.reason == enumerations.ReleaseRequestReason.NORMAL

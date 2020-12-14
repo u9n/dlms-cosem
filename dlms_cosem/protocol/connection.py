@@ -3,15 +3,11 @@ from typing import *
 import attr
 
 from dlms_cosem.protocol.xdlms.conformance import Conformance
-from dlms_cosem.protocol import acse, xdlms, dlms
+from dlms_cosem.protocol import acse, xdlms, dlms, exceptions
 from dlms_cosem.protocol import state as dlms_state
 import logging
 
 LOG = logging.getLogger(__name__)
-
-
-class PreEstablishedAssociationError(Exception):
-    """An error when doing illeagal things to the connection if it pre established"""
 
 
 def make_conformance(encryption_key: Optional[bytes], use_block_transfer: bool):
@@ -38,10 +34,6 @@ def make_conformance(encryption_key: Optional[bytes], use_block_transfer: bool):
         event_notification=True,
         action=True,
     )
-
-
-class ConformanceError(Exception):
-    """If APDUs does not match connection Conformance"""
 
 
 @attr.s(auto_attribs=True)
@@ -116,7 +108,7 @@ class DlmsConnection:
             # Only valid state change is to send the ReleaseRequestApdu. But it is not
             # possible to close a pre-established association.
             if isinstance(event, acse.ReleaseRequestApdu):
-                raise PreEstablishedAssociationError(
+                raise exceptions.PreEstablishedAssociationError(
                     f"You cannot send a {type(event)} when the association is"
                     f"pre-established "
                 )
@@ -144,11 +136,11 @@ class DlmsConnection:
 
         if isinstance(event, acse.ApplicationAssociationRequestApdu):
             if self.global_encryption_key and not event.ciphered:
-                raise ConformanceError(
+                raise exceptions.ConformanceError(
                     "Connection is ciphered but AARQ does not indicate ciphering."
                 )
             if self.global_encryption_key and not event.user_information:
-                raise ConformanceError(
+                raise exceptions.ConformanceError(
                     "Connection is ciphered but AARQ does not "
                     "contain a InitiateRequest."
                 )
@@ -156,24 +148,24 @@ class DlmsConnection:
                 self.global_encryption_key
                 and not event.user_information.content.proposed_conformance.general_protection
             ):
-                raise ConformanceError(
+                raise exceptions.ConformanceError(
                     "Connection is ciphered but the conformance block in the "
                     "InitiateRequest doesn't indicate support of general-protection"
                 )
             if not self.global_encryption_key and event.ciphered:
-                raise ConformanceError(
+                raise exceptions.ConformanceError(
                     "Connection is not ciphered, but the AARQ indicates ciphering"
                 )
 
         elif isinstance(event, acse.ApplicationAssociationResponseApdu):
             if self.global_encryption_key and not event.ciphered:
-                raise ConformanceError(
+                raise exceptions.ConformanceError(
                     "Connection is ciphered but AARE does not indicate ciphering."
                 )
 
         if isinstance(event, xdlms.GetRequest):
             if not self.conformance.get:
-                raise ConformanceError(
+                raise exceptions.ConformanceError(
                     "Tried sending a get request during association that doesnt "
                     "support the service."
                 )

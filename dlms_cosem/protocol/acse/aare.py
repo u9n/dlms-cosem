@@ -1,10 +1,12 @@
 from typing import *
-from enum import IntEnum
+
 import attr
+from asn1crypto.core import Choice, Integer
+
 from dlms_cosem.protocol.acse import base as acse_base
+from dlms_cosem.protocol import enumerations
 from dlms_cosem.protocol.acse.aarq import aarq_should_set_authenticated
 from dlms_cosem.protocol.ber import BER
-from asn1crypto.core import Choice, Integer
 
 
 @attr.s(auto_attribs=True)
@@ -33,30 +35,6 @@ class Asn1Integer:
         return BER.encode(self.TAG, self.value.to_bytes(1, byteorder="big"))
 
 
-class AcseServiceUserDiagnostics(IntEnum):
-    NULL = 0
-    NO_REASON_GIVEN = 1
-    APPLICATION_CONTEXT_NAME_NOT_SUPPORTED = 2
-    CALLING_AP_TITLE_NOT_RECOGNIZED = 3
-    CALLING_AP_INVOCATION_IDENTIFIER_NOT_RECOGNIZED = 4
-    CALLING_AE_QUALIFIER_NOT_RECOGNIZED = 5
-    CALLING_AE_INVOCATION_IDENTIFIER_NOT_RECOGNIZED = 6
-    CALLED_AP_TITLE_NOT_RECOGNIZED = 7
-    CALLED_AP_INVOCATION_IDENTIFIER_NOT_RECOGNIZED = 8
-    CALLED_AE_QUALIFIER_NOT_RECOGNIZED = 9
-    CALLED_AE_INVOCATION_IDENTIFIER_NOT_RECOGNIZED = 10
-    AUTHENTICATION_MECHANISM_NAME_NOT_RECOGNIZED = 11
-    AUTHENTICATION_MECHANISM_NAME_REQUIRED = 12
-    AUTHENTICATION_FAILED = 13
-    AUTHENTICATION_REQUIRED = 14
-
-
-class AcseServiceProviderDiagnostics(IntEnum):
-    NULL = 0
-    NO_REASON_GIVEN = 1
-    NO_COMMON_ACSE_VERSION = 2
-
-
 class ResultSourceDiagnostics(Choice):
     _alternatives = [
         ("acse-service-user", Integer, {"explicit": 1}),
@@ -66,13 +44,6 @@ class ResultSourceDiagnostics(Choice):
     @classmethod
     def from_bytes(cls, source_bytes: bytes):
         return cls.load(source_bytes)
-
-
-class AssociationResult(IntEnum):
-    ACCEPTED = 0
-    REJECTED_PERMANENT = 1
-    REJECTED_TRANSIENT = 2
-    # TODO: What does transient rejection mean?
 
 
 @attr.s(auto_attribs=True)
@@ -154,12 +125,15 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
         ),  # Context specific, constructed 30
     }
 
-    result: AssociationResult
+    result: enumerations.AssociationResult
     result_source_diagnostics: Union[
-        AcseServiceUserDiagnostics, AcseServiceProviderDiagnostics
+        enumerations.AcseServiceUserDiagnostics,
+        enumerations.AcseServiceProviderDiagnostics,
     ]
     ciphered: bool = attr.ib(default=False)
-    authentication: Optional[acse_base.AuthenticationMechanism] = attr.ib(default=None)
+    authentication: Optional[enumerations.AuthenticationMechanism] = attr.ib(
+        default=None
+    )
     meter_system_title: Optional[bytes] = attr.ib(default=None)
     meter_public_cert: Optional[bytes] = attr.ib(default=None)
     authentication_value: Optional[bytes] = attr.ib(default=None)
@@ -275,19 +249,21 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
                 raise ValueError("Parsed a protocol version that is not 0")
 
         # transform the result into an enum
-        object_dict["result"] = AssociationResult(object_dict["result"].value)
+        object_dict["result"] = enumerations.AssociationResult(
+            object_dict["result"].value
+        )
 
         # tarnsorm the source diagnositc into enum
         source_diagnostic = object_dict["result_source_diagnostics"]
 
         if source_diagnostic.name == "acse-service-user":
-            object_dict["result_source_diagnostics"] = AcseServiceUserDiagnostics(
-                source_diagnostic.native
-            )
+            object_dict[
+                "result_source_diagnostics"
+            ] = enumerations.AcseServiceUserDiagnostics(source_diagnostic.native)
         elif source_diagnostic.name == "acse-service-provider":
-            object_dict["result_source_diagnostics"] = AcseServiceProviderDiagnostics(
-                source_diagnostic.native
-            )
+            object_dict[
+                "result_source_diagnostics"
+            ] = enumerations.AcseServiceProviderDiagnostics(source_diagnostic.native)
 
         else:
             raise ValueError("Not a valid choice of result_source_diagnostics")
@@ -335,7 +311,9 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
                 BER.encode(162, Asn1Integer(value=self.result.value).to_bytes())
             )
         if self.result_source_diagnostics is not None:
-            if isinstance(self.result_source_diagnostics, AcseServiceUserDiagnostics):
+            if isinstance(
+                self.result_source_diagnostics, enumerations.AcseServiceUserDiagnostics
+            ):
                 aare_data.extend(
                     BER.encode(
                         163,
@@ -346,7 +324,8 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
                     )
                 )
             elif isinstance(
-                self.result_source_diagnostics, AcseServiceProviderDiagnostics
+                self.result_source_diagnostics,
+                enumerations.AcseServiceProviderDiagnostics,
             ):
                 aare_data.extend(
                     BER.encode(

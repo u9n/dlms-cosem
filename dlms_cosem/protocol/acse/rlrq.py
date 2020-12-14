@@ -1,25 +1,18 @@
-from typing import *
-from enum import IntEnum, Enum, unique
 from functools import partial
+from typing import *
+
 import attr
 
+from dlms_cosem.protocol import enumerations
 from dlms_cosem.protocol.acse.base import AbstractAcseApdu, UserInformation
 from dlms_cosem.protocol.ber import BER
-
-RELEASE_REQUEST_REASONS = {1: "normal", 2: "urgent", 30: "user-defined"}
-
-
-@unique
-class ReleaseRequestReason(IntEnum):
-    NORMAL = 0
-    URGENT = 1
-    USER_DEFINED = 30
-
 
 # TODO: It might be a better approach to give the callable and not the class to make a
 #   object from bytes. This means we could jack into the creation if needed
 #   and also using partials and other for integers etc.
-relase_reason_from_bytes = partial(ReleaseRequestReason.from_bytes, byteorder="big")
+release_reason_from_bytes = partial(
+    enumerations.ReleaseRequestReason.from_bytes, byteorder="big"
+)
 
 
 @attr.s(auto_attribs=True)
@@ -37,14 +30,14 @@ class ReleaseRequestApdu(AbstractAcseApdu):
     TAG: ClassVar[int] = 98  # Application 2
 
     PARSE_TAGS: ClassVar[Dict[int, Tuple[str, Callable]]] = {
-        0x80: ("reason", relase_reason_from_bytes),  # context specific, constricted 0
+        0x80: ("reason", release_reason_from_bytes),  # context specific, constricted 0
         0xBE: (
             "user_information",
             UserInformation.from_bytes,
         ),  # Context specific, constructed 30
     }
 
-    reason: Optional[ReleaseRequestReason] = attr.ib(default=None)
+    reason: Optional[enumerations.ReleaseRequestReason] = attr.ib(default=None)
     user_information: Optional[UserInformation] = attr.ib(default=None)
 
     @classmethod
@@ -100,7 +93,7 @@ class ReleaseRequestApdu(AbstractAcseApdu):
         # default value of protocol_version is 1. Only decode if other than 1
 
         if self.reason is not None:
-            rlrq_data.extend(BER.encode(0x80, self.reason.value.to_bytes(1, 'big')))
+            rlrq_data.extend(BER.encode(0x80, self.reason.value.to_bytes(1, "big")))
         if self.user_information is not None:
             rlrq_data.extend(BER.encode(0xBE, self.user_information.to_bytes()))
         return BER.encode(self.TAG, rlrq_data)

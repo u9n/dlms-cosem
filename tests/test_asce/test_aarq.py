@@ -1,11 +1,10 @@
 import pytest
 
+from dlms_cosem.protocol import enumerations
 from dlms_cosem.protocol.acse import (
     ApplicationAssociationRequestApdu,
     UserInformation,
-    AuthenticationValue,
 )
-from dlms_cosem.protocol.acse import AuthenticationMechanism
 from dlms_cosem.protocol.xdlms import InitiateRequestApdu, Conformance
 
 # Example encodings from DLMS Green Book v10: page 444
@@ -23,7 +22,7 @@ class TestParseAARQ:
         aarq = ApplicationAssociationRequestApdu.from_bytes(data)
         print(aarq)
         assert not aarq.ciphered
-        assert aarq.authentication == AuthenticationMechanism.LLS
+        assert aarq.authentication == enumerations.AuthenticationMechanism.LLS
         # Password is used in LLS
         assert aarq.authentication_value is not None
 
@@ -32,7 +31,7 @@ class TestParseAARQ:
         aarq = ApplicationAssociationRequestApdu.from_bytes(data)
         print(aarq)
         assert not aarq.ciphered
-        assert aarq.authentication == AuthenticationMechanism.HLS_GMAC
+        assert aarq.authentication == enumerations.AuthenticationMechanism.HLS_GMAC
         # Password is used in LLS
         assert aarq.authentication_value is not None
 
@@ -43,7 +42,7 @@ class TestParseAARQ:
             aarq = ApplicationAssociationRequestApdu.from_bytes(data)
             print(aarq)
             assert aarq.ciphered
-            assert aarq.authentication == AuthenticationMechanism.LLS
+            assert aarq.authentication == enumerations.AuthenticationMechanism.LLS
             # you need to set a system title when ciphering
             assert aarq.client_system_title is not None
             # Password is used in LLS
@@ -144,7 +143,7 @@ class TestEncodeAARE:
         aarq = ApplicationAssociationRequestApdu(
             client_system_title=None,
             client_public_cert=None,
-            authentication=AuthenticationMechanism.HLS_GMAC,
+            authentication=enumerations.AuthenticationMechanism.HLS_GMAC,
             ciphered=False,
             authentication_value=b"K56iVagY",
             user_information=UserInformation(
@@ -191,7 +190,7 @@ class TestEncodeAARE:
         aarq = ApplicationAssociationRequestApdu(
             client_system_title=None,
             client_public_cert=None,
-            authentication=AuthenticationMechanism.LLS,
+            authentication=enumerations.AuthenticationMechanism.LLS,
             ciphered=False,
             authentication_value=b"12345678",
             user_information=UserInformation(

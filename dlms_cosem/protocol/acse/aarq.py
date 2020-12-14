@@ -5,7 +5,7 @@ import attr
 from dlms_cosem.protocol.ber import BER
 
 from dlms_cosem.protocol.acse import base as acse_base
-from dlms_cosem.protocol import xdlms
+from dlms_cosem.protocol import xdlms, enumerations
 
 
 def user_information_holds_initiate_request(
@@ -20,7 +20,7 @@ def user_information_holds_initiate_request(
 
 
 def aarq_should_set_authenticated(
-    mechanism: Optional[acse_base.AuthenticationMechanism]
+    mechanism: Optional[enumerations.AuthenticationMechanism]
 ):
     """
     * If Lowest Level Scurity (None) is used it shall not be present.
@@ -32,7 +32,7 @@ def aarq_should_set_authenticated(
     if not mechanism:
         return False
 
-    if mechanism == acse_base.AuthenticationMechanism.NONE:
+    if mechanism == enumerations.AuthenticationMechanism.NONE:
         return False
 
     return True
@@ -141,10 +141,14 @@ class ApplicationAssociationRequestApdu:
         ),  # Context specific, constructed 30
     }
 
-    user_information: acse_base.UserInformation = attr.ib(validator=[user_information_holds_initiate_request])
+    user_information: acse_base.UserInformation = attr.ib(
+        validator=[user_information_holds_initiate_request]
+    )
     client_system_title: Optional[bytes] = attr.ib(default=None)
     client_public_cert: Optional[bytes] = attr.ib(default=None)
-    authentication: Optional[acse_base.AuthenticationMechanism] = attr.ib(default=None)
+    authentication: Optional[enumerations.AuthenticationMechanism] = attr.ib(
+        default=None
+    )
     ciphered: bool = attr.ib(default=False)
     # TODO: Can we rename this to password? Would be nice to pass it as bytes or str.
     authentication_value: Optional[bytes] = attr.ib(default=None)

@@ -1,16 +1,12 @@
 import pytest
 
-from dlms_cosem.protocol import acse, xdlms, cosem
-from dlms_cosem.protocol.acse.aare import AssociationResult, AcseServiceUserDiagnostics
+from dlms_cosem.protocol import acse, xdlms, cosem, enumerations
 from dlms_cosem.protocol.xdlms import (
     InitiateResponseApdu,
     Conformance,
     InitiateRequestApdu,
 )
-from dlms_cosem.protocol.xdlms.confirmed_service_error import ServiceError
-from dlms_cosem.protocol.xdlms.exception_response import StateException, \
-    ServiceException
-from dlms_cosem.protocol.xdlms.get import InvokeIdAndPriority, GetType
+
 
 
 @pytest.fixture()
@@ -55,8 +51,8 @@ def aarq():
 @pytest.fixture()
 def aare():
     return acse.ApplicationAssociationResponseApdu(
-        result=AssociationResult.ACCEPTED,
-        result_source_diagnostics=AcseServiceUserDiagnostics.NULL,
+        result=enumerations.AssociationResult.ACCEPTED,
+        result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.NULL,
         ciphered=False,
         authentication=None,
         meter_system_title=None,
@@ -114,7 +110,7 @@ def get_request() -> xdlms.GetRequest:
     # invocation counter
     return xdlms.GetRequest(
         cosem_attribute=cosem.CosemObject(
-            interface=cosem.CosemInterface.DATA,
+            interface=enumerations.CosemInterface.DATA,
             instance=cosem.Obis(0, 0, 0x2B, 1, 0),
             attribute=2,
         )
@@ -124,6 +120,6 @@ def get_request() -> xdlms.GetRequest:
 @pytest.fixture()
 def exception_response() -> xdlms.ExceptionResponseApdu:
     return xdlms.ExceptionResponseApdu(
-        state_error=StateException.SERVICE_NOT_ALLOWED,
-        service_error=ServiceException.OPERATION_NOT_POSSIBLE,
+        state_error=enumerations.StateException.SERVICE_NOT_ALLOWED,
+        service_error=enumerations.ServiceException.OPERATION_NOT_POSSIBLE,
     )

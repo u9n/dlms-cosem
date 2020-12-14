@@ -1,27 +1,19 @@
-from enum import IntEnum, unique
 from functools import partial
 from typing import *
 
 import attr
 
-from dlms_cosem.protocol import cosem
+from dlms_cosem.protocol import cosem, enumerations
 from dlms_cosem.protocol.a_xdr import (
     Attribute,
     AXdrDecoder,
+    Choice,
     EncodingConf,
     Sequence,
-    Choice,
 )
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 
-
-class GetType(IntEnum):
-    NORMAL = 1
-    NEXT = 2
-    WITH_LIST = 3
-
-
-get_type_from_bytes = partial(GetType.from_bytes, byteorder="big")
+get_type_from_bytes = partial(enumerations.GetType.from_bytes, byteorder="big")
 
 
 class NullValue:
@@ -115,7 +107,7 @@ class GetRequest(AbstractXDlmsApdu):
     )
 
     cosem_attribute: cosem.CosemObject
-    request_type: GetType = attr.ib(default=GetType.NORMAL)
+    request_type: enumerations.GetType = attr.ib(default=enumerations.GetType.NORMAL)
     invoke_id_and_priority: InvokeIdAndPriority = attr.ib(factory=InvokeIdAndPriority)
     access_selection: Optional[bytes] = attr.ib(
         default=None, converter=attr.converters.default_if_none(default=b"\x00")
@@ -130,7 +122,7 @@ class GetRequest(AbstractXDlmsApdu):
                 f"Tag for GET request is not correct. Got {tag}, should be {cls.TAG}"
             )
 
-        type_choice = GetType(data.pop(0))
+        type_choice = enumerations.GetType(data.pop(0))
         decoder = AXdrDecoder(encoding_conf=cls.ENCODING_CONF)
         out_dict = decoder.decode(data)
         print(out_dict)
@@ -151,28 +143,8 @@ class GetRequest(AbstractXDlmsApdu):
         return b"".join(out)
 
 
-@unique
-class DataAccessResult(IntEnum):
-    SUCCESS = 0
-    HARDWARE_FAULT = 1
-    TEMPORARY_FAILURE = 2
-    READ_WRITE_DENIED = 3
-    OBJECT_UNDEFINED = 4
-    OBJECT_CLASS_INCONSISTENT = 9
-    OBJECT_UNAVAILABLE = 11
-    TYPE_UNMATCHED = 12
-    SCOPE_OF_ACCESS_VIOLATED = 13
-    DATA_BLOCK_UNAVAILABLE = 14
-    LONG_GET_ABORTED = 15
-    NO_LONG_GET_IN_PROGRESS = 16
-    LONG_SET_ABORTED = 17
-    NO_LONG_SET_IN_PROGRESS = 18
-    DATA_BLOCK_NUMBER_INVALID = 19
-    OTHER_REASON = 250
-
-
 get_data_access_result_from_bytes = partial(
-    DataAccessResult.from_bytes, byteorder="big"
+    enumerations.DataAccessResult.from_bytes, byteorder="big"
 )
 
 
@@ -207,7 +179,7 @@ class GetResponse(AbstractXDlmsApdu):
     )
 
     result: Any
-    response_type: GetType = attr.ib(default=GetType.NORMAL)
+    response_type: enumerations.GetType = attr.ib(default=enumerations.GetType.NORMAL)
     invoke_id_and_priority: InvokeIdAndPriority = attr.ib(factory=InvokeIdAndPriority)
 
     @classmethod
