@@ -2,7 +2,11 @@
 # A Python library for DLMS/COSEM.
 
 [![codecov](https://codecov.io/gh/pwitab/dlms-cosem/branch/master/graph/badge.svg?token=RO37L11VQJ)](https://codecov.io/gh/pwitab/dlms-cosem)
-![tests](https://github.com/pwitab/dlms-cosem/workflows/Run%20tests/badge.svg)
+![run-tests](https://github.com/pwitab/dlms-cosem/workflows/run-tests/badge.svg)
+![build-docs](https://github.com/pwitab/dlms-cosem/workflows/build-docs/badge.svg)
+
+<img src="dlms-logo.png" alt="dlms_logo" width="200"/>
+
 # Installation
 We only support Python 3.6+
 
