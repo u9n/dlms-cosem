@@ -2,7 +2,7 @@
 # A Python library for DLMS/COSEM.
 
 [![codecov](https://codecov.io/gh/pwitab/dlms-cosem/branch/master/graph/badge.svg?token=RO37L11VQJ)](https://codecov.io/gh/pwitab/dlms-cosem)
-
+![tests](https://github.com/pwitab/dlms-cosem/workflows/Run%20tests/badge.svg)
 # Installation
 We only support Python 3.6+
 
@@ -17,9 +17,9 @@ Full documentation can be found at [www.dlms.dev](https://www.dlms.dev)
 
 # About
 
-`dlms-cosem` is built to be a tool for working with DLMS/COSEM enabled energy meters.
-it provides the lowest level function, as protocol state management, 
-APDU encoding/decoding, APDU encryption/decryption.
+`dlms-cosem` is designed to be a tool with a simple APU for working with DLMS/COSEM 
+enabled energy meters. It provides the lowest level function, as protocol state 
+management, APDU encoding/decoding, APDU encryption/decryption.
 
 The library aims to provide a [sans-io](https://sans-io.readthedocs.io/) implementation 
 of the DLMS/COSEM protocol so that the protocol code can be reused with several 

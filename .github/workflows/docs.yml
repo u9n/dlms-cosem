@@ -1,4 +1,4 @@
-name: docs
+name: build-docs
 on:
   push:
     branches:
