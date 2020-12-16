@@ -1,5 +1,5 @@
 from dlms_cosem.clients.serial_dlms import SerialDlmsClient
-from dlms_cosem.protocol.acse import ApplicationAssociationRequestApdu
+from dlms_cosem.protocol.acse import ApplicationAssociationRequestApdu, enumerations
 
 from dlms_cosem.protocol.acse.base import UserInformation, AppContextName
 
@@ -74,11 +74,8 @@ client = public_client(
 # with client.session() as client:
 #    client.get()
 client.associate()
-result = client.get(
-    ic=cosem.CosemInterface.DATA, instance=cosem.Obis(0, 0, 0x2B, 1, 0), attribute=2
-)
+result = client.get(ic=enumerations.CosemInterface.DATA, instance=cosem.Obis(0, 0, 0x2b, 1, 0), attribute=2)
 print(result)
-# bytes.fromhex("C001C1000100002A0000FF0200")
 # TODO: parse  b'~\xa0\x10!\x02#0\x85\xdd\xe6\xe7\x00\xd8\x01\x01<C~' and see where the error is.
 
 client.release_association()

@@ -1,9 +1,25 @@
-site_name: My Docs
-
+site_name: DLMS.dev
+site_description: 'Resources for the python library `dlms-cosem` and general DLMS/COSEM'
+site_author: 'Henrik Palmlund Wahlgren @ Utilitarian'
 theme:
   name: material
+
+
+# Copyright
+copyright: 'Copyright &copy; 2020-2021 Palmlund Wahlgren Innovative Technology AB'
+
+
+extra:
+  social:
+    - type: 'github'
+      link: 'https://github.com/pwitab'
 
 markdown_extensions:
   - pymdownx.highlight
   - pymdownx.superfences
   - admonition
+  - codehilite:
+      guess_lang: false
+  - toc:
+      permalink: '#'
+  - def_list

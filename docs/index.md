@@ -1,4 +1,5 @@
-# dlms-cosem documentation
+# DLMS.dev 
+*Resources for the python library `dlms-cosem` and general DLMS/COSEM*
 
 
 ## About
@@ -15,31 +16,31 @@ pip install dlms-cosem
 !!! note
     We only support Python 3.6+
     
-    
-# DLMS/COSEM
 
+# About DLMS/COSEM
+    
 DLMS/COSEM (IEC 62056, EN13757-1) is the global standard for smart energy
 metering, control and management. It specifies an object-oriented data model,
 an application layer protocol and media-specific communication profiles.
 
 DLMS/COSEM comprises three key components:
 
-### COSEM 
-Companion Specification for Energy Metering - the object model capable of
- describing virtually any application.
-  
-### OBIS
-Object Identification System, the naming system of the objects
-
-### DLMS
+## DLMS
 Device Language Message Specification - the application layer protocol
-that turns the information held by the objects into messages.
+that turns the information held by COSEM objects into messages.
 
 DLMS/COSEM can be used for all utilities / energy kinds, all market segments,
 all applications and over virtually any communication media.
 
+## COSEM 
+Companion Specification for Energy Metering - the object model capable of
+ describing virtually any application.
+  
+## OBIS
+Object Identification System, the naming system of the objects
 
-## COSEM  (Companion Specification for Energy Metering)
+
+# COSEM  (Companion Specification for Energy Metering)
 
 
 The COSEM object model describes the semantics of the language.
@@ -71,8 +72,6 @@ billing period.
 
 ## DLMS /COSEM application layer services
 
-
-
 DLMS stands for Device Language Message Specification
 
 The syntax of the language is specified by the DLMS services.
@@ -98,7 +97,6 @@ the characteristics of the media.
 
 ## Transport
 
-
 The application messages can be transported over virtually any communication
 media.
 
@@ -109,11 +107,12 @@ application layer.
 Communication profiles are available for:
 
 *   Local ports, PSTN/GSM: with HDLC data link layer RS232 / RS485;
-*   GPRS;
+*   GPRS/LTE/NB-IoT;
 *   IPv6, IPv4, TCP and UDP;
 *   S-FSK PLC;
 *   G3-PLC with UDP/ IPv6;
 *   Prime PLC without IP, with IPv6, IPv4, TCP and UDP;
 *   Wired and wireless M-Bus;
 *   Mesh networks with IPv6 and 6LowPAN;
-*   Coming soon: Wi-SUN and NB IoT.
+*   Wi-SUN
+*   LoRaWAN

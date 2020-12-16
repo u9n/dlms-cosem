@@ -85,12 +85,12 @@ We welcome contributions of any kind.
 We add features depending on our own use cases and our clients use cases. If you 
 need a feature implemented please contact us.
 
-# Training / Consultancy / Corporate Support
+# Training / Consultancy / Commercial Support
 
-We offer consultancy service and training services around this library and DLMS/COSEM. 
-If you are in need of either please contact us.
+We offer consultancy service and training services around this library and general DLMS/COSEM. 
+If you are interested in out services just reach out to us. 
 
-If you have implemented a solution based on this library we also can offer a corporate 
+If you have implemented a solution based on this library we also offer a commercial 
 support scheme.
 
 
