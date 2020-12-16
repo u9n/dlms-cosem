@@ -5,14 +5,11 @@ theme:
   name: material
 
 
-# Copyright
 copyright: 'Copyright &copy; 2020-2021 Palmlund Wahlgren Innovative Technology AB'
 
+repo_url: https://github.com/pwitab/dlms-cosem
+repo_name: pwitab/dlms-cosem
 
-extra:
-  social:
-    - type: 'github'
-      link: 'https://github.com/pwitab'
 
 markdown_extensions:
   - pymdownx.highlight

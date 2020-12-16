@@ -17,7 +17,7 @@ pip install dlms-cosem
     We only support Python 3.6+
     
 
-# About DLMS/COSEM
+## About DLMS/COSEM
     
 DLMS/COSEM (IEC 62056, EN13757-1) is the global standard for smart energy
 metering, control and management. It specifies an object-oriented data model,
@@ -25,22 +25,22 @@ an application layer protocol and media-specific communication profiles.
 
 DLMS/COSEM comprises three key components:
 
-## DLMS
+### DLMS
 Device Language Message Specification - the application layer protocol
 that turns the information held by COSEM objects into messages.
 
 DLMS/COSEM can be used for all utilities / energy kinds, all market segments,
 all applications and over virtually any communication media.
 
-## COSEM 
+### COSEM 
 Companion Specification for Energy Metering - the object model capable of
  describing virtually any application.
   
-## OBIS
+### OBIS
 Object Identification System, the naming system of the objects
 
 
-# COSEM  (Companion Specification for Energy Metering)
+## COSEM  (Companion Specification for Energy Metering)
 
 
 The COSEM object model describes the semantics of the language.
