@@ -5,17 +5,18 @@ import attr
 from dlms_cosem.protocol.ber import BER
 
 from dlms_cosem.protocol.acse import base as acse_base
+from dlms_cosem.protocol.acse.user_information import UserInformation
 from dlms_cosem.protocol import xdlms, enumerations
 
 
 def user_information_holds_initiate_request(
-    instance, attribute, value: acse_base.UserInformation
+    instance, attribute, value: UserInformation
 ):
-    if not isinstance(value.content, xdlms.InitiateRequestApdu):
+    if not isinstance(value.content, (xdlms.InitiateRequestApdu, xdlms.GlobalCipherInitiateRequest)):
         raise ValueError(
             f"ApplicationAssociationRequestApdu.user_information should "
             f"only hold a UserInformation where .content is a "
-            f"InitiateRequestApdu. Got {value.content.__class__.__name__}"
+            f"InitiateRequestApdu or GlobalCihperInitiateRequest. Got {value.content.__class__.__name__}"
         )
 
 
@@ -137,11 +138,11 @@ class ApplicationAssociationRequestApdu:
         0xBD: ("implementation_information", None),
         0xBE: (
             "user_information",
-            acse_base.UserInformation,
+            UserInformation,
         ),  # Context specific, constructed 30
     }
 
-    user_information: acse_base.UserInformation = attr.ib(
+    user_information: UserInformation = attr.ib(
         validator=[user_information_holds_initiate_request]
     )
     client_system_title: Optional[bytes] = attr.ib(default=None)
@@ -277,10 +278,22 @@ class ApplicationAssociationRequestApdu:
             object_dict["authentication"] = mechanism_name.mechanism
 
         # rename some elements
-        object_dict["client_system_title"] = object_dict.pop("calling_ap_title", None)
-        object_dict["client_public_cert"] = object_dict.pop(
+        client_system_title = object_dict.pop("calling_ap_title", None)
+        if client_system_title:
+            # it is ber encoded universal tag ocetctring. simple handling
+            object_dict["client_system_title"] = client_system_title[2:]
+        else:
+            object_dict["client_system_title"] = None
+
+        client_public_cert = object_dict.pop(
             "calling_ae_qualifier", None
         )
+        if client_public_cert:
+            # it is ber encoded universal tag ocetctring. simple handling
+            object_dict["client_public_cert"] = client_public_cert[2:]
+        else:
+            object_dict["client_public_cert"] = None
+
         auth_value: Optional[acse_base.AuthenticationValue] = object_dict.pop(
             "calling_authentication_value", None
         )
@@ -305,9 +318,9 @@ class ApplicationAssociationRequestApdu:
         if self.called_ae_invocation_identifier is not None:
             aarq_data.extend(BER.encode(165, self.called_ae_invocation_identifier))
         if self.client_system_title is not None:
-            aarq_data.extend(BER.encode(166, self.client_system_title))
+            aarq_data.extend(BER.encode(166, BER.encode(4, self.client_system_title)))
         if self.client_public_cert is not None:
-            aarq_data.extend(BER.encode(167, self.client_public_cert))
+            aarq_data.extend(BER.encode(167, BER.encode(4, self.client_public_cert)))
         if self.calling_ap_invocation_identifier is not None:
             aarq_data.extend(BER.encode(168, self.calling_ap_invocation_identifier))
         if self.calling_ae_invocation_identifier is not None:

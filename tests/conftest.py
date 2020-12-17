@@ -1,16 +1,11 @@
 import pytest
 
 from dlms_cosem.protocol import acse, xdlms, cosem, enumerations
-from dlms_cosem.protocol.xdlms import (
-    InitiateResponseApdu,
-    Conformance,
-    InitiateRequestApdu,
-)
-
 
 
 @pytest.fixture()
 def aarq():
+
     return acse.ApplicationAssociationRequestApdu(
         ciphered=False,
         client_system_title=None,
@@ -18,8 +13,8 @@ def aarq():
         authentication=None,
         authentication_value=None,
         user_information=acse.UserInformation(
-            content=InitiateRequestApdu(
-                proposed_conformance=Conformance(
+            content=xdlms.InitiateRequestApdu(
+                proposed_conformance=xdlms.Conformance(
                     general_protection=False,
                     general_block_transfer=False,
                     delta_value_encoding=False,
@@ -50,6 +45,13 @@ def aarq():
 
 @pytest.fixture()
 def aare():
+    from dlms_cosem.protocol import acse, xdlms, cosem, enumerations
+    from dlms_cosem.protocol.xdlms import (
+        InitiateResponseApdu,
+        Conformance,
+        InitiateRequestApdu,
+    )
+
     return acse.ApplicationAssociationResponseApdu(
         result=enumerations.AssociationResult.ACCEPTED,
         result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.NULL,
@@ -92,6 +94,7 @@ def aare():
 
 @pytest.fixture()
 def rlrq() -> acse.ReleaseRequestApdu:
+
     data = bytes.fromhex("6203800100")  # Normal no user-information
     rlrq = acse.ReleaseRequestApdu.from_bytes(data)
     return rlrq
@@ -99,6 +102,7 @@ def rlrq() -> acse.ReleaseRequestApdu:
 
 @pytest.fixture()
 def rlre() -> acse.ReleaseResponseApdu:
+
     data = b"c\x03\x80\x01\x00"
     rlre = acse.ReleaseResponseApdu.from_bytes(data)
     return rlre
@@ -119,7 +123,43 @@ def get_request() -> xdlms.GetRequest:
 
 @pytest.fixture()
 def exception_response() -> xdlms.ExceptionResponseApdu:
+
     return xdlms.ExceptionResponseApdu(
         state_error=enumerations.StateException.SERVICE_NOT_ALLOWED,
         service_error=enumerations.ServiceException.OPERATION_NOT_POSSIBLE,
     )
+
+
+@pytest.fixture()
+def lls_password() -> bytes:
+    return bytes.fromhex("12345678")
+
+
+@pytest.fixture()
+def global_authentication_key() -> bytes:
+    return bytes.fromhex("D0D1D2D3D4D5D6D7D8D9DADBDCDDDEDF")
+
+
+@pytest.fixture()
+def global_broadcast_key() -> bytes:
+    return bytes.fromhex("0F0E0D0C0B0A09080706050403020100")
+
+
+@pytest.fixture()
+def global_encryption_key() -> bytes:
+    return bytes.fromhex("000102030405060708090A0B0C0D0E0F")
+
+
+@pytest.fixture()
+def global_cip_authentication_key() -> bytes:
+    return bytes.fromhex("C0C1C2C3C4C5C6C7C8C9CACBCCCDCECF")
+
+
+@pytest.fixture()
+def global_cip_encryption_key() -> bytes:
+    return bytes.fromhex("101112131415161718191A1B1C1D1E1F")
+
+
+@pytest.fixture()
+def master_key() -> bytes:
+    return bytes.fromhex("00112233445566778899AABBCCDDEEFF")

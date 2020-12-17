@@ -16,7 +16,6 @@ class TestDecodeRLRQ:
             "6239800100be34043221303001234567801302FF8A7874133D414CED25B42534D28DB0047720606B175BD52211BE6841DB204D39EE6FDB8E356855"
         )
         # No support for ciphnered adpus yet
-        with pytest.raises(ValueError):
 
-            rlrq = ReleaseRequestApdu.from_bytes(data)
-            assert rlrq.reason == enumerations.ReleaseRequestReason.NORMAL
+        rlrq = ReleaseRequestApdu.from_bytes(data)
+        assert rlrq.reason == enumerations.ReleaseRequestReason.NORMAL

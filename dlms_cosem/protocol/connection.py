@@ -3,11 +3,73 @@ from typing import *
 import attr
 
 from dlms_cosem.protocol.xdlms.conformance import Conformance
-from dlms_cosem.protocol import acse, xdlms, dlms, exceptions
+from dlms_cosem.protocol import acse, xdlms, exceptions, security
+from dlms_cosem.protocol import enumerations as enums
 from dlms_cosem.protocol import state as dlms_state
+from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 import logging
+import os
 
 LOG = logging.getLogger(__name__)
+
+
+def default_system_title() -> bytes:
+    return b"uti" + os.urandom(7)
+
+
+class XDlmsApduFactory:
+    """
+    A factory to return the correct APDU depending on the tag.
+    """
+
+    APDU_MAP = {
+        1: xdlms.InitiateRequestApdu,
+        8: xdlms.InitiateResponseApdu,
+        14: xdlms.ConfirmedServiceErrorApdu,
+        15: xdlms.DataNotificationApdu,
+        33: xdlms.GlobalCipherInitiateRequest,
+        40: xdlms.GlobalCipherInitiateResponse,
+        216: xdlms.ExceptionResponseApdu,
+        219: xdlms.GeneralGlobalCipherApdu,
+        # ACSE APDUs:
+        96: acse.ApplicationAssociationRequestApdu,
+        97: acse.ApplicationAssociationResponseApdu,
+        98: acse.ReleaseRequestApdu,
+        99: acse.ReleaseResponseApdu,
+        192: xdlms.GetRequest,
+        196: xdlms.GetResponse,
+    }
+
+    @classmethod
+    def apdu_from_bytes(cls, apdu_bytes):
+        tag = apdu_bytes[0]
+
+        try:
+            apdu_class = cls.APDU_MAP[tag]
+        except KeyError as e:
+            raise KeyError(f"Tag {tag!r} is not available in DLMS APDU Factory") from e
+        return apdu_class.from_bytes(apdu_bytes)
+
+
+def create_gmac_challenge(system_title: bytes, invocation_counter: int):
+    pass
+
+
+def make_client_to_server_challenge(
+    auth_method: enums.AuthenticationMechanism, length: int = 8
+) -> Optional[bytes]:
+    if auth_method in [
+        enums.AuthenticationMechanism.NONE,
+        enums.AuthenticationMechanism.LLS,
+    ]:
+        return None
+
+    if 8 <= length <= 64:
+        return os.urandom(length)
+    else:
+        raise ValueError(
+            f"Client to server challenge must be between 8 and 64 bytes. Got {length}"
+        )
 
 
 def make_conformance(encryption_key: Optional[bytes], use_block_transfer: bool):
@@ -46,12 +108,42 @@ class DlmsConnection:
     # The state as it would have done the ACSE protocol. (use classmethod)
     """
 
+    client_system_title: bytes = attr.ib(
+        converter=attr.converters.default_if_none(factory=default_system_title)
+    )
+
     # The encryption key used to global cipher service.
     global_encryption_key: Optional[bytes] = attr.ib(default=None)
-    global_invocation_counter: Optional[int] = attr.ib(default=None)
+    global_authentication_key: Optional[bytes] = attr.ib(default=None)
+    security_suite: int = attr.ib(default=0)
+
+    meter_system_title: Optional[bytes] = attr.ib(default=None)
+
+    authentication_method: Optional[enums.AuthenticationMechanism] = attr.ib(
+        default=None
+    )
+    password: Optional[bytes] = attr.ib(default=None)
+    challenge_length: int = attr.ib(default=32)
+    client_to_meter_challenge: Optional[bytes] = attr.ib(
+        init=False,
+        default=attr.Factory(
+            lambda self: make_client_to_server_challenge(
+                self.authentication_method, self.challenge_length
+            ),
+            takes_self=True,
+        ),
+    )
+    meter_to_client_challenge: Optional[bytes] = attr.ib(default=None, init=False)
+    # To keep track of invocation counters used by the meter. If we get a request with
+    # an invocation counter smaller than the current registered we should reject the
+    # message
+    # TODO: is the meter using the same invocation counter as the client?
+    client_invocation_counter: int = attr.ib(default=0)
+    meter_invocation_counter: int = attr.ib(default=0)
 
     # TODO: Support dedicated ciphers
     use_dedicated_ciphering: bool = attr.ib(default=False)
+    global_dedicated_key: Optional[bytes] = attr.ib(default=None)
     # TODO: when supported we should have it as default True.
     use_block_transfer: bool = attr.ib(default=False)
 
@@ -84,8 +176,10 @@ class DlmsConnection:
         max_pdu_size: int = 65535,
         global_encryption_key: Optional[bytes] = None,
         use_dedicated_ciphering: bool = False,
+        client_system_title: Optional[bytes] = None,
     ):
         return cls(
+            client_system_title=client_system_title,
             global_encryption_key=global_encryption_key,
             # Moves the state into ready.
             state=dlms_state.DlmsConnectionState(current_state=dlms_state.READY),
@@ -94,6 +188,27 @@ class DlmsConnection:
             max_pdu_size=max_pdu_size,
             use_dedicated_ciphering=use_dedicated_ciphering,
         )
+
+    @property
+    def security_control(self) -> security.SecurityControlField:
+        _authenticated = bool(self.global_authentication_key)
+        _encrypted = bool(self.global_encryption_key)
+        return security.SecurityControlField(
+            self.security_suite,
+            encrypted=_encrypted,
+            authenticated=_authenticated,
+            broadcast_key=False,
+        )
+
+    @property
+    def authentication_value(self) -> Optional[bytes]:
+        if self.authentication_method == enums.AuthenticationMechanism.NONE:
+            return None
+        elif self.authentication_method == enums.AuthenticationMechanism.LLS:
+            return self.password
+        else:
+            # HLS Mechanism
+            return self.client_to_meter_challenge
 
     def send(self, event) -> bytes:
         """
@@ -117,16 +232,14 @@ class DlmsConnection:
 
         self.state.process_event(event)
 
-        out_data = event.to_bytes()
-
         if self.use_protection:
-            out_data = self.protect(type(event), out_data)
+            event = self.protect(event)
 
-        if self.use_blocks:
-            blocks = self.make_blocks(out_data)
-            # TODO: How to handle the subcase of sending blocks?
-
-        return out_data
+        # if self.use_blocks:
+        #    blocks = self.make_blocks(event)
+        #    # TODO: How to handle the subcase of sending blocks?
+        LOG.info(f"Sending : {event}")
+        return event.to_bytes()
 
     def validate_event_conformance(self, event):
         """
@@ -193,7 +306,7 @@ class DlmsConnection:
         # it is always a full Apdu. And if we cant parse the full buffer as an APDU
         # we need more data.
 
-        apdu = dlms.xdlms_apdu_factory.apdu_from_bytes(self.buffer)
+        apdu = XDlmsApduFactory.apdu_from_bytes(self.buffer)
         # TODO: What error is raised when data is incomplete?
 
         if self.use_protection:
@@ -209,6 +322,12 @@ class DlmsConnection:
         self.state.process_event(apdu)
         self.clear_buffer()
 
+        if isinstance(apdu, acse.ApplicationAssociationResponseApdu):
+            # TODO: should be a list of all HLS options
+            if apdu.authentication == enums.AuthenticationMechanism.HLS_GMAC:
+                # we need to start the HLS auth.
+                self.state.process_event(dlms_state.HlsStart())
+
         return apdu
 
     def clear_buffer(self):
@@ -220,22 +339,99 @@ class DlmsConnection:
         If the Association is such that APDUs should be protected.
         :return:
         """
-        if self.global_encryption_key is not None:
+        if (
+            self.global_encryption_key is not None
+            or self.global_authentication_key is not None
+        ):
             return True
         else:
             return False
 
-    def protect(self, event_type: Type, data: bytes) -> Any:
+    def protect(self, event) -> Any:
         """
         Will apply the correct protection to apdus depending on the security context
         Will return new objects, ciphered or partially ciphered.
         """
-        return data
+        # ASCE have different rules about protection
+        if isinstance(event, acse.ApplicationAssociationRequestApdu):
+            # TODO: Not sure if it is needed to encrypt the IniateRequest when
+            #   you are not sending a dedicated_key.
+
+            ciphered_initiate_text = self.encrypt(
+                event.user_information.content.to_bytes()
+            )
+
+            protected = acse.ApplicationAssociationRequestApdu(
+                ciphered=event.ciphered,
+                authentication=event.authentication,
+                authentication_value=event.authentication_value,
+                client_system_title=event.client_system_title,
+                client_public_cert=event.client_public_cert,
+                user_information=acse.UserInformation(
+                    content=xdlms.GlobalCipherInitiateRequest(
+                        security_control=self.security_control,
+                        invocation_counter=self.client_invocation_counter,
+                        ciphered_text=ciphered_initiate_text,
+                    )
+                ),
+            )
+
+        # XDLMS apdus should be protected with general-glo-cihpering
+        if isinstance(event, AbstractXDlmsApdu):
+            ciphered_text = self.encrypt(event.to_bytes())
+
+            protected = xdlms.GeneralGlobalCipherApdu(
+                system_title=self.client_system_title,
+                security_control=self.security_control,
+                invocation_counter=self.client_invocation_counter,
+                ciphered_text=ciphered_text,
+            )
+
+        # updated the client_invocation_counter
+        self.client_invocation_counter += 1
+        return protected
+
+    def encrypt(self, plain_text: bytes):
+        return security.encrypt(
+            self.security_control,
+            system_title=self.client_system_title,
+            invocation_counter=self.client_invocation_counter,
+            key=self.global_encryption_key,
+            auth_key=self.global_authentication_key,
+            plain_text=plain_text,
+        )
+
+    def decrypt(self, ciphered_text: bytes):
+        return security.decrypt(
+            self.security_control,
+            system_title=self.meter_system_title,
+            invocation_counter=self.meter_invocation_counter,
+            key=self.global_encryption_key,
+            auth_key=self.global_authentication_key,
+            cipher_text=ciphered_text,
+        )
 
     def unprotect(self, event):
         """
         Removes protection from APDUs and return a new the unprotected version
         """
+        if isinstance(event, acse.ApplicationAssociationResponseApdu):
+            if event.user_information:
+                if isinstance(
+                    event.user_information.content, xdlms.GlobalCipherInitiateResponse
+                ):
+                    print(event)
+                    plain_text = security.decrypt(
+                        security_control=event.user_information.content.security_control,
+                        system_title=event.meter_system_title,
+                        invocation_counter=event.user_information.content.invocation_counter,
+                        key=self.global_encryption_key,
+                        auth_key=self.global_authentication_key,
+                        cipher_text=event.user_information.content.ciphered_text,
+                    )
+                    event.user_information.content = xdlms.InitiateResponseApdu.from_bytes(
+                        plain_text
+                    )
         return event
 
     @property
@@ -256,6 +452,8 @@ class DlmsConnection:
         Returns an AARQ with the appropriate information for setting up a
         connection as requested.
         """
+        print(self.conformance)
+        # TODO: Should we set this in the protection instead?
         if self.global_encryption_key:
             ciphered_apdus = True
         else:
@@ -268,6 +466,23 @@ class DlmsConnection:
 
         return acse.ApplicationAssociationRequestApdu(
             ciphered=ciphered_apdus,
+            client_system_title=self.client_system_title,
+            authentication=self.authentication_method,
+            authentication_value=self.authentication_value,
+            user_information=acse.UserInformation(content=initiate_request),
+        )
+
+    def get_rlrq(self) -> acse.ReleaseRequestApdu:
+        """
+        Returns a ReleaseRequestApdu to release the current association.
+        """
+        initiate_request = xdlms.InitiateRequestApdu(
+            proposed_conformance=self.conformance,
+            client_max_receive_pdu_size=self.max_pdu_size,
+        )
+
+        return acse.ReleaseRequestApdu(
+            reason=enums.ReleaseRequestReason.NORMAL,
             user_information=acse.UserInformation(content=initiate_request),
         )
 
@@ -286,3 +501,7 @@ class DlmsConnection:
             self.max_pdu_size = (
                 aare.user_information.content.server_max_receive_pdu_size
             )
+
+        self.meter_system_title = aare.meter_system_title
+        self.authentication_method = aare.authentication
+        self.meter_to_client_challenge = aare.authentication_value

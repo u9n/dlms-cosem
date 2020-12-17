@@ -10,3 +10,6 @@ class PreEstablishedAssociationError(Exception):
 
 class ConformanceError(Exception):
     """If APDUs does not match connection Conformance"""
+
+class CipheringError(Exception):
+    """Shomething went wrong when ciphering or deceiphering an APDU"""

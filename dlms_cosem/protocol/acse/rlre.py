@@ -5,7 +5,8 @@ from typing import *
 import attr
 
 from dlms_cosem.protocol import enumerations
-from dlms_cosem.protocol.acse.base import AbstractAcseApdu, UserInformation
+from dlms_cosem.protocol.acse.base import AbstractAcseApdu
+from dlms_cosem.protocol.acse.user_information import UserInformation
 from dlms_cosem.protocol.ber import BER
 
 # TODO: It might be a better approach to give the callable and not the class to make a
@@ -43,17 +44,17 @@ class ReleaseResponseApdu(AbstractAcseApdu):
     @classmethod
     def from_bytes(cls, source_bytes: bytes):
         # put it in a bytearray to be able to pop.
-        rlrq_data = bytearray(source_bytes)
+        data = bytearray(source_bytes)
 
-        rlrq_tag = rlrq_data.pop(0)
-        if not rlrq_tag == cls.TAG:
+        tag = data.pop(0)
+        if not tag == cls.TAG:
             raise ValueError("Bytes are not an RLRE APDU. TAg is not int(96)")
 
-        rlrq_length = rlrq_data.pop(0)
+        length = data.pop(0)
 
-        if not len(rlrq_data) == rlrq_length:
+        if not len(data) == length:
             raise ValueError(
-                f"The APDU Data lenght does not correspond to length byte, should be {rlrq_length} but is {len(rlrq_data)}"
+                f"The APDU Data lenght does not correspond to length byte, should be {length} but is {len(data)}"
             )
 
         # Assumes that the protocol-version is 1 and we don't need to decode it
@@ -63,7 +64,7 @@ class ReleaseResponseApdu(AbstractAcseApdu):
         # use the data in tags to go through the bytes and create objects.
         while True:
             # TODO: this does not take into account when defining objects in dict and not using them.
-            object_tag = rlrq_data.pop(0)
+            object_tag = data.pop(0)
             object_desc = ReleaseResponseApdu.PARSE_TAGS.get(object_tag, None)
             if object_desc is None:
                 raise ValueError(
@@ -71,9 +72,9 @@ class ReleaseResponseApdu(AbstractAcseApdu):
                     f"in RLRQ definition"
                 )
 
-            object_length = rlrq_data.pop(0)
-            object_data = bytes(rlrq_data[:object_length])
-            rlrq_data = rlrq_data[object_length:]
+            object_length = data.pop(0)
+            object_data = bytes(data[:object_length])
+            data = data[object_length:]
 
             object_name = object_desc[0]
             call: Callable = object_desc[1]
@@ -84,7 +85,7 @@ class ReleaseResponseApdu(AbstractAcseApdu):
 
             object_dict[object_name] = object_data
 
-            if len(rlrq_data) <= 0:
+            if len(data) <= 0:
                 break
 
         return cls(**object_dict)

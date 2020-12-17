@@ -2,7 +2,6 @@ import attr
 from typing import *
 from dlms_cosem.clients.serial_hdlc import SerialHdlcClient
 from dlms_cosem.protocol.connection import DlmsConnection
-from dlms_cosem.protocol.state import NEED_DATA
 from dlms_cosem.protocol import xdlms, cosem, exceptions, enumerations
 from dlms_cosem.protocol import acse
 import logging
@@ -25,10 +24,37 @@ class SerialDlmsClient:
     serial_baud_rate: int = attr.ib(default=9600)
     server_physical_address: Optional[int] = attr.ib(default=None)
     client_physical_address: Optional[int] = attr.ib(default=None)
-    conformance: xdlms.Conformance = attr.ib(default=xdlms.Conformance())
+    authentication_method: Optional[enumerations.AuthenticationMechanism] = attr.ib(
+        default=None
+    )
+    password: Optional[bytes] = attr.ib(default=None)
+    encryption_key: Optional[bytes] = attr.ib(default=None)
+    authentication_key: Optional[bytes] = attr.ib(default=None)
+    security_suite: Optional[bytes] = attr.ib(default=0)
+    dedicated_ciphering: bool = attr.ib(default=False)
+    block_transfer: bool = attr.ib(default=False)
+    max_pdu_size: int = attr.ib(default=65535)
+    client_system_title: Optional[bytes] = attr.ib(default=None)
+    client_initial_invocation_counter: int = attr.ib(default=0)
+    meter_initial_invocation_counter: int = attr.ib(default=0)
+
     dlms_connection: DlmsConnection = attr.ib(
         default=attr.Factory(
-            lambda self: DlmsConnection(conformance=self.conformance), takes_self=True
+            lambda self: DlmsConnection(
+                client_system_title=self.client_system_title,
+                authentication_method=self.authentication_method,
+                password=self.password,
+                global_encryption_key=self.encryption_key,
+                global_authentication_key=self.authentication_key,
+                use_dedicated_ciphering=self.dedicated_ciphering,
+                use_block_transfer=self.block_transfer,
+                security_suite=self.security_suite,
+                max_pdu_size=self.max_pdu_size,
+                client_invocation_counter=self.client_initial_invocation_counter,
+                meter_invocation_counter=self.meter_initial_invocation_counter
+
+            ),
+            takes_self=True,
         )
     )
     io_interface: SerialHdlcClient = attr.ib(
@@ -52,7 +78,9 @@ class SerialDlmsClient:
         self.release_association()
 
     # TODO: ensure association with decorator
-    def get(self, ic: enumerations.CosemInterface, instance: cosem.Obis, attribute: int):
+    def get(
+        self, ic: enumerations.CosemInterface, instance: cosem.Obis, attribute: int
+    ):
         # Just a random get request.
         self.send(
             xdlms.GetRequest(
@@ -63,7 +91,9 @@ class SerialDlmsClient:
         )
         get_response = self.next_event()
         if isinstance(get_response.result, enumerations.DataAccessResult):
-            raise DataResultError(f"Could not perform GET request: {get_response.result!r}")
+            raise DataResultError(
+                f"Could not perform GET request: {get_response.result!r}"
+            )
         return get_response.result
 
     def set(self):
@@ -82,7 +112,9 @@ class SerialDlmsClient:
         self.send(aarq)
         aare = self.next_event()
         if isinstance(aare, xdlms.ExceptionResponseApdu):
-            raise Exception(f"DLMS Exception: {aare.state_error!r}:{aare.service_error!r}:{aare.invocation_counter_data}")
+            raise Exception(
+                f"DLMS Exception: {aare.state_error!r}:{aare.service_error!r}:{aare.invocation_counter_data}"
+            )
         if aare.result is not enumerations.AssociationResult.ACCEPTED:
             raise exceptions.ApplicationAssociationError(
                 f"Unable to perform Association: {aare.result!r} and "
@@ -90,20 +122,14 @@ class SerialDlmsClient:
             )
         if aare.user_information:
             if isinstance(aare.user_information.content, ConfirmedServiceErrorApdu):
-                raise exceptions.ApplicationAssociationError(f"Unable to perform Association: {aare.user_information.content.error}")
+                raise exceptions.ApplicationAssociationError(
+                    f"Unable to perform Association: {aare.user_information.content.error}"
+                )
         return aare
 
-    def release_association(
-        self,
-        reason: enumerations.ReleaseRequestReason = enumerations.ReleaseRequestReason.NORMAL,
-        initiate_request: xdlms.InitiateRequestApdu = None,
-    ) -> acse.ReleaseResponseApdu:
+    def release_association(self) -> acse.ReleaseResponseApdu:
 
-        if initiate_request:
-            user_info = acse.UserInformation(content=initiate_request)
-        else:
-            user_info = None
-        rlrq = acse.ReleaseRequestApdu(reason=reason, user_information=user_info)
+        rlrq = self.dlms_connection.get_rlrq()
         self.send(rlrq)
         rlre = self.next_event()
         self.io_interface.disconnect()
@@ -112,7 +138,6 @@ class SerialDlmsClient:
     def send(self, *events):
         for event in events:
             data = self.dlms_connection.send(event)
-            LOG.info(f"Sending {event}")
             response_bytes = self.io_interface.send(data)
 
             self.dlms_connection.receive_data(response_bytes)
