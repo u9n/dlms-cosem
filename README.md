@@ -21,7 +21,7 @@ Full documentation can be found at [www.dlms.dev](https://www.dlms.dev)
 
 # About
 
-`dlms-cosem` is designed to be a tool with a simple APU for working with DLMS/COSEM 
+`dlms-cosem` is designed to be a tool with a simple API for working with DLMS/COSEM 
 enabled energy meters. It provides the lowest level function, as protocol state 
 management, APDU encoding/decoding, APDU encryption/decryption.
 
@@ -34,8 +34,6 @@ We have not implemented full support to be able to build a server (meter) emulat
 this is a use-case you need, consider sponsoring the development and contact us.    
 
 # Supported features
-
-# Development of this library
 
 Current release:
 

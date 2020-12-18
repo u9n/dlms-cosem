@@ -1,15 +1,22 @@
 class LocalDlmsProtocolError(Exception):
     """Protocol error"""
 
+
 class ApplicationAssociationError(Exception):
     """Something went wrong when trying to setup the application association"""
 
 
 class PreEstablishedAssociationError(Exception):
-    """An error when doing illeagal things to the connection if it pre established"""
+    """An error when doing illegal things to the connection if it pre established"""
+
 
 class ConformanceError(Exception):
     """If APDUs does not match connection Conformance"""
 
+
 class CipheringError(Exception):
-    """Shomething went wrong when ciphering or deceiphering an APDU"""
+    """Something went wrong when ciphering or deciphering an APDU"""
+
+
+class DlmsClientException(Exception):
+    """An exception that is relating to the client"""

@@ -1,6 +1,12 @@
 site_name: DLMS.dev
 site_description: 'Resources for the python library `dlms-cosem` and general DLMS/COSEM'
 site_author: 'Henrik Palmlund Wahlgren @ Utilitarian'
+
+nav:
+  - Home: index.md
+  - About DLMS/COSEM: dlms_cosem.md
+
+
 theme:
   name: material
 

@@ -5,61 +5,9 @@ import attr
 
 from dlms_cosem.protocol import a_xdr
 from dlms_cosem.protocol.dlms_data import OctetStringData
-from dlms_cosem.protocol.security import SecuritySuiteFactory
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 
 from dlms_cosem.protocol.security import SecurityControlField, decrypt
-
-# TODO: Add the encryption and decryption functionallity via Mixin.
-#  Encryption needs to be done with some form of service since their are
-#  different kinds of encryption generating different objects.
-
-
-@attr.s(auto_attribs=True)
-class SecurityHeader:
-    """
-    The SecurityHeader contains the SecurityControlField that maps all the
-    settings of the encryption plus the invocation counter used in the
-    encryption.
-
-    :param `SecurityControlField` security_control_field: Bitmap of encryption options
-    :param int invocation_counter: Invocation counter for the key.
-    """
-
-    security_control_field: SecurityControlField
-    invocation_counter: int
-
-    # TODO: merge functnality of the controlfield into the header as it is an unneeded
-    #    abstraction.
-
-    @classmethod
-    def from_bytes(cls, _bytes):
-        # TODO: Raise error on no handled stuff
-
-        security_control_field = SecurityControlField.from_bytes(_bytes[0])
-        invocation_counter = int.from_bytes(_bytes[1:5], "big")
-
-        return cls(security_control_field, invocation_counter)
-
-
-@attr.s(auto_attribs=True)
-class CipheredContent:
-    """
-    CipheredContent contains the encrypted data plus a security header
-    defining how the encryption is done.
-
-    :param `SecurityHeader` security_header: Security header.
-    :param bytes cipher_text: The encrypted data.
-    """
-
-    security_header: SecurityHeader
-    cipher_text: bytes
-
-    @classmethod
-    def from_bytes(cls, _bytes_data):
-        security_header = SecurityHeader.from_bytes(_bytes_data[0:5])
-        cipher_text = _bytes_data[5:]
-        return cls(security_header, cipher_text)
 
 
 int_from_bytes = partial(int.from_bytes, "big")

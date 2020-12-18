@@ -80,7 +80,6 @@ class SerialDlmsClient:
         yield self
         self.release_association()
 
-    # TODO: ensure association with decorator
     def get(
         self, ic: enumerations.CosemInterface, instance: cosem.Obis, attribute: int
     ):
@@ -109,53 +108,72 @@ class SerialDlmsClient:
         self,
         association_request: Optional[acse.ApplicationAssociationRequestApdu] = None,
     ) -> acse.ApplicationAssociationResponseApdu:
+
         # set up hdlc
         self.io_interface.connect()
         aarq = association_request or self.dlms_connection.get_aarq()
-        self.send(aarq)
-        aare = self.next_event()
-        if isinstance(aare, xdlms.ExceptionResponseApdu):
-            raise Exception(
-                f"DLMS Exception: {aare.state_error!r}:{aare.service_error!r}:"
-                f"{aare.invocation_counter_data}"
-            )
-        if aare.result is not enumerations.AssociationResult.ACCEPTED:
-            raise exceptions.ApplicationAssociationError(
-                f"Unable to perform Association: {aare.result!r} and "
-                f"{aare.result_source_diagnostics!r}"
-            )
-        if aare.user_information:
-            if isinstance(aare.user_information.content, ConfirmedServiceErrorApdu):
-                raise exceptions.ApplicationAssociationError(
-                    f"Unable to perform Association: "
-                    f"{aare.user_information.content.error}"
+
+        try:
+            self.send(aarq)
+            aare = self.next_event()
+            # we could have recieved an exception from the meter.
+            if isinstance(aare, xdlms.ExceptionResponseApdu):
+                raise exceptions.DlmsClientException(
+                    f"DLMS Exception: {aare.state_error!r}:{aare.service_error!r}"
+                )
+            # the association might not be accepted by the meter
+            if aare.result is not enumerations.AssociationResult.ACCEPTED:
+                # there could be an error suppled with the reject.
+                extra_error = None
+                if aare.user_information:
+                    if isinstance(
+                        aare.user_information.content, ConfirmedServiceErrorApdu
+                    ):
+                        extra_error = aare.user_information.content.error
+                raise exceptions.DlmsClientException(
+                    f"Unable to perform Association: {aare.result!r} and "
+                    f"{aare.result_source_diagnostics!r}, extra info: {extra_error}"
                 )
 
-        if (
+            if self.should_send_hls_reply():
+
+                self.send(self.get_hls_reply())
+                action_response = self.next_event()
+
+                if action_response.result != enumerations.ActionResult.SUCCESS:
+                    raise HLSError(
+                        f"HLS authentication failed: {action_response.result!r}"
+                    )
+
+                if not self.dlms_connection.hls_response_valid(
+                    action_response.result_data
+                ):
+                    raise HLSError(
+                        f"Meter did not respond with correct challenge calculation"
+                    )
+        except (exceptions.DlmsClientException, HLSError):
+            self.io_interface.disconnect()
+            raise
+        return aare
+
+    def should_send_hls_reply(self) -> bool:
+        return (
             self.dlms_connection.state.current_state
             == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
-        ):
-            action_request = xdlms.ActionRequest(
-                cosem_method=cosem.CosemMethod(
-                    enumerations.CosemInterface.ASSOCIATION_LN,
-                    cosem.Obis(0, 0, 40, 0, 0),
-                    1,
-                ),
-                action_type=enumerations.ActionType.NORMAL,
-                parameters=dlms_data.OctetStringData(
-                    self.dlms_connection.get_hls_reply()
-                ).to_bytes(),
-            )
-            self.send(action_request)
-            action_response = self.next_event()
-            if action_response.result != enumerations.ActionResult.SUCCESS:
-                raise HLSError(f"HLS authentication failed: {action_response.result!r}")
+        )
 
-            if not self.dlms_connection.hls_response_valid(action_response.result_data):
-                raise HLSError(
-                    f"Meter did not respond with correct challenge calculation"
-                )
-        return aare
+    def get_hls_reply(self) -> xdlms.ActionRequest:
+        return xdlms.ActionRequest(
+            cosem_method=cosem.CosemMethod(
+                enumerations.CosemInterface.ASSOCIATION_LN,
+                cosem.Obis(0, 0, 40, 0, 0),
+                1,
+            ),
+            action_type=enumerations.ActionType.NORMAL,
+            parameters=dlms_data.OctetStringData(
+                self.dlms_connection.get_hls_reply()
+            ).to_bytes(),
+        )
 
     def release_association(self) -> acse.ReleaseResponseApdu:
         rlrq = self.dlms_connection.get_rlrq()
