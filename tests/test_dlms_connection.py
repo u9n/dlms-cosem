@@ -1,9 +1,20 @@
+import os
+
 import pytest
 
 from dlms_cosem.protocol.connection import DlmsConnection
-from dlms_cosem.protocol import acse, xdlms, state, enumerations, exceptions
+from dlms_cosem.protocol import (
+    acse,
+    xdlms,
+    state,
+    enumerations,
+    exceptions,
+    cosem,
+    dlms_data,
+)
 from dlms_cosem.protocol.exceptions import LocalDlmsProtocolError
-from dlms_cosem.protocol.xdlms import Conformance
+from dlms_cosem.protocol.xdlms import Conformance, ActionResponse
+from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
 
 
 def test_conformance_exists_on_simple_init():
@@ -115,6 +126,36 @@ def test_receive_exception_response_sets_state_to_ready(
     assert c.state.current_state == state.READY
 
 
+def test_hls_is_started_automatically(
+    connection_with_hls: DlmsConnection,
+    ciphered_hls_aare: acse.ApplicationAssociationResponseApdu,
+):
+    # Force state into awaiting response
+    connection_with_hls.state.current_state = state.AWAITING_ASSOCIATION_RESPONSE
+    connection_with_hls.receive_data(ciphered_hls_aare.to_bytes())
+    connection_with_hls.next_event()
+    assert (
+        connection_with_hls.state.current_state
+        == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
+    )
+
+
+def test_rejection_resets_connection_state(
+    connection_with_hls: DlmsConnection,
+    ciphered_hls_aare: acse.ApplicationAssociationResponseApdu,
+):
+    connection_with_hls.state.current_state = state.AWAITING_ASSOCIATION_RESPONSE
+    ciphered_hls_aare.result = enumerations.AssociationResult.REJECTED_PERMANENT
+    connection_with_hls.receive_data(ciphered_hls_aare.to_bytes())
+    connection_with_hls.next_event()
+    assert connection_with_hls.state.current_state == state.NO_ASSOCIATION
+
+# what happens if the gmac provided by the meter is wrong
+# -> we get an error
+
+# what happens if the gmac provided by the client is wrong
+
+
 class TestPreEstablishedAssociation:
     def test_state_is_ready_in_init(self):
         c = DlmsConnection.with_pre_established_association(
@@ -130,23 +171,19 @@ class TestPreEstablishedAssociation:
                 selective_access=True,
                 event_notification=True,
                 action=True,
-            ),
+            )
         )
 
         assert c.state.current_state == state.READY
 
     def test_not_able_to_send_aarq(self, aarq: acse.ApplicationAssociationRequestApdu):
-        c = DlmsConnection.with_pre_established_association(
-            conformance=Conformance(),
-        )
+        c = DlmsConnection.with_pre_established_association(conformance=Conformance())
 
         with pytest.raises(LocalDlmsProtocolError):
             c.send(aarq)
 
     def test_not_able_to_send_rlrq(self, rlrq: acse.ReleaseRequestApdu):
-        c = DlmsConnection.with_pre_established_association(
-            conformance=Conformance(),
-        )
+        c = DlmsConnection.with_pre_established_association(conformance=Conformance())
 
         with pytest.raises(exceptions.PreEstablishedAssociationError):
             c.send(rlrq)

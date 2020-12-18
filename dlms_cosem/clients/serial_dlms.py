@@ -116,7 +116,8 @@ class SerialDlmsClient:
         aare = self.next_event()
         if isinstance(aare, xdlms.ExceptionResponseApdu):
             raise Exception(
-                f"DLMS Exception: {aare.state_error!r}:{aare.service_error!r}:{aare.invocation_counter_data}"
+                f"DLMS Exception: {aare.state_error!r}:{aare.service_error!r}:"
+                f"{aare.invocation_counter_data}"
             )
         if aare.result is not enumerations.AssociationResult.ACCEPTED:
             raise exceptions.ApplicationAssociationError(
@@ -126,7 +127,8 @@ class SerialDlmsClient:
         if aare.user_information:
             if isinstance(aare.user_information.content, ConfirmedServiceErrorApdu):
                 raise exceptions.ApplicationAssociationError(
-                    f"Unable to perform Association: {aare.user_information.content.error}"
+                    f"Unable to perform Association: "
+                    f"{aare.user_information.content.error}"
                 )
 
         if (
@@ -156,7 +158,6 @@ class SerialDlmsClient:
         return aare
 
     def release_association(self) -> acse.ReleaseResponseApdu:
-
         rlrq = self.dlms_connection.get_rlrq()
         self.send(rlrq)
         rlre = self.next_event()

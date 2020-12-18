@@ -34,11 +34,18 @@ class HlsStart:
     pass
 
 
+@attr.s()
 class HlsSuccess:
     pass
 
 
+@attr.s()
 class HlsFailed:
+    pass
+
+
+@attr.s()
+class RejectAssociation:
     pass
 
 
@@ -80,6 +87,7 @@ DLMS_STATE_TRANSITIONS = {
         acse.ReleaseRequestApdu: AWAITING_RELEASE_RESPONSE,
         xdlms.GetRequest: AWAITING_GET_RESPONSE,
         HlsStart: SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT,
+        RejectAssociation: NO_ASSOCIATION,
     },
     SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT: {
         xdlms.ActionRequest: AWAITING_HLS_CLIENT_CHALLENGE_RESULT

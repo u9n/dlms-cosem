@@ -14,12 +14,13 @@ LOG = logging.getLogger(__name__)
 
 
 def default_system_title() -> bytes:
-    return b"uti" + os.urandom(7)
+    """A non FLAG registed id + 5 random bytes """
+    return b"uti" + os.urandom(5)
 
 
 class XDlmsApduFactory:
     """
-    A factory to return the correct APDU depending on the tag.
+    A factory to return the correct APDU depending from the tag.
     """
 
     APDU_MAP = {
@@ -53,13 +54,12 @@ class XDlmsApduFactory:
         return apdu_class.from_bytes(apdu_bytes)
 
 
-def create_gmac_challenge(system_title: bytes, invocation_counter: int):
-    pass
-
-
 def make_client_to_server_challenge(
     auth_method: enums.AuthenticationMechanism, length: int = 8
 ) -> Optional[bytes]:
+    """
+    Return a valid challenge depending on the authentocation method.
+    """
     if auth_method in [
         enums.AuthenticationMechanism.NONE,
         enums.AuthenticationMechanism.LLS,
@@ -103,29 +103,39 @@ def make_conformance(encryption_key: Optional[bytes], use_block_transfer: bool):
 @attr.s(auto_attribs=True)
 class DlmsConnection:
     """
-    Just a class to collect ideas.
-    And what is needed.
-
-    # TODO: We need the ability to pass in a PreEstablished Association and transistion
-    # The state as it would have done the ACSE protocol. (use classmethod)
+    A DLMS connection.
     """
 
+    # Client system title can be any combination of 8 bytes.
+    # But is should not be the same as the metering the connection is set up too.
     client_system_title: bytes = attr.ib(
         converter=attr.converters.default_if_none(factory=default_system_title)
     )
 
-    # The encryption key used to global cipher service.
     global_encryption_key: Optional[bytes] = attr.ib(default=None)
     global_authentication_key: Optional[bytes] = attr.ib(default=None)
+
+    # The security suite just indicates what cryptographical functions are available to
+    # the meter
     security_suite: int = attr.ib(default=0)
 
+    # Meter system title is usually unknown at the start of the connection. And it is
+    # only needed if the connection is ciphered. In the AARE the meter will respond with
+    # its system title
     meter_system_title: Optional[bytes] = attr.ib(default=None)
 
+    # Meter authentication method.
     authentication_method: Optional[enums.AuthenticationMechanism] = attr.ib(
         default=None
     )
+    # Low Level Security (LLS) password
     password: Optional[bytes] = attr.ib(default=None)
+
+    # HLS challenge length.
     challenge_length: int = attr.ib(default=32)
+
+    # client_to_meter_challenge is generated automatically with a random seed
+    # depending on the HLS setup.
     client_to_meter_challenge: Optional[bytes] = attr.ib(
         init=False,
         default=attr.Factory(
@@ -136,17 +146,26 @@ class DlmsConnection:
         ),
     )
     meter_to_client_challenge: Optional[bytes] = attr.ib(default=None, init=False)
-    # To keep track of invocation counters used by the meter. If we get a request with
-    # an invocation counter smaller than the current registered we should reject the
-    # message
-    # TODO: is the meter using the same invocation counter as the client?
+
+    # To keep track of invocation counters used by the meter. If a request is received
+    # with an invocation counter smaller than the current registered the message should
+    # be rejected. If the meter receives a message with a with the same or lower
+    # invocation counter as the last received message it will reject the message. So
+    # after every use of the apdu protection the client_invocation_counter needs to be
+    # increased
     client_invocation_counter: int = attr.ib(default=0)
     meter_invocation_counter: int = attr.ib(default=0)
 
-    # TODO: Support dedicated ciphers
+    # Using dedicated ciphering increase security since we only use the global key for
+    # association setup. This also saves a bit on the global invocation counter as once
+    # it hits the maximum value the global key needs to be exchanged.
     use_dedicated_ciphering: bool = attr.ib(default=False)
+    # Dedicated key will be generated on each association
     global_dedicated_key: Optional[bytes] = attr.ib(default=None)
-    # TODO: when supported we should have it as default True.
+    # the dedicated invocation_counter will be reset on each new dedicated_key.
+    dedicated_invocation_counter: int = attr.ib(init=False, default=0)
+
+    # not supported yet
     use_block_transfer: bool = attr.ib(default=False)
 
     # the max pdu size controls when we need to use block transfer. If the message is
@@ -180,6 +199,10 @@ class DlmsConnection:
         use_dedicated_ciphering: bool = False,
         client_system_title: Optional[bytes] = None,
     ):
+        """
+        A pre-established association does not need the ACSE APDUs. It is
+        predetermined what access the client have.
+        """
         return cls(
             client_system_title=client_system_title,
             global_encryption_key=global_encryption_key,
@@ -193,6 +216,10 @@ class DlmsConnection:
 
     @property
     def security_control(self) -> security.SecurityControlField:
+        """
+        The security control field is used in encryption/decryption of data. It also
+        follows the protected apdus to indicate what kind of protections they have.
+        """
         _authenticated = bool(self.global_authentication_key)
         _encrypted = bool(self.global_encryption_key)
         return security.SecurityControlField(
@@ -204,7 +231,13 @@ class DlmsConnection:
 
     @property
     def authentication_value(self) -> Optional[bytes]:
-        if self.authentication_method == enums.AuthenticationMechanism.NONE:
+        """
+        Depending on the authentication method for the connection the value in the
+        authentication value of the AARQ is different.
+        """
+        if self.authentication_method is None:
+            return None
+        elif self.authentication_method == enums.AuthenticationMechanism.NONE:
             return None
         elif self.authentication_method == enums.AuthenticationMechanism.LLS:
             return self.password
@@ -222,7 +255,7 @@ class DlmsConnection:
 
         if self.is_pre_established:
             # When we are in a pre established association state starts as READY.
-            # Only valid state change is to send the ReleaseRequestApdu. But it is not
+            # Only invalid state change is to send the ReleaseRequestApdu. But it is not
             # possible to close a pre-established association.
             if isinstance(event, acse.ReleaseRequestApdu):
                 raise exceptions.PreEstablishedAssociationError(
@@ -231,9 +264,7 @@ class DlmsConnection:
                 )
 
         self.validate_event_conformance(event)
-
         self.state.process_event(event)
-
         if self.use_protection:
             event = self.protect(event)
 
@@ -296,38 +327,34 @@ class DlmsConnection:
 
     def next_event(self):
         """
-        Will try to parse an event from the buffer.
-        If no event is found we assume it is not complete and we return a
-        NEED_DATA event to signal we need to receive more data.
+        Will parse the buffer into an APDU. In lower levels we need the case to get more
+        data. But this is not needed in the DLMS connections as it is the lower layers
+        responisbility to make sure the data is complete before handing the control
+        back to the dlms-layer. In the HDLC case the data is complete when we get the
+        last nonsegmented informtion frame. And in the IP case we know the length of
+        the data from the IP wrapper so we can keep on trying until we get all data.
         """
-        # How do we find an event in the buffer when we don't know the length of some
-        # APDUS. In X-ADR encoding for example. In the  HDLC layer the the control for
-        # example is handed over via the final/poll bit in the control field.
-        # In IP the IPWrapper adds the length to be sent.
-        # So it should be safe to assume that if a lower layer has delivered bytes
-        # it is always a full Apdu. And if we cant parse the full buffer as an APDU
-        # we need more data.
-
         apdu = XDlmsApduFactory.apdu_from_bytes(self.buffer)
-        # TODO: What error is raised when data is incomplete?
 
         if self.use_protection:
             apdu = self.unprotect(apdu)
 
-        if (
-            self.state.current_state == dlms_state.AWAITING_ASSOCIATION_RESPONSE
-            and isinstance(apdu, acse.ApplicationAssociationResponseApdu)
-        ):
-            self.update_negotiated_parameters(apdu)
+        self.update_negotiated_parameters(apdu)
 
         self.validate_event_conformance(apdu)
         self.state.process_event(apdu)
         self.clear_buffer()
 
         if isinstance(apdu, acse.ApplicationAssociationResponseApdu):
-            # TODO: should be a list of all HLS options
-            if apdu.authentication == enums.AuthenticationMechanism.HLS_GMAC:
-                # we need to start the HLS auth.
+            if apdu.result in [
+                enums.AssociationResult.REJECTED_PERMANENT,
+                enums.AssociationResult.REJECTED_TRANSIENT,
+            ]:
+                # reset the association on a reject
+                self.state.process_event(dlms_state.RejectAssociation())
+
+            # we need to start the HLS auth.
+            elif apdu.authentication == enums.AuthenticationMechanism.HLS_GMAC:
                 self.state.process_event(dlms_state.HlsStart())
 
         if isinstance(apdu, xdlms.ActionResponse):
@@ -362,10 +389,11 @@ class DlmsConnection:
     def protect(self, event) -> Any:
         """
         Will apply the correct protection to apdus depending on the security context
-        Will return new objects, ciphered or partially ciphered.
         """
         # ASCE have different rules about protection
-        if isinstance(event, (acse.ApplicationAssociationRequestApdu, acse.ReleaseRequestApdu)):
+        if isinstance(
+            event, (acse.ApplicationAssociationRequestApdu, acse.ReleaseRequestApdu)
+        ):
             # TODO: Not sure if it is needed to encrypt the IniateRequest when
             #   you are not sending a dedicated_key.
             if event.user_information:
@@ -375,13 +403,12 @@ class DlmsConnection:
                 )
 
                 event.user_information = acse.UserInformation(
-                        content=xdlms.GlobalCipherInitiateRequest(
-                            security_control=self.security_control,
-                            invocation_counter=self.client_invocation_counter,
-                            ciphered_text=ciphered_initiate_text,
-                        )
+                    content=xdlms.GlobalCipherInitiateRequest(
+                        security_control=self.security_control,
+                        invocation_counter=self.client_invocation_counter,
+                        ciphered_text=ciphered_initiate_text,
                     )
-
+                )
 
         # XDLMS apdus should be protected with general-glo-cihpering
         elif isinstance(event, AbstractXDlmsApdu):
@@ -401,6 +428,9 @@ class DlmsConnection:
         return event
 
     def encrypt(self, plain_text: bytes):
+        """
+        Encrypts plain bytes according to the current association and connection.
+        """
         return security.encrypt(
             self.security_control,
             system_title=self.client_system_title,
@@ -411,6 +441,9 @@ class DlmsConnection:
         )
 
     def decrypt(self, ciphered_text: bytes):
+        """
+        Encrypts ciphered bytes according to the current association and connection.
+        """
         return security.decrypt(
             self.security_control,
             system_title=self.meter_system_title,
@@ -424,14 +457,20 @@ class DlmsConnection:
         """
         Removes protection from APDUs and return a new the unprotected version
         """
-        if isinstance(event, (acse.ApplicationAssociationResponseApdu, acse.ReleaseResponseApdu)):
+        if isinstance(
+            event, (acse.ApplicationAssociationResponseApdu, acse.ReleaseResponseApdu)
+        ):
             if event.user_information:
                 if isinstance(
                     event.user_information.content, xdlms.GlobalCipherInitiateResponse
                 ):
-                    self.meter_invocation_counter = (
+                    received_invocation_counter = (
                         event.user_information.content.invocation_counter
                     )
+                    self.validate_received_invocation_counter(
+                        received_invocation_counter
+                    )
+                    self.meter_invocation_counter = received_invocation_counter
                     plain_text = security.decrypt(
                         security_control=event.user_information.content.security_control,
                         system_title=self.meter_system_title or event.system_title,
@@ -445,7 +484,7 @@ class DlmsConnection:
                     )
 
         elif isinstance(event, xdlms.GeneralGlobalCipherApdu):
-            # TODO: check that invocation counter is not lower than registered.
+            self.validate_received_invocation_counter(event.invocation_counter)
             self.meter_invocation_counter = event.invocation_counter
             plain_text = security.decrypt(
                 security_control=event.security_control,
@@ -477,10 +516,9 @@ class DlmsConnection:
 
     def get_aarq(self) -> acse.ApplicationAssociationRequestApdu:
         """
-        Returns an AARQ with the appropriate information for setting up a
-        connection as requested.
+        Returns an AARQ with the appropriate information for setting up the
+        connection.
         """
-        # TODO: Should we set this in the protection instead?
         if self.global_encryption_key:
             ciphered_apdus = True
         else:
@@ -513,27 +551,41 @@ class DlmsConnection:
             user_information=acse.UserInformation(content=initiate_request),
         )
 
-    def update_negotiated_parameters(
-        self, aare: acse.ApplicationAssociationResponseApdu
-    ) -> None:
+    def update_negotiated_parameters(self, event: Any) -> None:
         """
-        When the AARE is received we need to update the connection to the negotiated
+        When an AARE is received we need to update the connection to the negotiated
         parameters from the server (meter)
-        :param aare:
-        :return:
         """
-        if aare.user_information:
-            assert isinstance(aare.user_information.content, xdlms.InitiateResponseApdu)
-            self.conformance = aare.user_information.content.negotiated_conformance
-            self.max_pdu_size = (
-                aare.user_information.content.server_max_receive_pdu_size
-            )
+        if (
+            self.state.current_state == dlms_state.AWAITING_ASSOCIATION_RESPONSE
+            and isinstance(event, acse.ApplicationAssociationResponseApdu)
+        ):
+            if event.user_information:
+                assert isinstance(
+                    event.user_information.content, xdlms.InitiateResponseApdu
+                )
+                self.conformance = event.user_information.content.negotiated_conformance
+                self.max_pdu_size = (
+                    event.user_information.content.server_max_receive_pdu_size
+                )
 
-        self.meter_system_title = aare.system_title
-        self.authentication_method = aare.authentication
-        self.meter_to_client_challenge = aare.authentication_value
+            self.meter_system_title = event.system_title
+            self.authentication_method = event.authentication
+            self.meter_to_client_challenge = event.authentication_value
 
     def get_hls_reply(self) -> bytes:
+        """
+        When the meter has enterted the HLS procedure the client firsts sends a reply
+        to the server (meter) challenge. It is done with an ActionRequest to the
+        current LN Association object in the meter. Method 2, Reply_to_HLS.
+
+        Depending on the HLS type the data looks a bit different
+
+        HLS_GMAC:
+            SC + IC + GMAC(SC + AK + Challenge)
+        """
+        if not self.meter_to_client_challenge:
+            raise exceptions.LocalDlmsProtocolError("Meter has not send challenge")
         if self.authentication_method == enums.AuthenticationMechanism.HLS_GMAC:
             only_auth_security_control = security.SecurityControlField(
                 security_suite=self.security_suite, authenticated=True, encrypted=False
@@ -558,6 +610,16 @@ class DlmsConnection:
             )
 
     def hls_response_valid(self, response_to_client_challenge: bytes) -> bool:
+        """
+        After sending the HLS reply to the meter the meter sends back the result of the
+        client challenge in the ActionResponse. To make sure the meter has dont the HLS
+        auth correctly we must validate the data.
+        The data looks different depending on the HLS type
+
+        HLS_GMAC:
+            SC + IC + GMAC(SC + AK + Challenge)
+
+        """
 
         security_control = security.SecurityControlField.from_bytes(
             response_to_client_challenge[0].to_bytes(1, "big")
@@ -574,3 +636,15 @@ class DlmsConnection:
             challenge=self.client_to_meter_challenge,
         )
         return gmac_result == correct_gmac
+
+    def validate_received_invocation_counter(
+        self, received_invocation_counter: int
+    ) -> None:
+        """
+        The recevied invocation counter must be larger than the last one we registered.
+        """
+        if received_invocation_counter <= self.meter_invocation_counter:
+            raise exceptions.LocalDlmsProtocolError(
+                "Received invocation counter is not larger than the previous "
+                "received one. "
+            )

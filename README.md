@@ -88,7 +88,7 @@ need a feature implemented please contact us.
 # Training / Consultancy / Commercial Support
 
 We offer consultancy service and training services around this library and general DLMS/COSEM. 
-If you are interested in out services just reach out to us. 
+If you are interested in our services just reach out to us. 
 
 If you have implemented a solution based on this library we also offer a commercial 
 support scheme.

@@ -45,7 +45,6 @@ public_client = partial(
     server_logical_address=1,
     server_physical_address=17,
     client_logical_address=16,
-    client_system_title=b"HEWATEST",
 )
 
 management_client = partial(
@@ -53,7 +52,6 @@ management_client = partial(
     server_logical_address=1,
     server_physical_address=17,
     client_logical_address=1,
-    client_system_title=b"HEWATEST",
     authentication_method=auth,
     encryption_key=encryption_key,
     authentication_key=authentication_key,

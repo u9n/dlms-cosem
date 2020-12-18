@@ -85,12 +85,9 @@ class ActionResponse(AbstractXDlmsApdu):
         out.append(self.TAG)
         out.append(self.action_type.value)
         out.extend(self.invoke_id_and_priority.to_bytes())
-        out.extend(self.cosem_method.to_bytes())
-        if self.parameters:
-            out.append(0x01)
-            out.extend(self.parameters)
-        else:
-            out.append(0x00)
+        out.append(self.result.value)
+        # optinal result data not used.
+        out.append(0)
         return bytes(out)
 
     @classmethod
