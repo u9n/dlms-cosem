@@ -1,7 +1,7 @@
 import pytest
 
 from dlms_cosem.protocol import enumerations
-from dlms_cosem.protocol.cosem import CosemObject, Obis
+from dlms_cosem.protocol.cosem import CosemAttribute, Obis
 from dlms_cosem.protocol.xdlms import GetResponse, GetRequest
 from dlms_cosem.protocol.xdlms.get import InvokeIdAndPriority
 
@@ -10,7 +10,7 @@ class TestGetRequest:
     def test_to_bytes(self):
         data = b"\xc0\x01\xc1\x00\x01\x00\x00+\x01\x00\xff\x02\x00"
         get_req = GetRequest(
-            cosem_attribute=CosemObject(
+            cosem_attribute=CosemAttribute(
                 interface=enumerations.CosemInterface.DATA,
                 instance=Obis(a=0, b=0, c=43, d=1, e=0, f=255),
                 attribute=2,

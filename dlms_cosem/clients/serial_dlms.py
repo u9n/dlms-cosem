@@ -2,8 +2,8 @@ import attr
 from typing import *
 from dlms_cosem.clients.serial_hdlc import SerialHdlcClient
 from dlms_cosem.protocol.connection import DlmsConnection
-from dlms_cosem.protocol import xdlms, cosem, exceptions, enumerations
-from dlms_cosem.protocol import acse
+from dlms_cosem.protocol import xdlms, cosem, exceptions, enumerations, dlms_data
+from dlms_cosem.protocol import acse, state
 import logging
 import contextlib
 
@@ -14,6 +14,10 @@ LOG = logging.getLogger(__name__)
 
 class DataResultError(Exception):
     """ Error retrieveing data"""
+
+
+class HLSError(Exception):
+    """error in HLS procedure"""
 
 
 @attr.s(auto_attribs=True)
@@ -51,8 +55,7 @@ class SerialDlmsClient:
                 security_suite=self.security_suite,
                 max_pdu_size=self.max_pdu_size,
                 client_invocation_counter=self.client_initial_invocation_counter,
-                meter_invocation_counter=self.meter_initial_invocation_counter
-
+                meter_invocation_counter=self.meter_initial_invocation_counter,
             ),
             takes_self=True,
         )
@@ -84,7 +87,7 @@ class SerialDlmsClient:
         # Just a random get request.
         self.send(
             xdlms.GetRequest(
-                cosem_attribute=cosem.CosemObject(
+                cosem_attribute=cosem.CosemAttribute(
                     interface=ic, instance=instance, attribute=attribute
                 )
             )
@@ -124,6 +127,31 @@ class SerialDlmsClient:
             if isinstance(aare.user_information.content, ConfirmedServiceErrorApdu):
                 raise exceptions.ApplicationAssociationError(
                     f"Unable to perform Association: {aare.user_information.content.error}"
+                )
+
+        if (
+            self.dlms_connection.state.current_state
+            == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
+        ):
+            action_request = xdlms.ActionRequest(
+                cosem_method=cosem.CosemMethod(
+                    enumerations.CosemInterface.ASSOCIATION_LN,
+                    cosem.Obis(0, 0, 40, 0, 0),
+                    1,
+                ),
+                action_type=enumerations.ActionType.NORMAL,
+                parameters=dlms_data.OctetStringData(
+                    self.dlms_connection.get_hls_reply()
+                ).to_bytes(),
+            )
+            self.send(action_request)
+            action_response = self.next_event()
+            if action_response.result != enumerations.ActionResult.SUCCESS:
+                raise HLSError(f"HLS authentication failed: {action_response.result!r}")
+
+            if not self.dlms_connection.hls_response_valid(action_response.result_data):
+                raise HLSError(
+                    f"Meter did not respond with correct challenge calculation"
                 )
         return aare
 

@@ -135,8 +135,8 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
     authentication: Optional[enumerations.AuthenticationMechanism] = attr.ib(
         default=None
     )
-    meter_system_title: Optional[bytes] = attr.ib(default=None)
-    meter_public_cert: Optional[bytes] = attr.ib(default=None)
+    system_title: Optional[bytes] = attr.ib(default=None)
+    public_cert: Optional[bytes] = attr.ib(default=None)
     authentication_value: Optional[bytes] = attr.ib(default=None)
     user_information: Optional[UserInformation] = attr.ib(default=None)
 
@@ -284,16 +284,16 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
         meter_system_title = object_dict.pop("responding_ap_title", None)
         if meter_system_title:
             # it is ber encoded universal tag ocetctring. simple handling
-            object_dict["meter_system_title"] = bytes(meter_system_title[2:])
+            object_dict["system_title"] = bytes(meter_system_title[2:])
         else:
-            object_dict["meter_system_title"] = None
+            object_dict["system_title"] = None
         # rename responding_ae_qualifier to meter_public_cert
         meter_public_cert = object_dict.pop("responding_ae_qualifier", None)
         if meter_public_cert:
             # it is ber encoded universal tag ocetctring. simple handling
-            object_dict["meter_public_cert"] = bytes(meter_public_cert[2:])
+            object_dict["public_cert"] = bytes(meter_public_cert[2:])
         else:
-            object_dict["meter_public_cert"] = None
+            object_dict["public_cert"] = None
 
 
 
@@ -347,10 +347,10 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
                     )
                 )
 
-        if self.meter_system_title is not None:
-            aare_data.extend(BER.encode(164, BER.encode(4, self.meter_system_title)))
-        if self.meter_public_cert is not None:
-            aare_data.extend(BER.encode(165, BER.encode(4, self.meter_public_cert)))
+        if self.system_title is not None:
+            aare_data.extend(BER.encode(164, BER.encode(4, self.system_title)))
+        if self.public_cert is not None:
+            aare_data.extend(BER.encode(165, BER.encode(4, self.public_cert)))
         if self.responding_ap_invocation_id is not None:
             aare_data.extend(BER.encode(166, self.responding_ap_invocation_id))
         if self.responding_ae_invocation_id is not None:

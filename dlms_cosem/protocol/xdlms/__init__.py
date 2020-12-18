@@ -6,6 +6,7 @@ from dlms_cosem.protocol.xdlms.confirmed_service_error import ConfirmedServiceEr
 from dlms_cosem.protocol.xdlms.get import GetRequest, GetResponse
 from dlms_cosem.protocol.xdlms.conformance import Conformance
 from dlms_cosem.protocol.xdlms.exception_response import ExceptionResponseApdu
+from dlms_cosem.protocol.xdlms.action import ActionResponse, ActionRequest
 
 __all__ = [
     "InitiateRequestApdu",
@@ -19,4 +20,6 @@ __all__ = [
     "ExceptionResponseApdu",
     "GlobalCipherInitiateRequest",
     "GlobalCipherInitiateResponse",
+    "ActionResponse",
+    "ActionRequest",
 ]

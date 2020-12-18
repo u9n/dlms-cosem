@@ -42,7 +42,7 @@ class TestParseAARQ:
         assert aarq.ciphered
         assert aarq.authentication == enumerations.AuthenticationMechanism.LLS
         # you need to set a system title when ciphering
-        assert aarq.client_system_title is not None
+        assert aarq.system_title is not None
         # Password is used in LLS
         assert aarq.authentication_value is not None
 
@@ -53,7 +53,7 @@ class TestParseAARQ:
         assert aarq.ciphered
         assert aarq.authentication == enumerations.AuthenticationMechanism.LLS
         # you need to set a system title when ciphering
-        assert aarq.client_system_title == bytes.fromhex("4D4D4D0000BC614E")
+        assert aarq.system_title == bytes.fromhex("4D4D4D0000BC614E")
         # Password is used in LLS
         assert aarq.authentication_value == b"12345678"
         assert aarq.to_bytes() == data
@@ -72,8 +72,8 @@ class TestEncodeAARE:
         )
         aarq = ApplicationAssociationRequestApdu(
             ciphered=False,
-            client_system_title=None,
-            client_public_cert=None,
+            system_title=None,
+            public_cert=None,
             authentication=None,
             authentication_value=None,
             user_information=UserInformation(
@@ -111,8 +111,8 @@ class TestEncodeAARE:
     def test_parse_no_ciphering_no_sercurity(self):
         data = b"`\x1d\xa1\t\x06\x07`\x85t\x05\x08\x01\x01\xbe\x10\x04\x0e\x01\x00\x00\x00\x06_\x1f\x04\x00\x00~\x1f\x04\xb0"
         aarq = ApplicationAssociationRequestApdu(
-            client_system_title=None,
-            client_public_cert=None,
+            system_title=None,
+            public_cert=None,
             authentication=None,
             ciphered=False,
             authentication_value=None,
@@ -157,8 +157,8 @@ class TestEncodeAARE:
     def test_encode_no_ciphering_high_security(self):
         data = b"`6\xa1\t\x06\x07`\x85t\x05\x08\x01\x01\x8a\x02\x07\x80\x8b\x07`\x85t\x05\x08\x02\x05\xac\n\x80\x08K56iVagY\xbe\x10\x04\x0e\x01\x00\x00\x00\x06_\x1f\x04\x00\x00~\x1f\x04\xb0"
         aarq = ApplicationAssociationRequestApdu(
-            client_system_title=None,
-            client_public_cert=None,
+            system_title=None,
+            public_cert=None,
             authentication=enumerations.AuthenticationMechanism.HLS_GMAC,
             ciphered=False,
             authentication_value=b"K56iVagY",
@@ -204,8 +204,8 @@ class TestEncodeAARE:
     def test_encode_no_ciphering_low_security(self):
         data = b"`6\xa1\t\x06\x07`\x85t\x05\x08\x01\x01\x8a\x02\x07\x80\x8b\x07`\x85t\x05\x08\x02\x01\xac\n\x80\x0812345678\xbe\x10\x04\x0e\x01\x00\x00\x00\x06_\x1f\x04\x00\x00~\x1f\x04\xb0"
         aarq = ApplicationAssociationRequestApdu(
-            client_system_title=None,
-            client_public_cert=None,
+            system_title=None,
+            public_cert=None,
             authentication=enumerations.AuthenticationMechanism.LLS,
             ciphered=False,
             authentication_value=b"12345678",

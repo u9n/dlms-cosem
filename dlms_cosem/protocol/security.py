@@ -194,7 +194,6 @@ def decrypt(
     # initialization vector is 12 bytes long and consists of the system_title (8 bytes)
     # and invocation_counter (4 bytes)
     iv = system_title + invocation_counter.to_bytes(4, "big")
-    print(invocation_counter)
     validate_key(security_control.security_suite, key)
     validate_key(security_control.security_suite, auth_key)
 
@@ -215,6 +214,48 @@ def decrypt(
     # Decryption gets us the authenticated plaintext.
     # If the tag does not match an InvalidTag exception will be raised.
     return decryptor.update(ciphertext) + decryptor.finalize()
+
+
+def gmac(
+    security_control: SecurityControlField,
+    system_title: bytes,
+    invocation_counter: int,
+    key: bytes,
+    auth_key: bytes,
+    challenge: bytes,
+):
+    if not security_control.encrypted and not security_control.authenticated:
+        raise CipheringError("encrypt() only handles authenticated encryption")
+    if len(system_title) != 8:
+        raise ValueError(f"System Title must be of lenght 8, not {len(system_title)}")
+    # initialization vector is 12 bytes long and consists of the system_title (8 bytes)
+    # and invocation_counter (4 bytes)
+
+    iv = system_title + invocation_counter.to_bytes(4, "big")
+
+    validate_key(security_control.security_suite, key)
+    validate_key(security_control.security_suite, auth_key)
+
+    # Construct an AES-GCM Cipher object with the given key and iv
+    encryptor = Cipher(
+        algorithms.AES(key),
+        modes.GCM(initialization_vector=iv, tag=None, min_tag_length=TAG_LENGTH),
+    ).encryptor()
+
+    # associated_data will be authenticated but not encrypted,
+    # it must also be passed in on decryption.
+    associated_data = security_control.to_bytes() + auth_key + challenge
+    encryptor.authenticate_additional_data(associated_data)
+
+    # Encrypt the plaintext and get the associated ciphertext.
+    # GCM does not require padding.
+    ciphertext = encryptor.update(b"") + encryptor.finalize()
+
+    # dlms uses a tag lenght of 12 not the default of 16. Since we have set the minimum
+    # tag length to 12 it is ok to truncated the tag.
+    tag = encryptor.tag[:TAG_LENGTH]
+
+    return ciphertext + tag
 
 
 def wrap_key(

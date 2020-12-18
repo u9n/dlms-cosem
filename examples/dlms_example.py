@@ -75,15 +75,27 @@ client.release_association()
 
 
 client = management_client(serial_port=port, client_initial_invocation_counter=result+1)
-print(client)
 client.associate()
-print(client.dlms_connection)
+
 result = client.get(
     ic=enumerations.CosemInterface.DATA,
     instance=cosem.Obis(0, 0, 0x2B, 1, 0),
     attribute=2,
 )
-print(result)
+print(f"meter_initial_invocation_counter = {result}")
+print(">>>>>")
+print(f"{client.dlms_connection.client_invocation_counter}")
+print(f"{client.dlms_connection.meter_invocation_counter}")
+print(f">>>>>>")
+
+profile = client.get(
+    ic=enumerations.CosemInterface.PROFILE_GENERIC,
+    instance=cosem.Obis(1, 0, 99, 1, 0),
+    attribute=2,
+)
+
+print(profile)
+
 # TODO: parse  b'~\xa0\x10!\x02#0\x85\xdd\xe6\xe7\x00\xd8\x01\x01<C~' and see where the error is.
 
 client.release_association()

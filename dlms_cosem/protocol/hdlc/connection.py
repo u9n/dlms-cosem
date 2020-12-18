@@ -28,7 +28,11 @@ class HdlcFrameFactory:
         try:
             return frames.InformationFrame.from_bytes(frame_data)
         except exceptions.HdlcParsingError as e:
-            LOG.exception(e)
+            LOG.debug(
+                f"Unable to load and information frame from frame_data: {frame_data!r}."
+                f"Information carried in frame might have contained the HDLC flag and "
+                f"we have not recieved the full frame yet."
+            )
             return None
 
 
@@ -96,6 +100,7 @@ class HdlcConnection:
         frame = parse_method(frame_bytes)
 
         if frame is None:
+            LOG.debug("HDLC frame could not be parsed. Need more data")
             return NEED_DATA
 
         LOG.debug(f"Received frame: {frame}")
@@ -141,5 +146,3 @@ class HdlcConnection:
         """
         del self.buffer[: self.buffer_search_position]
         self.buffer_search_position = 1
-
-

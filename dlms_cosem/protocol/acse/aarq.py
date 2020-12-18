@@ -145,8 +145,8 @@ class ApplicationAssociationRequestApdu:
     user_information: UserInformation = attr.ib(
         validator=[user_information_holds_initiate_request]
     )
-    client_system_title: Optional[bytes] = attr.ib(default=None)
-    client_public_cert: Optional[bytes] = attr.ib(default=None)
+    system_title: Optional[bytes] = attr.ib(default=None)
+    public_cert: Optional[bytes] = attr.ib(default=None)
     authentication: Optional[enumerations.AuthenticationMechanism] = attr.ib(
         default=None
     )
@@ -281,18 +281,18 @@ class ApplicationAssociationRequestApdu:
         client_system_title = object_dict.pop("calling_ap_title", None)
         if client_system_title:
             # it is ber encoded universal tag ocetctring. simple handling
-            object_dict["client_system_title"] = client_system_title[2:]
+            object_dict["system_title"] = client_system_title[2:]
         else:
-            object_dict["client_system_title"] = None
+            object_dict["system_title"] = None
 
         client_public_cert = object_dict.pop(
             "calling_ae_qualifier", None
         )
         if client_public_cert:
             # it is ber encoded universal tag ocetctring. simple handling
-            object_dict["client_public_cert"] = client_public_cert[2:]
+            object_dict["public_cert"] = client_public_cert[2:]
         else:
-            object_dict["client_public_cert"] = None
+            object_dict["public_cert"] = None
 
         auth_value: Optional[acse_base.AuthenticationValue] = object_dict.pop(
             "calling_authentication_value", None
@@ -317,10 +317,10 @@ class ApplicationAssociationRequestApdu:
             aarq_data.extend(BER.encode(164, self.called_ap_invocation_identifier))
         if self.called_ae_invocation_identifier is not None:
             aarq_data.extend(BER.encode(165, self.called_ae_invocation_identifier))
-        if self.client_system_title is not None:
-            aarq_data.extend(BER.encode(166, BER.encode(4, self.client_system_title)))
-        if self.client_public_cert is not None:
-            aarq_data.extend(BER.encode(167, BER.encode(4, self.client_public_cert)))
+        if self.system_title is not None:
+            aarq_data.extend(BER.encode(166, BER.encode(4, self.system_title)))
+        if self.public_cert is not None:
+            aarq_data.extend(BER.encode(167, BER.encode(4, self.public_cert)))
         if self.calling_ap_invocation_identifier is not None:
             aarq_data.extend(BER.encode(168, self.calling_ap_invocation_identifier))
         if self.calling_ae_invocation_identifier is not None:

@@ -8,8 +8,8 @@ def aarq():
 
     return acse.ApplicationAssociationRequestApdu(
         ciphered=False,
-        client_system_title=None,
-        client_public_cert=None,
+        system_title=None,
+        public_cert=None,
         authentication=None,
         authentication_value=None,
         user_information=acse.UserInformation(
@@ -113,7 +113,7 @@ def get_request() -> xdlms.GetRequest:
 
     # invocation counter
     return xdlms.GetRequest(
-        cosem_attribute=cosem.CosemObject(
+        cosem_attribute=cosem.CosemAttribute(
             interface=enumerations.CosemInterface.DATA,
             instance=cosem.Obis(0, 0, 0x2B, 1, 0),
             attribute=2,

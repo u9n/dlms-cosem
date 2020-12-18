@@ -3,7 +3,7 @@ from typing import *
 import attr
 
 from dlms_cosem.protocol.xdlms.conformance import Conformance
-from dlms_cosem.protocol import acse, xdlms, exceptions, security
+from dlms_cosem.protocol import acse, xdlms, exceptions, security, cosem, dlms_data
 from dlms_cosem.protocol import enumerations as enums
 from dlms_cosem.protocol import state as dlms_state
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
@@ -37,7 +37,9 @@ class XDlmsApduFactory:
         98: acse.ReleaseRequestApdu,
         99: acse.ReleaseResponseApdu,
         192: xdlms.GetRequest,
+        195: xdlms.ActionRequest,
         196: xdlms.GetResponse,
+        199: xdlms.ActionResponse,
     }
 
     @classmethod
@@ -328,6 +330,16 @@ class DlmsConnection:
                 # we need to start the HLS auth.
                 self.state.process_event(dlms_state.HlsStart())
 
+        if isinstance(apdu, xdlms.ActionResponse):
+            if self.state.current_state == dlms_state.HLS_DONE:
+                if apdu.result != enums.ActionResult.SUCCESS:
+                    self.state.process_event(dlms_state.HlsFailed())
+                else:
+                    if self.hls_response_valid(apdu.result_data):
+                        self.state.process_event(dlms_state.HlsSuccess())
+                    else:
+                        self.state.process_event(dlms_state.HlsFailed())
+
         return apdu
 
     def clear_buffer(self):
@@ -353,43 +365,40 @@ class DlmsConnection:
         Will return new objects, ciphered or partially ciphered.
         """
         # ASCE have different rules about protection
-        if isinstance(event, acse.ApplicationAssociationRequestApdu):
+        if isinstance(event, (acse.ApplicationAssociationRequestApdu, acse.ReleaseRequestApdu)):
             # TODO: Not sure if it is needed to encrypt the IniateRequest when
             #   you are not sending a dedicated_key.
+            if event.user_information:
 
-            ciphered_initiate_text = self.encrypt(
-                event.user_information.content.to_bytes()
-            )
+                ciphered_initiate_text = self.encrypt(
+                    event.user_information.content.to_bytes()
+                )
 
-            protected = acse.ApplicationAssociationRequestApdu(
-                ciphered=event.ciphered,
-                authentication=event.authentication,
-                authentication_value=event.authentication_value,
-                client_system_title=event.client_system_title,
-                client_public_cert=event.client_public_cert,
-                user_information=acse.UserInformation(
-                    content=xdlms.GlobalCipherInitiateRequest(
-                        security_control=self.security_control,
-                        invocation_counter=self.client_invocation_counter,
-                        ciphered_text=ciphered_initiate_text,
+                event.user_information = acse.UserInformation(
+                        content=xdlms.GlobalCipherInitiateRequest(
+                            security_control=self.security_control,
+                            invocation_counter=self.client_invocation_counter,
+                            ciphered_text=ciphered_initiate_text,
+                        )
                     )
-                ),
-            )
+
 
         # XDLMS apdus should be protected with general-glo-cihpering
-        if isinstance(event, AbstractXDlmsApdu):
+        elif isinstance(event, AbstractXDlmsApdu):
             ciphered_text = self.encrypt(event.to_bytes())
 
-            protected = xdlms.GeneralGlobalCipherApdu(
+            event = xdlms.GeneralGlobalCipherApdu(
                 system_title=self.client_system_title,
                 security_control=self.security_control,
                 invocation_counter=self.client_invocation_counter,
                 ciphered_text=ciphered_text,
             )
+        else:
+            raise RuntimeError(f"Unable to handle ecryption/protection of {event}")
 
         # updated the client_invocation_counter
         self.client_invocation_counter += 1
-        return protected
+        return event
 
     def encrypt(self, plain_text: bytes):
         return security.encrypt(
@@ -415,15 +424,17 @@ class DlmsConnection:
         """
         Removes protection from APDUs and return a new the unprotected version
         """
-        if isinstance(event, acse.ApplicationAssociationResponseApdu):
+        if isinstance(event, (acse.ApplicationAssociationResponseApdu, acse.ReleaseResponseApdu)):
             if event.user_information:
                 if isinstance(
                     event.user_information.content, xdlms.GlobalCipherInitiateResponse
                 ):
-                    print(event)
+                    self.meter_invocation_counter = (
+                        event.user_information.content.invocation_counter
+                    )
                     plain_text = security.decrypt(
                         security_control=event.user_information.content.security_control,
-                        system_title=event.meter_system_title,
+                        system_title=self.meter_system_title or event.system_title,
                         invocation_counter=event.user_information.content.invocation_counter,
                         key=self.global_encryption_key,
                         auth_key=self.global_authentication_key,
@@ -432,6 +443,23 @@ class DlmsConnection:
                     event.user_information.content = xdlms.InitiateResponseApdu.from_bytes(
                         plain_text
                     )
+
+        elif isinstance(event, xdlms.GeneralGlobalCipherApdu):
+            # TODO: check that invocation counter is not lower than registered.
+            self.meter_invocation_counter = event.invocation_counter
+            plain_text = security.decrypt(
+                security_control=event.security_control,
+                system_title=event.system_title,
+                invocation_counter=event.invocation_counter,
+                key=self.global_encryption_key,
+                auth_key=self.global_authentication_key,
+                cipher_text=event.ciphered_text,
+            )
+            event = XDlmsApduFactory.apdu_from_bytes(plain_text)
+
+        else:
+            raise RuntimeError(f"Unable to handle decryption/unprotection of {event}")
+
         return event
 
     @property
@@ -452,7 +480,6 @@ class DlmsConnection:
         Returns an AARQ with the appropriate information for setting up a
         connection as requested.
         """
-        print(self.conformance)
         # TODO: Should we set this in the protection instead?
         if self.global_encryption_key:
             ciphered_apdus = True
@@ -466,7 +493,7 @@ class DlmsConnection:
 
         return acse.ApplicationAssociationRequestApdu(
             ciphered=ciphered_apdus,
-            client_system_title=self.client_system_title,
+            system_title=self.client_system_title,
             authentication=self.authentication_method,
             authentication_value=self.authentication_value,
             user_information=acse.UserInformation(content=initiate_request),
@@ -502,6 +529,48 @@ class DlmsConnection:
                 aare.user_information.content.server_max_receive_pdu_size
             )
 
-        self.meter_system_title = aare.meter_system_title
+        self.meter_system_title = aare.system_title
         self.authentication_method = aare.authentication
         self.meter_to_client_challenge = aare.authentication_value
+
+    def get_hls_reply(self) -> bytes:
+        if self.authentication_method == enums.AuthenticationMechanism.HLS_GMAC:
+            only_auth_security_control = security.SecurityControlField(
+                security_suite=self.security_suite, authenticated=True, encrypted=False
+            )
+
+            gmac_result = security.gmac(
+                security_control=only_auth_security_control,
+                system_title=self.client_system_title,
+                invocation_counter=self.client_invocation_counter,
+                key=self.global_encryption_key,
+                auth_key=self.global_authentication_key,
+                challenge=self.meter_to_client_challenge,
+            )
+            return (
+                only_auth_security_control.to_bytes()
+                + self.client_invocation_counter.to_bytes(4, "big")
+                + gmac_result
+            )
+        else:
+            raise NotImplementedError(
+                f"No implementation for HSL: {self.authentication_method!r}"
+            )
+
+    def hls_response_valid(self, response_to_client_challenge: bytes) -> bool:
+
+        security_control = security.SecurityControlField.from_bytes(
+            response_to_client_challenge[0].to_bytes(1, "big")
+        )
+        invocation_counter = int.from_bytes(response_to_client_challenge[1:5], "big")
+        gmac_result = response_to_client_challenge[-12:]
+
+        correct_gmac = security.gmac(
+            security_control=security_control,
+            system_title=self.meter_system_title,
+            invocation_counter=invocation_counter,
+            key=self.global_encryption_key,
+            auth_key=self.global_authentication_key,
+            challenge=self.client_to_meter_challenge,
+        )
+        return gmac_result == correct_gmac

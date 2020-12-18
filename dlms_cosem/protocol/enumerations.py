@@ -27,6 +27,15 @@ class GetType(IntEnum):
     WITH_LIST = 3
 
 
+class ActionType(IntEnum):
+    NORMAL = 1
+    NEXT_PBLOCK = 2
+    WITH_LIST = 3
+    WITH_FIRST_PBLOCK = 4
+    WITH_LIST_AND_FIRST_PBLOCK = 5
+    WITH_PBLOCK = 6
+
+
 class StateException(IntEnum):
     SERVICE_NOT_ALLOWED = 1
     SERVICE_UNKNOWN = 2
@@ -316,3 +325,18 @@ class AssociationResult(IntEnum):
     REJECTED_PERMANENT = 1
     REJECTED_TRANSIENT = 2
     # TODO: What does transient rejection mean?
+
+class ActionResult(IntEnum):
+    SUCCESS = 0
+    HARDWARE_FAULT = 1
+    TEMPORARY_FAILURE = 2
+    READ_WRITE_DENIED = 3
+    OBJECT_UNDEFINED = 4
+    OBJECT_CLASS_INCONSISTENT = 9
+    OBJECT_UNAVAILABLE = 11
+    TYPE_UNMATCHED = 12
+    SCOPE_OF_ACCESS_VIOLATED = 13
+    DATA_BLOCK_UNAVAILABLE = 14
+    LONG_ACTION_ABORTED = 15
+    NO_LONG_ACTION_IN_PROGRESS = 16
+    OTHER_REASON = 250
