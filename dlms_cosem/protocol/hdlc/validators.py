@@ -3,7 +3,7 @@
 
 
 def validate_information_sequence_number(instance, attribute, value):
-    if 0 <= value >= 7:
+    if not 0 <= value <= 7:
         raise ValueError(f"Sequence number can only be between 0-7. Got {value}")
 
 

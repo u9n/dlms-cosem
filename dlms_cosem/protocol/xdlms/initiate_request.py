@@ -1,11 +1,15 @@
+from functools import partial
 from typing import *
 
 import attr
 
+from dlms_cosem.protocol import security, a_xdr, dlms_data, acse, xdlms
 from dlms_cosem.protocol.ber import BER
 
 from dlms_cosem.protocol.xdlms.conformance import Conformance
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
+
+int_from_bytes = partial(int.from_bytes, byteorder="big")
 
 
 @attr.s(auto_attribs=True)
@@ -22,61 +26,34 @@ class InitiateRequestApdu(AbstractXDlmsApdu):
     """
 
     TAG: ClassVar[int] = 0x01  # initiateRequest XDLMS-APDU Choice.
-    NAME: ClassVar[str] = "initiate-request"
 
-    object_map: ClassVar[List[Dict[str, Any]]] = [
-        {
-            "attr": "dedicated_key",
-            "encoding": "x-adr",
-            "optional": True,
-            "default": None,
-            "class_ref": "bytes",
-            "length": None,
-        },
-        {
-            "attr": "response_allowed",
-            "encoding": "x-adr",
-            "optional": False,
-            "default": True,
-            "class_ref": "bool",
-            "length": 1,
-        },
-        {
-            "attr": "proposed_quality_of_service",
-            "encoding": "x-adr",
-            "optional": False,
-            "default": None,
-            "class_ref": "int",
-            "length": 1,
-        },
-        {
-            "attr": "proposed_dlms_version_number",
-            "encoding": "x-adr",
-            "optional": False,
-            "default": None,
-            "class_ref": "int",
-            "length": 1,
-        },
-        {
-            "attr": "proposed_conformance",
-            "encoding": "ber",
-            "optional": False,
-            "default": None,
-            "class_ref": Conformance,
-            "length": 7,
-            "tag": b"\x5f\x1f",
-        },  # Might be 6 over HDLC because of compbility with old version.
-        {
-            "attr": "client_max_receive_pdu_size",
-            "encoding": "x-adr",
-            "optional": False,
-            "default": None,
-            "class_ref": "int",
-            "length": 2,
-        },
-    ]
-
-    # TODO: Cannot be default and optional at the same time!
+    ENCODING_CONF = a_xdr.EncodingConf(
+        [
+            a_xdr.Attribute(
+                attribute_name="dedicated_key",
+                create_instance=dlms_data.OctetStringData.from_bytes,
+                optional=True,
+            ),
+            a_xdr.Attribute(
+                attribute_name="response_allowed", create_instance=bool, default=True
+            ),
+            a_xdr.Attribute(
+                attribute_name="proposed_quality_of_service",
+                create_instance=int_from_bytes,
+                length=1,
+            ),
+            a_xdr.Attribute(
+                attribute_name="proposed_dlms_version_number",
+                create_instance=int_from_bytes,
+                length=1,
+            ),
+            a_xdr.Attribute(
+                attribute_name="rest",
+                create_instance=dlms_data.OctetStringData.from_bytes,
+                length=9,
+            ),
+        ]
+    )
 
     proposed_conformance: Conformance
     proposed_quality_of_service: Optional[int] = attr.ib(default=None)
@@ -94,117 +71,90 @@ class InitiateRequestApdu(AbstractXDlmsApdu):
             raise ValueError(
                 f"Data is not a InitiateReques APDU, got apdu tag {apdu_tag}"
             )
-        object_dict = dict()
 
-        for decoding_rule in InitiateRequestApdu.object_map:
-            is_used = True
-            is_default = False
-            if decoding_rule["encoding"] == "x-adr":
-                if decoding_rule["optional"]:
-                    tag = data.pop(0)  # get the first byte in the array
-                    if tag == 0x00:
-                        # 0x00 indicates that the optinal element is not used.
-                        is_used = False
-                    elif tag == 0x01:
-                        # 0x01 indicates that the optional elemnt is used.
-                        is_used = True
-                    else:
-                        raise ValueError(
-                            f"Not possible to byte: {tag} to be other than 0x00 or "
-                            f"0x01 when optional is set."
-                        )
-                if decoding_rule["default"] is not None:
-                    tag = data.pop(0)  # get the first byte in the array
-                    if tag == 0x00:
-                        # 0x00 indicates that the default value is used.
-                        is_default = True
-                    elif tag == 0x01:
-                        # 0x01 indicates that the default value is not used and
-                        # we need to look for the real value.
-                        is_default = False
-                    else:
-                        raise ValueError(
-                            f"Not possible to byte: {tag} to be other than 0x00 or "
-                            f"0x01 when default is set."
-                        )
-                if is_default:
-                    object_dict[decoding_rule["attr"]] = decoding_rule["default"]
-                    continue
-                if not is_used:
-                    object_dict[decoding_rule["attr"]] = None
-                    continue
+        decoder = a_xdr.AXdrDecoder(cls.ENCODING_CONF)
+        object_dict = decoder.decode(data)
 
-                object_data = data[: decoding_rule["length"]]
+        # Since the initiate request mixes a-xdr and ber encoding we make some pragmatic
+        # one-off handling of that case.
 
-            elif decoding_rule["encoding"] == "ber":
-                tag, length, object_data = BER.decode(
-                    data[: decoding_rule["length"]],
-                    tag_length=len(decoding_rule["tag"]),
-                )
+        rest = bytearray(object_dict.pop("rest").value)
+        # rest contains ber endoced propesed conformance and max reciec pdu
 
-            else:
-                raise ValueError(
-                    f"No encoding handling for encoding {decoding_rule['encoding']}"
-                )
-            data = data[decoding_rule["length"] :]
-
-            object_instance: Any
-
-            # TODO: this is not nice
-            if decoding_rule["class_ref"] == "int":
-                object_instance = int.from_bytes(object_data, "big")
-            elif decoding_rule["class_ref"] == "bool":
-                object_instance = bool(object_data)
-            elif decoding_rule["class_ref"] == "str":
-                object_instance = str(object_data)
-            elif decoding_rule["class_ref"] == "bytes":
-                object_instance = bytes(object_data)
-            else:
-                object_instance = decoding_rule["class_ref"].from_bytes(
-                    bytes(object_data)
-                )
-            object_dict[decoding_rule["attr"]] = object_instance
-
-        return cls(**object_dict)
+        conformance_tag = rest[:2]
+        if conformance_tag != b"\x5f\x1f":
+            raise ValueError(
+                f"Didnt receive conformance tag correcly, got {conformance_tag!r}"
+            )
+        conformance = xdlms.Conformance.from_bytes(data[-5:-2])
+        max_pdu_size = int.from_bytes(data[-2:], "big")
+        dedicated_key_obj = object_dict.pop("dedicated_key")
+        if dedicated_key_obj:
+            dedicated_key = bytes(dedicated_key_obj.value)
+        else:
+            dedicated_key = None
+        return cls(
+            **object_dict,
+            dedicated_key=dedicated_key,
+            proposed_conformance=conformance,
+            client_max_receive_pdu_size=max_pdu_size,
+        )
 
     def to_bytes(self):
-        _bytes = bytearray()
-        for decoding_rule in self.object_map:
-            object_value = self.__getattribute__(decoding_rule["attr"])
-            if decoding_rule["encoding"] == "x-adr":
+        # Since the initiate request mixes a-xdr and ber encoding we make some pragmatic
+        # one-off handling of that case.
+        out = bytearray()
+        out.append(self.TAG)
+        if self.dedicated_key:
+            out.append(0x01)
+            out.append(len(self.dedicated_key))
+            out.extend(self.dedicated_key)
+        else:
+            out.append(0x00)
+        out.append(0x00)
+        out.append(0x00)
+        out.append(0x06)
+        out.extend(b"_\x1f\x04")
+        out.extend(self.proposed_conformance.to_bytes())
+        out.extend(self.client_max_receive_pdu_size.to_bytes(2, 'big'))
+        return bytes(out)
 
-                # is the object used?
-                if object_value is None and decoding_rule["optional"] is True:
-                    object_bytes = b"\x00"
 
-                # is the object the default value?
-                elif object_value == decoding_rule["default"]:
-                    object_bytes = b"\x00"
+@attr.s(auto_attribs=True)
+class GlobalCipherInitiateRequest(AbstractXDlmsApdu):
+    TAG: ClassVar[int] = 33
 
-                else:
-                    if isinstance(object_value, int):
-                        object_bytes = object_value.to_bytes(
-                            decoding_rule["length"], "big"
-                        )
-                    elif isinstance(object_value, bytes):
-                        object_bytes = object_value
-                    elif isinstance(object_value, bool):
-                        if object_value:
-                            object_bytes = b"\x01"
-                        else:
-                            object_bytes = b"\x00"
-                    elif isinstance(object_value, str):
-                        object_bytes = object_value.encode()
-                    else:
-                        object_bytes = object_value.to_bytes()
+    security_control: security.SecurityControlField
+    invocation_counter: int
+    ciphered_text: bytes
 
-                if object_value is not None and decoding_rule["optional"] is True:
-                    # should add 0x01 infront of the data
-                    object_bytes = b"\x01" + object_bytes
+    @classmethod
+    def from_bytes(cls, source_bytes: bytes):
+        data = bytearray(source_bytes)
+        tag = data.pop(0)
+        if tag != cls.TAG:
+            raise ValueError(f"Tag is not correct. Should be {cls.TAG} but got {tag}")
 
-                _bytes.extend(object_bytes)
+        length = data.pop(0)
+        if length != len(data):
+            raise ValueError(f"Octetstring is not of correct length")
 
-            elif decoding_rule["encoding"] == "ber":
-                _bytes.extend(BER.encode(decoding_rule["tag"], object_value.to_bytes()))
+        security_control = security.SecurityControlField.from_bytes(
+            data.pop(0).to_bytes(1, "big")
+        )
+        invocation_counter = int.from_bytes(data[:4], "big")
+        ciphered_text = bytes(data[4:])
 
-        return b"\x01" + bytes(_bytes)
+        return cls(security_control, invocation_counter, ciphered_text)
+
+    def to_bytes(self):
+        out = bytearray()
+        out.append(self.TAG)
+
+        octet_string_data = bytearray()
+        octet_string_data.extend(self.security_control.to_bytes())
+        octet_string_data.extend(self.invocation_counter.to_bytes(4, "big"))
+        octet_string_data.extend(self.ciphered_text)
+        out.append(len(octet_string_data))
+        out.extend(octet_string_data)
+        return bytes(out)

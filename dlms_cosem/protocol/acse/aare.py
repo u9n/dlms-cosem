@@ -4,6 +4,7 @@ import attr
 from asn1crypto.core import Choice, Integer
 
 from dlms_cosem.protocol.acse import base as acse_base
+from dlms_cosem.protocol.acse.user_information import UserInformation
 from dlms_cosem.protocol import enumerations
 from dlms_cosem.protocol.acse.aarq import aarq_should_set_authenticated
 from dlms_cosem.protocol.ber import BER
@@ -121,7 +122,7 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
         189: ("implementation_information", None),
         0xBE: (
             "user_information",
-            acse_base.UserInformation,
+            UserInformation,
         ),  # Context specific, constructed 30
     }
 
@@ -134,10 +135,10 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
     authentication: Optional[enumerations.AuthenticationMechanism] = attr.ib(
         default=None
     )
-    meter_system_title: Optional[bytes] = attr.ib(default=None)
-    meter_public_cert: Optional[bytes] = attr.ib(default=None)
+    system_title: Optional[bytes] = attr.ib(default=None)
+    public_cert: Optional[bytes] = attr.ib(default=None)
     authentication_value: Optional[bytes] = attr.ib(default=None)
-    user_information: Optional[acse_base.UserInformation] = attr.ib(default=None)
+    user_information: Optional[UserInformation] = attr.ib(default=None)
 
     # Not really used.
     implementation_information: Optional[bytes] = attr.ib(default=None)
@@ -278,20 +279,29 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
 
         if responder_acse_requirements and mechanism_name:
             object_dict["authentication"] = mechanism_name.mechanism
-
         # rename responding_ap_title to meter_system_title for cleaner API
-        object_dict["meter_system_title"] = object_dict.pop("responding_ap_title", None)
-
+        # And it is ber encoded octet string universal 4. quick and diryt parse.
+        meter_system_title = object_dict.pop("responding_ap_title", None)
+        if meter_system_title:
+            # it is ber encoded universal tag ocetctring. simple handling
+            object_dict["system_title"] = bytes(meter_system_title[2:])
+        else:
+            object_dict["system_title"] = None
         # rename responding_ae_qualifier to meter_public_cert
-        object_dict["meter_public_cert"] = object_dict.pop(
-            "responding_ae_qualifier", None
-        )
+        meter_public_cert = object_dict.pop("responding_ae_qualifier", None)
+        if meter_public_cert:
+            # it is ber encoded universal tag ocetctring. simple handling
+            object_dict["public_cert"] = bytes(meter_public_cert[2:])
+        else:
+            object_dict["public_cert"] = None
+
+
 
         auth_value: Optional[acse_base.AuthenticationValue] = object_dict.pop(
             "responding_authentication_value", None
         )
         if auth_value:
-            object_dict["authentication_value"] = auth_value.password
+            object_dict["authentication_value"] = bytes(auth_value.password)
         else:
             object_dict["authentication_value"] = None
 
@@ -337,10 +347,10 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
                     )
                 )
 
-        if self.meter_system_title is not None:
-            aare_data.extend(BER.encode(164, self.meter_system_title))
-        if self.meter_public_cert is not None:
-            aare_data.extend(BER.encode(165, self.meter_public_cert))
+        if self.system_title is not None:
+            aare_data.extend(BER.encode(164, BER.encode(4, self.system_title)))
+        if self.public_cert is not None:
+            aare_data.extend(BER.encode(165, BER.encode(4, self.public_cert)))
         if self.responding_ap_invocation_id is not None:
             aare_data.extend(BER.encode(166, self.responding_ap_invocation_id))
         if self.responding_ae_invocation_id is not None:

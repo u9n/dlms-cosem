@@ -45,6 +45,24 @@ from dlms_cosem.protocol import dlms_data
 VARIABLE_LENGTH = -1
 
 
+def get_axdr_length(data: bytearray):
+    """
+    Will find the length of an xadr element assuming the length is the first bytes in
+    the data
+    Works with bytearray and will remove element from the array as it finds the
+    variable length.
+    """
+    length_data = bytearray()
+    first_byte = data.pop(0)
+    length_is_multiple_bytes = bool(first_byte & 0b10000000)
+    if not length_is_multiple_bytes:
+        return first_byte
+    number_of_bytes_representing_the_length = first_byte & 0b01111111
+    for _ in range(0, number_of_bytes_representing_the_length):
+        length_data.append(data.pop(0))
+    return int.from_bytes(length_data, 'big')
+
+
 def decode_variable_integer(bytes_input: bytes):
     """
     If the length is fitting in 7 bits it can be encoded in 1 bytes.
@@ -145,7 +163,6 @@ class AXdrDecoder:
         return self.buffer[self.pointer :]
 
     def decode_single(self, _type, index: int) -> Dict:
-
         if isinstance(_type, Attribute):
             return {_type.attribute_name: self.decode_attribute(_type, index)}
 
@@ -180,7 +197,7 @@ class AXdrDecoder:
             if self.is_last_encoding_element(index):
                 return attribute.create_instance()
             # We know hot to create the instance (just not how long it is)
-            length = int.from_bytes(self.get_bytes(1), "big")
+            length = self.get_axdr_length()
             data = self.get_bytes(length)
             return attribute.create_instance(data)
 
@@ -218,10 +235,10 @@ class AXdrDecoder:
             # TODO: should have a function to get variable intefer incase it is longer
             #   than what a normal byte can handle.
 
-            length_or_items = self.get_bytes(1)
+            length_or_items = self.get_axdr_length()
             parsed_data.append(
                 data_class.from_bytes(
-                    bytes(self.get_bytes(int.from_bytes(length_or_items, "big")))
+                    bytes(self.get_bytes(length_or_items))
                 ).to_python()
             )
             continue
@@ -250,13 +267,13 @@ class AXdrDecoder:
         assert data_class not in [dlms_data.DataArray, dlms_data.DataStructure]
 
         if data_class.LENGTH == VARIABLE_LENGTH:
-            length = int.from_bytes(self.get_bytes(1), 'big')
+            length = self.get_axdr_length()
             return data_class.from_bytes(self.get_bytes(length)).to_python()
         else:
             return data_class.from_bytes(self.get_bytes(data_class.LENGTH)).to_python()
 
     def decode_array(self):
-        item_count = int.from_bytes(self.get_bytes(1), "big")
+        item_count = self.get_axdr_length()
         elements = list()
         for _ in range(0, item_count):
             elements.append(self.decode_sequence_of())
@@ -264,7 +281,7 @@ class AXdrDecoder:
 
 
     def decode_structure(self):
-        item_count = int.from_bytes(self.get_bytes(1), 'big')
+        item_count = self.get_axdr_length()
         elements = list()
         for _ in range(0, item_count):
             elements.append(self.decode_sequence_of())
@@ -277,9 +294,21 @@ class AXdrDecoder:
         self.pointer += length
         return part
 
+
     @property
     def remaining_buffer(self) -> bytearray:
         return self.buffer[self.pointer:]
+
+    def get_axdr_length(self) -> int:
+        length_data = bytearray()
+        first_byte = int.from_bytes(self.get_bytes(1), 'big')
+        length_is_multiple_bytes = bool(first_byte & 0b10000000)
+        if not length_is_multiple_bytes:
+            return first_byte
+        number_of_bytes_representing_the_length = first_byte & 0b01111111
+        for _ in range(0, number_of_bytes_representing_the_length):
+            length_data.extend(self.get_bytes(1))
+        return int.from_bytes(length_data, 'big')
 
 
 class DlmsDataToPythonConverter:

@@ -4,7 +4,8 @@ from typing import *
 import attr
 
 from dlms_cosem.protocol import enumerations
-from dlms_cosem.protocol.acse.base import AbstractAcseApdu, UserInformation
+from dlms_cosem.protocol.acse.base import AbstractAcseApdu
+from dlms_cosem.protocol.acse.user_information import UserInformation
 from dlms_cosem.protocol.ber import BER
 
 # TODO: It might be a better approach to give the callable and not the class to make a

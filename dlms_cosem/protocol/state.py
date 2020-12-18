@@ -26,6 +26,29 @@ class _SentinelBase(type):
         return self.__name__
 
 
+# Some simple flow control classes
+
+
+@attr.s()
+class HlsStart:
+    pass
+
+
+@attr.s()
+class HlsSuccess:
+    pass
+
+
+@attr.s()
+class HlsFailed:
+    pass
+
+
+@attr.s()
+class RejectAssociation:
+    pass
+
+
 def make_sentinel(name):
     cls = _SentinelBase(name, (_SentinelBase,), {})
     cls.__class__ = cls
@@ -39,7 +62,14 @@ AWAITING_ASSOCIATION_RESPONSE = make_sentinel("AWAITING_ASSOCIATION_RESPONSE")
 READY = make_sentinel("READY")
 
 AWAITING_RELEASE_RESPONSE = make_sentinel("AWAITING_RELEASE_RESPONSE")
-AWAITING_GET_RESPONSE = make_sentinel("AWATING_GET_RESPONSE")
+AWAITING_GET_RESPONSE = make_sentinel("AWAITING_GET_RESPONSE")
+SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT = make_sentinel(
+    "SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT"
+)
+AWAITING_HLS_CLIENT_CHALLENGE_RESULT = make_sentinel(
+    "AWAITING_HLS_CLIENT_CHALLENGE_RESULT"
+)
+HLS_DONE = make_sentinel("HLS_DONE")
 
 NEED_DATA = make_sentinel("NEED_DATA")
 
@@ -49,14 +79,29 @@ DLMS_STATE_TRANSITIONS = {
     NO_ASSOCIATION: {
         acse.ApplicationAssociationRequestApdu: AWAITING_ASSOCIATION_RESPONSE
     },
-    AWAITING_ASSOCIATION_RESPONSE: {acse.ApplicationAssociationResponseApdu: READY, xdlms.ExceptionResponseApdu: NO_ASSOCIATION},
+    AWAITING_ASSOCIATION_RESPONSE: {
+        acse.ApplicationAssociationResponseApdu: READY,
+        xdlms.ExceptionResponseApdu: NO_ASSOCIATION,
+    },
     READY: {
         acse.ReleaseRequestApdu: AWAITING_RELEASE_RESPONSE,
         xdlms.GetRequest: AWAITING_GET_RESPONSE,
-
+        HlsStart: SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT,
+        RejectAssociation: NO_ASSOCIATION,
     },
-    AWAITING_GET_RESPONSE: {xdlms.GetResponse: READY, xdlms.ExceptionResponseApdu: READY},
-    AWAITING_RELEASE_RESPONSE: {acse.ReleaseResponseApdu: NO_ASSOCIATION, xdlms.ExceptionResponseApdu: READY},
+    SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT: {
+        xdlms.ActionRequest: AWAITING_HLS_CLIENT_CHALLENGE_RESULT
+    },
+    AWAITING_HLS_CLIENT_CHALLENGE_RESULT: {xdlms.ActionResponse: HLS_DONE},
+    HLS_DONE: {HlsSuccess: READY, HlsFailed: NO_ASSOCIATION},
+    AWAITING_GET_RESPONSE: {
+        xdlms.GetResponse: READY,
+        xdlms.ExceptionResponseApdu: READY,
+    },
+    AWAITING_RELEASE_RESPONSE: {
+        acse.ReleaseResponseApdu: NO_ASSOCIATION,
+        xdlms.ExceptionResponseApdu: READY,
+    },
 }
 
 

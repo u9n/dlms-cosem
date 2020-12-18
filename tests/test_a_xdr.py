@@ -6,6 +6,7 @@ from dlms_cosem.protocol.a_xdr import (
     EncodingConf,
     Sequence,
     AXdrDecoder,
+    get_axdr_length
 )
 from dlms_cosem.protocol.xdlms.get import (
     InvokeIdAndPriority,
@@ -96,4 +97,17 @@ class TestAxdrDecoder:
         assert isinstance(result[0][0], bytearray)
         assert isinstance(result[0][1], int)
         assert isinstance(result[0][2], int)
+
+
+
+def test_get_axdr_length():
+
+    data = bytearray(b"\x82\x0f\x0f")
+
+    assert get_axdr_length(data) == int.from_bytes(b"\x0f\x0f", 'big')
+    assert len(data) == 0
+    data = bytearray(b"\x09")
+    assert get_axdr_length(data) == 9
+    assert len(data) == 0
+
 

@@ -1,10 +1,8 @@
 from dlms_cosem.clients.serial_dlms import SerialDlmsClient
-from dlms_cosem.protocol.acse import ApplicationAssociationRequestApdu, enumerations
+from dlms_cosem.protocol.acse import enumerations
 
-from dlms_cosem.protocol.acse.base import UserInformation, AppContextName
 
 from dlms_cosem.protocol.xdlms.conformance import Conformance
-from dlms_cosem.protocol.xdlms.initiate_request import InitiateRequestApdu
 from dlms_cosem.protocol import cosem, time
 import logging
 from functools import partial
@@ -12,7 +10,8 @@ from functools import partial
 # set up logging so you get a bit nicer printout of what is happening.
 logging.basicConfig(
     level=logging.DEBUG,
-    format="%(asctime)s,%(msecs)d : %(levelname)s : %(module)s:%(lineno)d : %(message)s",
+    #format="%(asctime)s,%(msecs)d : %(levelname)s : %(module)s:%(lineno)d : %(message)s",
+    format="%(asctime)s,%(msecs)d : %(levelname)s : %(message)s",
     datefmt="%H:%M:%S",
 )
 
@@ -36,46 +35,65 @@ c = Conformance(
     action=True,
 )
 
-
-def client_factory(
-    server_logical_address,
-    server_physical_address,
-    client_logical_address,
-    serial_port,
-    conformance,
-):
-    return SerialDlmsClient(
-        server_logical_address=server_logical_address,
-        server_physical_address=server_physical_address,
-        client_logical_address=client_logical_address,
-        serial_port=serial_port,
-        conformance=conformance,
-    )
+encryption_key = bytes.fromhex("990EB3136F283EDB44A79F15F0BFCC21")
+authentication_key = bytes.fromhex("EC29E2F4BD7D697394B190827CE3DD9A")
+auth = enumerations.AuthenticationMechanism.HLS_GMAC
 
 
 public_client = partial(
-    client_factory,
+    SerialDlmsClient,
     server_logical_address=1,
     server_physical_address=17,
     client_logical_address=16,
 )
 
-management_client = partial( client_factory,
+management_client = partial(
+    SerialDlmsClient,
     server_logical_address=1,
     server_physical_address=17,
-    client_logical_address=1,)
-
-port = "/dev/tty.usbserial-A704H8SO"
-client = public_client(
-    serial_port=port,
-    conformance=c,
+    client_logical_address=1,
+    authentication_method=auth,
+    encryption_key=encryption_key,
+    authentication_key=authentication_key,
 )
 
-# with client.session() as client:
-#    client.get()
+port = "/dev/tty.usbserial-A704H8SO"
+client = public_client(serial_port=port)
+
 client.associate()
-result = client.get(ic=enumerations.CosemInterface.DATA, instance=cosem.Obis(0, 0, 0x2b, 1, 0), attribute=2)
-print(result)
+result = client.get(
+    ic=enumerations.CosemInterface.DATA,
+    instance=cosem.Obis(0, 0, 0x2B, 1, 0),
+    attribute=2,
+)
+print(f"meter_initial_invocation_counter = {result}")
+client.release_association()
+
+
+
+
+client = management_client(serial_port=port, client_initial_invocation_counter=result+1)
+client.associate()
+
+result = client.get(
+    ic=enumerations.CosemInterface.DATA,
+    instance=cosem.Obis(0, 0, 0x2B, 1, 0),
+    attribute=2,
+)
+print(f"meter_initial_invocation_counter = {result}")
+print(">>>>>")
+print(f"{client.dlms_connection.client_invocation_counter}")
+print(f"{client.dlms_connection.meter_invocation_counter}")
+print(f">>>>>>")
+
+profile = client.get(
+    ic=enumerations.CosemInterface.PROFILE_GENERIC,
+    instance=cosem.Obis(1, 0, 99, 1, 0),
+    attribute=2,
+)
+
+print(profile)
+
 # TODO: parse  b'~\xa0\x10!\x02#0\x85\xdd\xe6\xe7\x00\xd8\x01\x01<C~' and see where the error is.
 
 client.release_association()

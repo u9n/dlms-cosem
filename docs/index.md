@@ -17,102 +17,74 @@ pip install dlms-cosem
     We only support Python 3.6+
     
 
-## About DLMS/COSEM
+## Design
+
+`dlms-cosem` is designed to be a tool with a simple API for working with DLMS/COSEM 
+enabled energy meters. It provides the lowest level function, as protocol state 
+management, APDU encoding/decoding, APDU encryption/decryption.
+
+The library aims to provide a [sans-io](https://sans-io.readthedocs.io/) implementation 
+of the DLMS/COSEM protocol so that the protocol code can be reused with several 
+different io-paradigms. As of now we provide a simple client implementation based on 
+blocking I/O.
+
+We have not implemented full support to be able to build a server (meter) emulator. If 
+this is a use-case you need, consider sponsoring the development and contact us.    
+
+## Supported features
+
+Current release:
+
+    * Parsing DataNotification via UDP.
+
+Current Work:
+
+    * GET, SET, ACTION over pre-established associations.
+    * Interface classes implementation.
+    * DLMS Client to handle communication.
+    * GBT, ACCESS.
+    * Establish Connections.
+    * More Security options.
     
-DLMS/COSEM (IEC 62056, EN13757-1) is the global standard for smart energy
-metering, control and management. It specifies an object-oriented data model,
-an application layer protocol and media-specific communication profiles.
+## Supported meters
 
-DLMS/COSEM comprises three key components:
+Technically we aim to support any DLMS enabled meter. But since the library is low 
+level DLMS you might need an abstraction layer to support everything in your meter.
 
-### DLMS
-Device Language Message Specification - the application layer protocol
-that turns the information held by COSEM objects into messages.
+DLMS/COSEM specifies many different ways of performing tasks on a meter. It is 
+customary that a meter also adheres to a companion standard. In the companion standard 
+it is defined exactly how certain use-cases are to be performed and how data is modeled.
 
-DLMS/COSEM can be used for all utilities / energy kinds, all market segments,
-all applications and over virtually any communication media.
+Examples of companion standards are:
+* DSMR (Netherlands)
+* IDIS (all Europe)
+* UNI/TS 11291 (Italy)
 
-### COSEM 
-Companion Specification for Energy Metering - the object model capable of
- describing virtually any application.
-  
-### OBIS
-Object Identification System, the naming system of the objects
+On top of it all your DSO (Distribution Service Operator) might have ordered their 
+meters with extra functionality or reduced functionality from one of the companion 
+standards.
 
+We have some meters we have run tests on or know the library is used for in production
 
-## COSEM  (Companion Specification for Energy Metering)
+* Pietro Fiorentini RSE 1,2 LA N1. Italian gas meter
+* Iskraemeco AM550. IDIS compliant electricity meter.
 
+## Development
 
-The COSEM object model describes the semantics of the language.
+This library is developed by Palmlund Wahlgren Innovative Technology AB. We are
+based in Sweden and are members of the DLMS User Association.
 
-COSEM interface classes and their instantiations (objects) can be readily used
-for modelling metering use cases, yet general enough to model any application.
+If you find an bug pleas raise an issue on Github.
 
-Object modelling is a powerful tool to formally represent simple or complex
-data. Each aspect of the data is modelled with an attribute. Objects may have
-several attributes and also methods to perform operations on the attributes.
+We welcome contributions of any kind.
 
-Objects can be used in combinations, to model simple use cases such as register
-reading or more complex ones such as tariff and billing schemes or load
-management.
+We add features depending on our own use cases and our clients use cases. If you 
+need a feature implemented please contact us.
 
-## OBIS  (Object Identification System)
+## Training / Consultancy / Commercial Support
 
+We offer consultancy service and training services around this library and general DLMS/COSEM. 
+If you are interested in our services just reach out to us. 
 
-OBIS is the naming system of COSEM objects.
-
-OBIS codes are specified for electricity, gas, water, heat cost allocators
-(HCAs) and thermal energy metering, as well as for abstract data that are not
-related to the energy kind measured.
-
-The hierarchical structure of OBIS allows classifying the characteristics of
-the data e.g. electrical energy – active power – integration – tariff –
-billing period.
-
-
-## DLMS /COSEM application layer services
-
-DLMS stands for Device Language Message Specification
-
-The syntax of the language is specified by the DLMS services.
-
-DLMS/COSEM uses a client-server model where the end devices, typically
-meters are the servers and the Head End Systems are the
-clients.
-
-The DLMS/COSEM application layer provides:
-
-*   the ACSE services to connect the clients and the servers.
-*   the xDLMS services to access the data held by the COSEM objects. The xDLMS
-    services are the same for each object; this allows new objects to be added
-    to the model without affecting the application layer.
-*   The application layer also builds the messages (APDUs, Application Protocol
-    Data Units), applies, check and removes cryptographic protection as needed
-    and manages transferring long messages in blocks.
-
-The messages can transported over virtually any communication media.
-
-There are various built-in mechanisms available for optimizing the traffic to
-the characteristics of the media.
-
-## Transport
-
-The application messages can be transported over virtually any communication
-media.
-
-The DLMS/COSEM communication profiles specify, for each communication the
-protocol stack and the binding of the lower protocol layers to the DLMS/COSEM
-application layer.
-
-Communication profiles are available for:
-
-*   Local ports, PSTN/GSM: with HDLC data link layer RS232 / RS485;
-*   GPRS/LTE/NB-IoT;
-*   IPv6, IPv4, TCP and UDP;
-*   S-FSK PLC;
-*   G3-PLC with UDP/ IPv6;
-*   Prime PLC without IP, with IPv6, IPv4, TCP and UDP;
-*   Wired and wireless M-Bus;
-*   Mesh networks with IPv6 and 6LowPAN;
-*   Wi-SUN
-*   LoRaWAN
+If you have implemented a solution based on this library we also offer a commercial 
+support scheme.

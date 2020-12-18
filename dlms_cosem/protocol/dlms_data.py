@@ -33,6 +33,18 @@ class BaseDlmsData(AbstractDlmsData):
     def to_python(self) -> Any:
         return self.value
 
+    def value_to_bytes(self) -> bytes:
+        raise NotImplementedError("value_to_bytes must be implemented in subclass")
+
+    def to_bytes(self) -> bytes:
+        out = bytearray()
+        out.append(self.TAG)
+        value_bytes = self.value_to_bytes()
+        if self.LENGTH == VARIABLE_LENGTH:
+            out.append(len(value_bytes))
+        out.extend(value_bytes)
+        return bytes(out)
+
 
 @attr.s(auto_attribs=True)
 class NullData(BaseDlmsData):
@@ -113,6 +125,9 @@ class OctetStringData(BaseDlmsData):
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
         return cls(value=bytes_data)
+
+    def value_to_bytes(self) -> bytes:
+        return self.value
 
     def to_python(self) -> bytes:
         return self.value

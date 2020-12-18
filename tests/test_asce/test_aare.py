@@ -78,9 +78,9 @@ class TestDecodeAARE:
         )
         assert not aare.ciphered
         assert not aare.authentication
-        assert aare.meter_system_title is None
+        assert aare.system_title is None
         assert aare.authentication_value is None
-        assert aare.meter_public_cert is None
+        assert aare.public_cert is None
         assert isinstance(aare.user_information.content, InitiateResponseApdu)
         assert aare.user_information.content.negotiated_conformance == Conformance(
             general_protection=False,
@@ -113,8 +113,8 @@ class TestEncodeAARE:
             result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.NULL,
             ciphered=False,
             authentication=None,
-            meter_system_title=None,
-            meter_public_cert=None,
+            system_title=None,
+            public_cert=None,
             authentication_value=None,
             user_information=acse.UserInformation(
                 content=InitiateResponseApdu(
@@ -158,8 +158,8 @@ class TestEncodeAARE:
             result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.APPLICATION_CONTEXT_NAME_NOT_SUPPORTED,
             ciphered=False,
             authentication=None,
-            meter_system_title=None,
-            meter_public_cert=None,
+            system_title=None,
+            public_cert=None,
             authentication_value=None,
             user_information=acse.UserInformation(
                 content=InitiateResponseApdu(
@@ -204,8 +204,8 @@ class TestEncodeAARE:
             result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.NO_REASON_GIVEN,
             ciphered=False,
             authentication=None,
-            meter_system_title=None,
-            meter_public_cert=None,
+            system_title=None,
+            public_cert=None,
             authentication_value=None,
             user_information=acse.UserInformation(
                 content=ConfirmedServiceErrorApdu(
@@ -229,8 +229,8 @@ class TestEncodeAARE:
             result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.AUTHENTICATION_REQUIRED,
             ciphered=False,
             authentication=enumerations.AuthenticationMechanism.HLS_GMAC,
-            meter_public_cert=None,
-            meter_system_title=None,
+            public_cert=None,
+            system_title=None,
             authentication_value=b"P6wRJ21F",
             user_information=UserInformation(
                 content=InitiateResponseApdu(
