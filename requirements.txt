@@ -1,3 +1,4 @@
 attrs~=20.3.0
 pyserial~=3.5
 cryptography~=3.3.1
+asn1crypto==0.24.0

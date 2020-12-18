@@ -13,7 +13,12 @@ REQUIRES_PYTHON = "~=3.6"
 # VERSION = None
 
 # What packages are required for this module to be executed?
-REQUIRED = ["attrs~=20.3.0", "pyserial~=3.5", "cryptography~=3.3.1"]
+REQUIRED = [
+    "attrs~=20.3.0",
+    "pyserial~=3.5",
+    "cryptography~=3.3.1",
+    "asn1crypto==0.24.0",
+]
 
 # What packages are optional?
 EXTRAS = {
