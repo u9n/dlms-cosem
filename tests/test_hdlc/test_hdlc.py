@@ -143,7 +143,7 @@ class TestInformationFrame:
             "7EA02C02232110AF9FE6E600601DA109060760857405080101BE10040E01000000065F1F0400001E1DFFFFC5E47E"
         )
         information_part = bytes.fromhex(
-            "601DA109060760857405080101BE10040E01000000065F1F0400001E1DFFFF"
+            "E6E600601DA109060760857405080101BE10040E01000000065F1F0400001E1DFFFF"
         )
         server_address = address.HdlcAddress(
             logical_address=1, physical_address=17, address_type="server"
@@ -174,7 +174,7 @@ class TestInformationResponseFrame:
             "7EA0382102233034E7E6E7006129A109060760857405080101A203020100A305A103020100BE10040E0800065F1F0400001E1D04C80007B86A7E"
         )
         information_part = bytes.fromhex(
-            "6129A109060760857405080101A203020100A305A103020100BE10040E0800065F1F0400001E1D04C80007"
+            "E6E7006129A109060760857405080101A203020100A305A103020100BE10040E0800065F1F0400001E1D04C80007"
         )
         server_address = address.HdlcAddress(
             logical_address=1, physical_address=17, address_type="server"
@@ -190,7 +190,6 @@ class TestInformationResponseFrame:
             payload=information_part,
             send_sequence_number=0,
             receive_sequence_number=1,
-            response_frame=True,
             segmented=False,
             final=True,
         )

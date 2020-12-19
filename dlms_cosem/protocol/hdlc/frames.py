@@ -9,8 +9,6 @@ from dlms_cosem.protocol.hdlc.address import HdlcAddress
 from dlms_cosem.protocol.hdlc import fields
 
 HDLC_FLAG = b"\x7e"
-LLC_COMMAND_HEADER = b"\xe6\xe6\x00"
-LLC_RESPONSE_HEADER = b"\xe6\xe7\x00"
 
 FCS = CRCCCITT()
 HCS = FCS
@@ -45,6 +43,7 @@ class _AbstractHdlcFrame(abc.ABC):
 
     The header check sequence field is only present when the frame has a Information field.
     """
+
     @property
     @abc.abstractmethod
     def frame_length(self) -> int:
@@ -244,6 +243,68 @@ class UnNumberedAcknowledgmentFrame(BaseHdlcFrame):
 
 
 @attr.s(auto_attribs=True)
+class ReceiveReadyFrame(BaseHdlcFrame):
+    fixed_length_bytes = 5
+
+    receive_sequence_number: int = attr.ib(
+        validator=[validators.validate_information_sequence_number], default=0
+    )
+
+    @property
+    def hcs(self) -> bytes:
+        """No information field in the frame so no hcs. Only FCS"""
+        return b""
+
+    @property
+    def information(self) -> bytes:
+        """
+        No information field present
+        """
+        return b""
+
+    def get_control_field(self):
+        return fields.ReceiveReadyControlField(
+            receive_sequence_number=self.receive_sequence_number
+        )
+
+    @classmethod
+    def from_bytes(cls, frame_bytes: bytes):
+        if not frame_is_enclosed_by_hdlc_flags(frame_bytes):
+            raise hdlc_exceptions.MissingHdlcFlags()
+
+        frame_format = BaseHdlcFrame.extract_format_field_from_bytes(frame_bytes)
+
+        if not frame_has_correct_length(frame_format.length, frame_bytes):
+            raise hdlc_exceptions.HdlcParsingError(
+                f"Frame data is not of length specified in frame format field. "
+                f"Should be {frame_format.length} but is {len(frame_bytes)}"
+            )
+
+        destination_address = address.HdlcAddress.destination_from_bytes(
+            frame_bytes, "client"
+        )
+        source_address = address.HdlcAddress.source_from_bytes(frame_bytes, "server")
+        control_byte_position = (
+            1 + 2 + destination_address.length + source_address.length
+        )
+        control_byte = frame_bytes[control_byte_position : control_byte_position + 1]
+        control = fields.ReceiveReadyControlField.from_bytes(control_byte)
+        fcs = frame_bytes[-3:-1]
+
+        frame = cls(
+            destination_address=destination_address,
+            source_address=source_address,
+            receive_sequence_number=control.receive_sequence_number,
+            final=control.is_final,
+        )
+
+        if fcs != frame.fcs:
+            raise hdlc_exceptions.HdlcParsingError("FCS is not correct")
+
+        return frame
+
+
+@attr.s(auto_attribs=True)
 class InformationFrame(BaseHdlcFrame):
 
     fixed_length_bytes = 7
@@ -254,19 +315,12 @@ class InformationFrame(BaseHdlcFrame):
     receive_sequence_number: int = attr.ib(
         validator=[validators.validate_information_sequence_number], default=0
     )
-    response_frame: bool = attr.ib(default=False)
-
     @property
     def information(self) -> bytes:
         """
         Information request uses the LLC_COMMAND_HEADER
         """
         out_data: List[bytes] = list()
-        if self.response_frame:
-            out_data.append(LLC_RESPONSE_HEADER)
-        else:
-            out_data.append(LLC_COMMAND_HEADER)  # Requests uses the command header
-
         if self.payload:
             out_data.append(self.payload)
 
@@ -306,30 +360,10 @@ class InformationFrame(BaseHdlcFrame):
             information_control_byte
         )
 
-        # is it a request or response?
-        llc_position = (
-            1 + 2 + destination_address.length + source_address.length + 1 + 2
-        )
-        llc_part = frame_bytes[llc_position : (llc_position + 3)]
-
-        is_response = llc_part == LLC_RESPONSE_HEADER
-        is_request = llc_part == LLC_COMMAND_HEADER
-
-        if not (is_request or is_response):
-            raise hdlc_exceptions.HdlcParsingError("Could not find LLC bytes")
-
-        if is_response and not is_request:
-            # destination address is the client and source is the server
-            destination_address.address_type = "client"
-            source_address.address_type = "server"
-        else:
-            destination_address.address_type = "server"
-            source_address.address_type = "client"
-
         hcs_position = 1 + 2 + destination_address.length + source_address.length + 1
         hcs = frame_bytes[hcs_position : hcs_position + 2]
         fcs = frame_bytes[-3:-1]
-        information = frame_bytes[hcs_position + 2 + 3 : -3]
+        information = frame_bytes[hcs_position + 2 : -3]
 
         frame = cls(
             destination_address,
@@ -337,7 +371,6 @@ class InformationFrame(BaseHdlcFrame):
             information,
             send_sequence_number=information_control.send_sequence_number,
             receive_sequence_number=information_control.receive_sequence_number,
-            response_frame=is_response,
             segmented=frame_format.segmented,
             final=information_control.final,
         )
@@ -402,15 +435,3 @@ class DisconnectFrame(BaseHdlcFrame):
             raise hdlc_exceptions.HdlcParsingError("FCS is not correct")
 
         return frame
-
-
-class SegmentedInformationRequestFrame:
-    pass
-
-
-class SegmentedInformationResponseFrame:
-    pass
-
-
-class ReceiveReadyFrame:
-    pass

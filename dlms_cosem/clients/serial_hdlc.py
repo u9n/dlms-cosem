@@ -14,6 +14,8 @@ from dlms_cosem.protocol.hdlc import (
 
 LOG = logging.getLogger(__name__)
 
+LLC_COMMAND_HEADER = b"\xe6\xe6\x00"
+LLC_RESPONSE_HEADER = b"\xe6\xe7\x00"
 
 class ClientError(Exception):
     """General error in client"""
@@ -24,6 +26,7 @@ class SerialHdlcClient:
     """
     HDLC client to send data over serial.
     """
+
     client_logical_address: int
     server_logical_address: int
     serial_port: str
@@ -48,8 +51,8 @@ class SerialHdlcClient:
     )
 
     _send_buffer: list = attr.ib(factory=list)
-
-
+    out_buffer: bytearray = attr.ib(init=False, factory=bytearray)
+    in_buffer: bytearray = attr.ib(init=False, factory=bytearray)
 
     @property
     def server_hdlc_address(self):
@@ -84,8 +87,9 @@ class SerialHdlcClient:
             destination_address=self.server_hdlc_address,
             source_address=self.client_hdlc_address,
         )
-        self._send_buffer.append(snrm)
-        ua_response = self._drain_send_buffer()[0]
+        self.out_buffer += self.hdlc_connection.send(snrm)
+        self.drain_out_buffer()
+        ua_response = self.next_event()
         LOG.info(f"Received {ua_response!r}")
         return ua_response
 
@@ -98,30 +102,18 @@ class SerialHdlcClient:
             destination_address=self.server_hdlc_address,
             source_address=self.client_hdlc_address,
         )
-        self._send_buffer.append(disc)
-        response = self._drain_send_buffer()[0]
+
+        self.out_buffer += self.hdlc_connection.send(disc)
+        self.drain_out_buffer()
+        response = self.next_event()
         return response
 
-    def _drain_send_buffer(self):
-        """
-        Messages to send might need to be fragmented and to handle the flow we can split all
-        data that is needed to be sent into several frames to be send and when this is
-        called it will make sure all is sent according to the protocol.
-        """
-        response_frames = list()
-        while self._send_buffer:
-            frame = self._send_buffer.pop(0)  # FIFO behavior
-            self._write_frame(frame)
-            if self.hdlc_connection.state.current_state in state.RECEIVE_STATES:
-                response = self._next_event()
-                response_frames.append(response)
-        return response_frames
-
-    def _next_event(self):
+    def next_event(self):
         """
         Will read the serial line until a proper response event is read.
         :return:
         """
+
         while True:
             # If we already have a complete event buffered internally, just
             # return that. Otherwise, read some data, add it to the internal
@@ -142,27 +134,84 @@ class SerialHdlcClient:
         :param telegram:
         :return:
         """
-        current_state = self.hdlc_connection.state.current_state
-        if not current_state == state.IDLE:
-            raise hdlc_exception.LocalProtocolError(
-                f"Connection is not in state IDLE and cannot send any data. "
-                f"Current state is {current_state}"
+        # prepend the LLC
+        # The LLC should only be present in the first segmented information frame.
+        # So instead we just prepend the data with it we know it will only be in the
+        # intial information frame
+
+        self.out_buffer += LLC_COMMAND_HEADER
+        self.out_buffer += telegram
+        self.drain_out_buffer()
+        in_buffer = bytearray()
+        while True:
+            response = self.next_event()
+            in_buffer += response.payload
+            if response.segmented and response.final:
+                # there is still data but server has send its max window size
+                # tell the server to send more.
+                rr = frames.ReceiveReadyFrame(
+                    destination_address=self.server_hdlc_address,
+                    source_address=self.client_hdlc_address,
+                    receive_sequence_number=self.hdlc_connection.server_rsn)
+                self.out_buffer += self.hdlc_connection.send(rr)
+                self.drain_out_buffer()
+
+            if response.segmented and not response.final:
+                # the server will send more frames.
+                continue
+            if not response.segmented and response.final:
+                # this was the last frame
+                break
+
+        if not in_buffer.startswith(LLC_RESPONSE_HEADER):
+            raise ValueError("The data is not prepended by the LLC response header")
+        # don't return the LLC
+        return in_buffer[3:]
+
+    def drain_out_buffer(self):
+        """
+        If the data we need to send is longer than the allowed InformationFrame payload
+        size we need to segment the data. It is done by splitting the payload into
+        several frames and setting the segmented flag.
+        To indicate that we are done with the sending a window we set final on the
+        last I-frame. To indicated we are done sending all the data we set segmented to
+        False
+        :return:
+        """
+        data_size = self.hdlc_connection.max_data_size
+        while len(self.out_buffer) > 0:
+            data = self.out_buffer[:data_size]
+            self.out_buffer = self.out_buffer[data_size:]
+            segmented = bool(self.out_buffer)
+            if self.hdlc_connection.state.current_state != state.IDLE:
+                self._write_bytes(data)
+                return
+            # We dont handle window sizes so final is always true
+            out_frame = self.generate_information_request(
+                data, segmented=segmented, final=True
             )
+            self._write_frame(out_frame)
+            # if it is the last frame we should not listen to possible RR frame
+            if segmented:
+                response = self.next_event()
+                if isinstance(response, frames.ReceiveReadyFrame):
+                    # send the next information frame.
+                    continue
+            break
 
-        info = self.generate_information_request(telegram)
-        self._send_buffer.append(info)
-        response = self._drain_send_buffer()[0]
 
-        return response.payload
 
-    def generate_information_request(self, payload):
+    def generate_information_request(
+        self, payload: bytes, segmented: bool, final: bool
+    ) -> frames.InformationFrame:
         return frames.InformationFrame(
             destination_address=self.server_hdlc_address,
             source_address=self.client_hdlc_address,
             payload=payload,
-            send_sequence_number=self.hdlc_connection.state.client_ssn,
-            receive_sequence_number=self.hdlc_connection.state.client_rsn,
-            response_frame=False
+            send_sequence_number=self.hdlc_connection.client_ssn,
+            receive_sequence_number=self.hdlc_connection.client_rsn,
+            segmented=segmented,
+            final=final,
         )
 
     def _write_frame(self, frame):
