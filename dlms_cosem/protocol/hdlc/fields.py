@@ -91,6 +91,45 @@ class DisconnectControlField(_AbstractHdlcControlField):
 
 
 @attr.s(auto_attribs=True)
+class ReceiveReadyControlField(_AbstractHdlcControlField):
+    """
+    RR-frame for ack.
+    """
+
+    receive_sequence_number: int = attr.ib(
+        validator=[validators.validate_information_sequence_number])
+
+    def is_final(self):
+        """
+        Always final
+        """
+        return True
+
+    def to_bytes(self) -> bytes:
+        """
+        Returns byte representation of the field.
+        """
+        out = 0b00000001
+        out += self.receive_sequence_number << 5
+        if self.is_final:
+            out |= 0b00010000
+        return out.to_bytes(1, "big")
+
+    @classmethod
+    def from_bytes(cls, in_byte: bytes):
+        if len(in_byte) != 1:
+            raise ValueError(
+                f"ReceiveReadyControlField can only be 1 bytes. Got {len(in_byte)}"
+            )
+        value = int.from_bytes(in_byte, "big")
+        control_frame = bool(value & 0b00000001)
+        if not control_frame:
+            raise ValueError("Frame is an information frame not a ReceiveReadyFrame")
+        rsn = (value & 0b11100000) >> 5
+        return cls(rsn)
+
+
+@attr.s(auto_attribs=True)
 class InformationControlField(_AbstractHdlcControlField):
     """
     Information control field also contains information about the acknowlegde frames

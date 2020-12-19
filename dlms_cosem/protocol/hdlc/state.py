@@ -44,8 +44,6 @@ AWAITING_RESPONSE = make_sentinel("AWAITING_RESPONSE")
 
 AWAITING_CONNECTION = make_sentinel("AWAITING_CONNECTION")
 
-SHOULD_SEND_READY_TO_RECEIVE = make_sentinel("SHOULD_SEND_READY_TO_RECEIVE")
-
 AWAITING_DISCONNECT = make_sentinel("AWAITING_DISCONNECT")
 
 CLOSED = make_sentinel("CLOSED")
@@ -59,19 +57,18 @@ HDLC_STATE_TRANSITIONS = {
     AWAITING_CONNECTION: {frames.UnNumberedAcknowledgmentFrame: IDLE},
     IDLE: {
         frames.InformationFrame: AWAITING_RESPONSE,
-        frames.SegmentedInformationRequestFrame: AWAITING_RESPONSE,
         frames.DisconnectFrame: AWAITING_DISCONNECT,
+        frames.ReceiveReadyFrame: AWAITING_RESPONSE
     },
     AWAITING_RESPONSE: {
         frames.InformationFrame: IDLE,
-        frames.SegmentedInformationResponseFrame: SHOULD_SEND_READY_TO_RECEIVE,
+        frames.ReceiveReadyFrame: IDLE,
     },
-    SHOULD_SEND_READY_TO_RECEIVE: {frames.ReceiveReadyFrame: AWAITING_RESPONSE},
     AWAITING_DISCONNECT: {frames.UnNumberedAcknowledgmentFrame: NOT_CONNECTED},
 }
 
 
-SEND_STATES = [NOT_CONNECTED, IDLE, SHOULD_SEND_READY_TO_RECEIVE]
+SEND_STATES = [NOT_CONNECTED, IDLE]
 RECEIVE_STATES = [AWAITING_CONNECTION, AWAITING_RESPONSE, AWAITING_DISCONNECT]
 
 # TODO: does the ssn and rsn belong in the state? Comparing to H11 that is only

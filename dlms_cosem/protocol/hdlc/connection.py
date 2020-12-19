@@ -30,11 +30,11 @@ class HdlcFrameFactory:
         try:
             return frames.InformationFrame.from_bytes(frame_data)
         except exceptions.HdlcParsingError as e:
-            LOG.debug(
-                f"Unable to load and information frame from frame_data: {frame_data!r}."
-                f"Information carried in frame might have contained the HDLC flag and "
-                f"we have not recieved the full frame yet."
-            )
+            #LOG.debug(
+            #    f"Unable to load and information frame from frame_data: {frame_data!r}."
+            #    f"Information carried in frame might have contained the HDLC flag and "
+            #    f"we have not recieved the full frame yet."
+            #)
             return None
 
 
@@ -165,13 +165,16 @@ class HdlcConnection:
         1. The first character in the buffer should be the HDLC_FLAG.
             During normal operations we will have frames with flags on both ends.
             But with windowing one might be omitted in long information frame exchanges
-            Ex: 7e{frame}7e{frame}7e. The second one would not have an initial 7e after we take out the first frame.
+            Ex: 7e{frame}7e{frame}7e. The second one would not have an initial 7e after
+             we take out the first frame.
             So if the intial byte is not 7e we should manually add it.
 
         2. We might find an incomplete frame if the second 7e was found as data and not
-            actually an end flag. So we need to keep the current end memory so we can extend the search if we cant parse the frame.
+            actually an end flag. So we need to keep the current end memory so we can
+            extend the search if we cant parse the frame.
 
-        3. Once we have parsed a proper frame we shoudl call clear buffer that will remove the data for the frame from the buffer.
+        3. Once we have parsed a proper frame we shoudl call clear buffer that will
+        remove the data for the frame from the buffer.
         :return:
         """
         try:

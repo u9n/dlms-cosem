@@ -86,11 +86,11 @@ print(f"{client.dlms_connection.client_invocation_counter}")
 print(f"{client.dlms_connection.meter_invocation_counter}")
 print(f">>>>>>")
 
-#profile = client.get(
-#    ic=enumerations.CosemInterface.PROFILE_GENERIC,
-#    instance=cosem.Obis(1, 0, 99, 1, 0),
-#    attribute=2,
-#)
+profile = client.get(
+    ic=enumerations.CosemInterface.PROFILE_GENERIC,
+    instance=cosem.Obis(1, 0, 99, 1, 0),
+    attribute=2,
+)
 
 
 #print(profile)
