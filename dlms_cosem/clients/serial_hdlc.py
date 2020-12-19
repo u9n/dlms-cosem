@@ -24,6 +24,7 @@ class SerialHdlcClient:
     """
     HDLC client to send data over serial.
     """
+
     client_logical_address: int
     server_logical_address: int
     serial_port: str
@@ -48,8 +49,7 @@ class SerialHdlcClient:
     )
 
     _send_buffer: list = attr.ib(factory=list)
-
-
+    out_buffer: bytearray = attr.ib(init=False, factory=bytearray)
 
     @property
     def server_hdlc_address(self):
@@ -84,8 +84,8 @@ class SerialHdlcClient:
             destination_address=self.server_hdlc_address,
             source_address=self.client_hdlc_address,
         )
-        self._send_buffer.append(snrm)
-        ua_response = self._drain_send_buffer()[0]
+        self.out_buffer += self.hdlc_connection.send(snrm)
+        ua_response = self.drain_out_buffer()
         LOG.info(f"Received {ua_response!r}")
         return ua_response
 
@@ -142,27 +142,57 @@ class SerialHdlcClient:
         :param telegram:
         :return:
         """
-        current_state = self.hdlc_connection.state.current_state
-        if not current_state == state.IDLE:
-            raise hdlc_exception.LocalProtocolError(
-                f"Connection is not in state IDLE and cannot send any data. "
-                f"Current state is {current_state}"
-            )
-
-        info = self.generate_information_request(telegram)
-        self._send_buffer.append(info)
-        response = self._drain_send_buffer()[0]
+        # current_state = self.hdlc_connection.state.current_state
+        # if not current_state == state.IDLE:
+        #    raise hdlc_exception.LocalProtocolError(
+        #        f"Connection is not in state IDLE and cannot send any data. "
+        #        f"Current state is {current_state}"
+        #    )
+        self.out_buffer += telegram
+        response = self.drain_out_buffer()
+        # info = self.generate_information_request(telegram)
+        # self._send_buffer.append(info)
+        # response = self._drain_send_buffer()[0]
 
         return response.payload
 
-    def generate_information_request(self, payload):
+    def drain_out_buffer(self):
+        data_size = self.hdlc_connection.max_data_size
+        segmented_frames = bool(len(self.out_buffer) > data_size)
+
+        while len(self.out_buffer) > 0:
+            data = self.out_buffer[:data_size]
+            self.out_buffer = self.out_buffer[data_size:]
+            buffer_was_emptied = bool(len(self.out_buffer))
+            if self.hdlc_connection.state.current_state != state.IDLE:
+                self._write_bytes(data)
+                return self._next_event()
+            else:
+                out_frame = self.generate_information_request(
+                    data, segmented=segmented_frames, final=buffer_was_emptied
+                )
+                self._write_frame(out_frame)
+                response = self._next_event()
+                if isinstance(response, frames.InformationFrame):
+                    return response
+                else:
+                    # it is probably a ReveiveReady frame.
+                    # TODO: handle recievie ready frame.
+                    continue
+        return
+
+    def generate_information_request(
+        self, payload: bytes, segmented: bool, final: bool
+    ) -> frames.InformationFrame:
         return frames.InformationFrame(
             destination_address=self.server_hdlc_address,
             source_address=self.client_hdlc_address,
             payload=payload,
-            send_sequence_number=self.hdlc_connection.state.client_ssn,
-            receive_sequence_number=self.hdlc_connection.state.client_rsn,
-            response_frame=False
+            send_sequence_number=self.hdlc_connection.client_ssn,
+            receive_sequence_number=self.hdlc_connection.client_rsn,
+            response_frame=False,
+            segmented=segmented,
+            final=final,
         )
 
     def _write_frame(self, frame):
@@ -175,6 +205,7 @@ class SerialHdlcClient:
         self._serial.write(to_write)
 
     def _read_frame(self) -> bytes:
+        print("Reading frame")
         in_bytes = self._serial.read_until(frames.HDLC_FLAG)
 
         if in_bytes == frames.HDLC_FLAG:

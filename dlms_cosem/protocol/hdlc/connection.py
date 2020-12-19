@@ -10,6 +10,8 @@ from dlms_cosem.protocol.hdlc.state import (
     NEED_DATA,
     HdlcConnectionState,
 )
+from dlms_cosem.protocol.hdlc.exceptions import LocalProtocolError
+
 
 LOG = logging.getLogger(__name__)
 
@@ -58,6 +60,11 @@ class HdlcConnection:
 
     client_address: address.HdlcAddress
     server_address: address.HdlcAddress
+    client_ssn: int = attr.ib(init=False, default=0)
+    client_rsn: int = attr.ib(init=False, default=0)
+    server_ssn: int = attr.ib(init=False, default=0)
+    server_rsn: int = attr.ib(init=False, default=0)
+    max_data_size: int = attr.ib(default=128)
     state: HdlcConnectionState = attr.ib(factory=HdlcConnectionState)
     buffer: bytearray = attr.ib(factory=bytearray)
     buffer_search_position: int = 1
@@ -70,7 +77,44 @@ class HdlcConnection:
         :return: bytes
         """
         self.state.process_frame(frame)
+
+        if isinstance(frame, frames.InformationFrame):
+            self.handle_sequence_numbers(
+                frame_ssn=frame.send_sequence_number,
+                frame_rsn=frame.receive_sequence_number,
+                response=False,
+            )
+
         return frame.to_bytes()
+
+    def handle_sequence_numbers(self, frame_ssn: int, frame_rsn: int, response: bool):
+        if not response:
+            if frame_ssn != self.server_ssn or frame_rsn != self.server_rsn:
+                raise LocalProtocolError(
+                    f"Frame sequence numbers are wrong: frame(ssn: {frame_ssn}, rsn: "
+                    f"{frame_rsn}) =! client(ssn:{self.server_ssn}, "
+                    f"rsn:{self.server_rsn})"
+                )
+            self.server_ssn += 1
+            self.client_rsn += 1
+        else:
+            if frame_ssn != self.client_ssn or frame_rsn != self.client_rsn:
+                raise LocalProtocolError(
+                    f"Frame sequence numbers are wrong: frame(ssn: {frame_ssn}, rsn: "
+                    f"{frame_rsn}) =! client(ssn:{self.server_ssn}, "
+                    f"rsn:{self.server_rsn})"
+                )
+            self.server_rsn += 1
+            self.client_ssn += 1
+
+        if self.server_rsn > 7:
+            self.server_rsn = 0
+        if self.server_ssn > 7:
+            self.server_ssn = 0
+        if self.client_rsn > 7:
+            self.client_rsn = 0
+        if self.client_ssn > 7:
+            self.client_ssn = 0
 
     def receive_data(self, data: bytes):
         """
@@ -89,7 +133,6 @@ class HdlcConnection:
         NEED_DATA event to signal we need to receive more data.
         :return:
         """
-
         frame_bytes = self._find_frame()
         if frame_bytes is None:
             return NEED_DATA
@@ -106,6 +149,13 @@ class HdlcConnection:
         LOG.debug(f"Received frame: {frame}")
         self.state.process_frame(frame)
         self._tidy_buffer()
+
+        if isinstance(frame, frames.InformationFrame):
+            self.handle_sequence_numbers(
+                frame_ssn=frame.send_sequence_number,
+                frame_rsn=frame.receive_sequence_number,
+                response=True,
+            )
 
         return frame
 

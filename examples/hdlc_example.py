@@ -1,7 +1,5 @@
 from dlms_cosem.clients.serial_hdlc import SerialHdlcClient
-from dlms_cosem.protocol.acse import ApplicationAssociationRequestApdu
-
-from dlms_cosem.protocol.acse.base import UserInformation, AppContextName
+from dlms_cosem.protocol.acse import ApplicationAssociationRequestApdu, UserInformation
 
 from dlms_cosem.protocol.xdlms.conformance import Conformance
 from dlms_cosem.protocol.xdlms.initiate_request import InitiateRequestApdu
@@ -24,22 +22,8 @@ client = SerialHdlcClient(
 with client as c:
 
     aarq = ApplicationAssociationRequestApdu(
-        application_context_name=AppContextName(
-            logical_name_refs=True, ciphered_apdus=False
-        ),
-        protocol_version=1,
-        called_ap_title=None,
-        called_ae_qualifier=None,
-        called_ap_invocation_identifier=None,
-        called_ae_invocation_identifier=None,
-        calling_ap_title=None,
-        calling_ae_qualifier=None,
-        calling_ap_invocation_identifier=None,
-        calling_ae_invocation_identifier=None,
-        sender_acse_requirements=None,
-        mechanism_name=None,
-        calling_authentication_value=None,
-        implementation_information=None,
+
+
         user_information=UserInformation(
             content=InitiateRequestApdu(
                 proposed_conformance=Conformance(
