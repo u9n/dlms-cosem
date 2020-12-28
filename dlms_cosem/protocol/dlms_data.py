@@ -116,6 +116,9 @@ class DoubleLongUnsignedData(BaseDlmsData):
     def from_bytes(cls, bytes_data: bytes):
         return cls(value=int.from_bytes(bytes_data, "big"))
 
+    def value_to_bytes(self) -> bytes:
+        return self.value.to_bytes(4, 'big')
+
 
 @attr.s(auto_attribs=True)
 class OctetStringData(BaseDlmsData):

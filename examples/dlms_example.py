@@ -10,7 +10,7 @@ from functools import partial
 # set up logging so you get a bit nicer printout of what is happening.
 logging.basicConfig(
     level=logging.DEBUG,
-    #format="%(asctime)s,%(msecs)d : %(levelname)s : %(module)s:%(lineno)d : %(message)s",
+    # format="%(asctime)s,%(msecs)d : %(levelname)s : %(module)s:%(lineno)d : %(message)s",
     format="%(asctime)s,%(msecs)d : %(levelname)s : %(message)s",
     datefmt="%H:%M:%S",
 )
@@ -22,8 +22,8 @@ c = Conformance(
     attribute_0_supported_with_set=False,
     priority_management_supported=False,
     attribute_0_supported_with_get=False,
-    block_transfer_with_get_or_read=True,
-    block_transfer_with_set_or_write=True,
+    block_transfer_with_get_or_read=False,
+    block_transfer_with_set_or_write=False,
     block_transfer_with_action=True,
     multiple_references=True,
     data_notification=False,
@@ -57,7 +57,7 @@ management_client = partial(
     authentication_key=authentication_key,
 )
 
-port = "/dev/tty.usbserial-A704H8SO"
+port = "/dev/tty.usbserial-A704H991"
 client = public_client(serial_port=port)
 
 client.associate()
@@ -70,15 +70,13 @@ print(f"meter_initial_invocation_counter = {result}")
 client.release_association()
 
 
-
-
-client = management_client(serial_port=port, client_initial_invocation_counter=result+1)
+client = management_client(
+    serial_port=port, client_initial_invocation_counter=result + 1
+)
 client.associate()
 
 result = client.get(
-    ic=enumerations.CosemInterface.DATA,
-    instance=cosem.Obis(0, 0, 0x2B, 1, 0),
-    attribute=2,
+    ic=enumerations.CosemInterface.DATA, instance=cosem.Obis(1, 2, 0, 2, 0), attribute=2
 )
 print(f"meter_initial_invocation_counter = {result}")
 print(">>>>>")
@@ -93,12 +91,12 @@ profile = client.get(
 )
 
 
-#print(profile)
+# print(profile)
 
 # TODO: parse  b'~\xa0\x10!\x02#0\x85\xdd\xe6\xe7\x00\xd8\x01\x01<C~' and see where the error is.
 
 client.release_association()
 
 
-#INFO: Sending InformationFrame(destination_address=HdlcAddress(logical_address=1, physical_address=17, address_type='server'), source_address=HdlcAddress(logical_address=16, physical_address=None, address_type='client'), payload=bytearray(b'`\x1d\xa1\t\x06\x07`\x85t\x05\x08\x01\x01\xbe\x10\x04\x0e\x01\x00\x00\x00\x06_\x1f\x04\x00\x00\x1e\x1d\xff\xff'), segmented=False, final=False, send_sequence_number=0, receive_sequence_number=0, response_frame=False)
-#DEBUG: Sending: b'~\xa0,\x02#!\x00.\x8f\xe6\xe6\x00`\x1d\xa1\t\x06\x07`\x85t\x05\x08\x01\x01\xbe\x10\x04\x0e\x01\x00\x00\x00\x06_\x1f\x04\x00\x00\x1e\x1d\xff\xff\xc5\xe4~'
+# INFO: Sending InformationFrame(destination_address=HdlcAddress(logical_address=1, physical_address=17, address_type='server'), source_address=HdlcAddress(logical_address=16, physical_address=None, address_type='client'), payload=bytearray(b'`\x1d\xa1\t\x06\x07`\x85t\x05\x08\x01\x01\xbe\x10\x04\x0e\x01\x00\x00\x00\x06_\x1f\x04\x00\x00\x1e\x1d\xff\xff'), segmented=False, final=False, send_sequence_number=0, receive_sequence_number=0, response_frame=False)
+# DEBUG: Sending: b'~\xa0,\x02#!\x00.\x8f\xe6\xe6\x00`\x1d\xa1\t\x06\x07`\x85t\x05\x08\x01\x01\xbe\x10\x04\x0e\x01\x00\x00\x00\x06_\x1f\x04\x00\x00\x1e\x1d\xff\xff\xc5\xe4~'

@@ -211,7 +211,8 @@ class AXdrDecoder:
         parsed_data = list()
 
         while not self.buffer_empty:
-
+            print(self.buffer)
+            print(self.result)
             tag = self.get_bytes(1)
 
             data_class = dlms_data.DlmsDataFactory.get_data_class(int.from_bytes(tag, "big"))

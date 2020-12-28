@@ -37,9 +37,9 @@ class XDlmsApduFactory:
         97: acse.ApplicationAssociationResponseApdu,
         98: acse.ReleaseRequestApdu,
         99: acse.ReleaseResponseApdu,
-        192: xdlms.GetRequest,
+        192: xdlms.GetRequestFactory,
         195: xdlms.ActionRequest,
-        196: xdlms.GetResponse,
+        196: xdlms.GetResponseFactory,
         199: xdlms.ActionResponse,
     }
 
@@ -81,7 +81,7 @@ def make_conformance(encryption_key: Optional[bytes], use_block_transfer: bool):
     """
     return Conformance(
         general_protection=bool(encryption_key),
-        general_block_transfer=use_block_transfer,
+        general_block_transfer=True,
         delta_value_encoding=False,
         attribute_0_supported_with_set=False,
         priority_management_supported=True,
@@ -309,7 +309,7 @@ class DlmsConnection:
                     "Connection is ciphered but AARE does not indicate ciphering."
                 )
 
-        if isinstance(event, xdlms.GetRequest):
+        if isinstance(event, xdlms.GetRequestNormal):
             if not self.conformance.get:
                 raise exceptions.ConformanceError(
                     "Tried sending a get request during association that doesnt "
@@ -413,6 +413,7 @@ class DlmsConnection:
         # XDLMS apdus should be protected with general-glo-cihpering
         elif isinstance(event, AbstractXDlmsApdu):
             ciphered_text = self.encrypt(event.to_bytes())
+            LOG.info(f"Protecting a {type(event)} with GlobalCiphering")
 
             event = xdlms.GeneralGlobalCipherApdu(
                 system_title=self.client_system_title,
@@ -494,6 +495,7 @@ class DlmsConnection:
                 auth_key=self.global_authentication_key,
                 cipher_text=event.ciphered_text,
             )
+            print(self.conformance)
             event = XDlmsApduFactory.apdu_from_bytes(plain_text)
 
         else:
@@ -564,10 +566,13 @@ class DlmsConnection:
                 assert isinstance(
                     event.user_information.content, xdlms.InitiateResponseApdu
                 )
+
                 self.conformance = event.user_information.content.negotiated_conformance
+                print(f"UPDATING CONFORMANCE! {self.conformance}")
                 self.max_pdu_size = (
                     event.user_information.content.server_max_receive_pdu_size
                 )
+                print(f"MAX PDU SIZE {self.max_pdu_size}")
 
             self.meter_system_title = event.system_title
             self.authentication_method = event.authentication

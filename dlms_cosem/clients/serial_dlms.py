@@ -2,7 +2,7 @@ import attr
 from typing import *
 from dlms_cosem.clients.serial_hdlc import SerialHdlcClient
 from dlms_cosem.protocol.connection import DlmsConnection
-from dlms_cosem.protocol import xdlms, cosem, exceptions, enumerations, dlms_data
+from dlms_cosem.protocol import xdlms, cosem, exceptions, enumerations, dlms_data, a_xdr
 from dlms_cosem.protocol import acse, state
 import logging
 import contextlib
@@ -85,18 +85,51 @@ class SerialDlmsClient:
     ):
         # Just a random get request.
         self.send(
-            xdlms.GetRequest(
+            xdlms.GetRequestNormal(
                 cosem_attribute=cosem.CosemAttribute(
                     interface=ic, instance=instance, attribute=attribute
                 )
             )
         )
-        get_response = self.next_event()
-        if isinstance(get_response.result, enumerations.DataAccessResult):
-            raise DataResultError(
-                f"Could not perform GET request: {get_response.result!r}"
+        all_data_received = False
+        data = bytearray()
+        while not all_data_received:
+            get_response = self.next_event()
+            if isinstance(get_response, xdlms.GetResponseNormal):
+                data.extend(get_response.data)
+                all_data_received = True
+                continue
+            if isinstance(get_response, xdlms.GetResponseWithBlock):
+                data.extend(get_response.data)
+                self.send(
+                    xdlms.GetRequestNext(
+                        invoke_id_and_priority=get_response.invoke_id_and_priority,
+                        block_number=get_response.block_number,
+                    )
+                )
+                continue
+            if isinstance(get_response, xdlms.GetResponseLastBlock):
+                data.extend(get_response.data)
+                all_data_received = True
+                continue
+
+            if isinstance(get_response, xdlms.GetResponseLastBlockWithError):
+                raise DataResultError(
+                    f"Error in blocktransfer of GET response: {get_response.error!r}")
+
+            if isinstance(get_response, xdlms.GetResponseNormalWithError):
+                raise DataResultError(
+                    f"Could not perform GET request: {get_response.error!r}"
+                )
+
+        data_decoder = a_xdr.AXdrDecoder(
+            encoding_conf=a_xdr.EncodingConf(
+                attributes=[a_xdr.Sequence(attribute_name="data")]
             )
-        return get_response.result
+        )
+        print(f"data: {data}")
+        print(f"length of data: {len(data)}")
+        return data_decoder.decode(data)["data"]
 
     def set(self):
         pass
