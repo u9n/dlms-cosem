@@ -84,7 +84,7 @@ def test_receive_rlre_terminates_association(rlre: acse.ReleaseResponseApdu):
     assert c.state.current_state == state.NO_ASSOCIATION
 
 
-def test_can_send_get_when_ready(get_request: xdlms.GetRequest):
+def test_can_send_get_when_ready(get_request: xdlms.GetRequestNormal):
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.READY),
         client_system_title=b"12345678",

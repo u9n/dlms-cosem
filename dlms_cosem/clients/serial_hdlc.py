@@ -187,7 +187,7 @@ class SerialHdlcClient:
                 self._write_bytes(data)
                 return
             # We dont handle window sizes so final is always true
-            out_frame = self.generate_information_request(
+            out_frame = self.generate_information_frame(
                 data, segmented=segmented, final=True
             )
             self._write_frame(out_frame)
@@ -201,15 +201,15 @@ class SerialHdlcClient:
 
 
 
-    def generate_information_request(
+    def generate_information_frame(
         self, payload: bytes, segmented: bool, final: bool
     ) -> frames.InformationFrame:
         return frames.InformationFrame(
             destination_address=self.server_hdlc_address,
             source_address=self.client_hdlc_address,
             payload=payload,
-            send_sequence_number=self.hdlc_connection.client_ssn,
-            receive_sequence_number=self.hdlc_connection.client_rsn,
+            send_sequence_number=self.hdlc_connection.server_ssn,
+            receive_sequence_number=self.hdlc_connection.server_rsn,
             segmented=segmented,
             final=final,
         )

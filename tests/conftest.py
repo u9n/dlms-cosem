@@ -160,10 +160,10 @@ def rlre() -> acse.ReleaseResponseApdu:
 
 
 @pytest.fixture()
-def get_request() -> xdlms.GetRequest:
+def get_request() -> xdlms.GetRequestNormal:
 
     # invocation counter
-    return xdlms.GetRequest(
+    return xdlms.GetRequestNormal(
         cosem_attribute=cosem.CosemAttribute(
             interface=enumerations.CosemInterface.DATA,
             instance=cosem.Obis(0, 0, 0x2B, 1, 0),
