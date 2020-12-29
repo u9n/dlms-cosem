@@ -60,7 +60,7 @@ def get_axdr_length(data: bytearray):
     number_of_bytes_representing_the_length = first_byte & 0b01111111
     for _ in range(0, number_of_bytes_representing_the_length):
         length_data.append(data.pop(0))
-    return int.from_bytes(length_data, 'big')
+    return int.from_bytes(length_data, "big")
 
 
 def decode_variable_integer(bytes_input: bytes):
@@ -80,12 +80,31 @@ def decode_variable_integer(bytes_input: bytes):
     is_mutliple_bytes = bool(bytes_input[0] & 0b10000000)
     if is_mutliple_bytes:
         length_length = int(bytes_input[0] & 0b01111111)
-        length = int(bytes_input[1 : (length_length + 1)])
+        length_data = bytes_input[1 : (length_length + 1)]
+        length = int.from_bytes(length_data, 'big')
         return length, bytes_input[length_length + 1 :]
 
     else:
         length = int(bytes_input[0] & 0b01111111)
         return length, bytes_input[1:]
+
+
+def encode_variable_integer(length: int):
+    if length > 0b01111111:
+        encoded_length = 1
+        while True:
+            try:
+                length.to_bytes(encoded_length, "big")
+            except OverflowError:
+                encoded_length += 1
+                continue
+            break
+
+        length_byte = (0b10000000 + encoded_length).to_bytes(1, "big")
+        return length_byte + length.to_bytes(encoded_length, "big")
+
+    else:
+        return length.to_bytes(1, "big")
 
 
 @attr.s
@@ -106,19 +125,11 @@ class Attribute:
 
 @attr.s(auto_attribs=True)
 class Sequence:
-    """A sequence acts as a structure (dict) since we can have differenct objects in
-    the sequence."""
-    attribute_name: str
-    instance_factory: dlms_data.DlmsDataFactory = attr.ib(factory=dlms_data.DlmsDataFactory)
 
-@attr.s(auto_attribs=True)
-class SequenceOf:
-    """
-    A sequence OF behaves like a list since we only have the same objects in it.
-    In A-XDR the length is also not the number of bytes but the number of elementns in
-    the Sequence.
-    """
-    pass
+    attribute_name: str
+    instance_factory: dlms_data.DlmsDataFactory = attr.ib(
+        factory=dlms_data.DlmsDataFactory
+    )
 
 
 @attr.s(auto_attribs=True)
@@ -211,11 +222,11 @@ class AXdrDecoder:
         parsed_data = list()
 
         while not self.buffer_empty:
-            print(self.buffer)
-            print(self.result)
             tag = self.get_bytes(1)
 
-            data_class = dlms_data.DlmsDataFactory.get_data_class(int.from_bytes(tag, "big"))
+            data_class = dlms_data.DlmsDataFactory.get_data_class(
+                int.from_bytes(tag, "big")
+            )
 
             if data_class == dlms_data.DataArray:
                 parsed_data.append(self.decode_array())
@@ -251,7 +262,7 @@ class AXdrDecoder:
 
     def decode_sequence_of(self):
 
-        tag = int.from_bytes(self.get_bytes(1), 'big')
+        tag = int.from_bytes(self.get_bytes(1), "big")
         data_class = dlms_data.DlmsDataFactory.get_data_class(tag)
 
         if data_class == dlms_data.DataArray:
@@ -262,7 +273,6 @@ class AXdrDecoder:
 
         else:
             return self.decode_data(data_class)
-
 
     def decode_data(self, data_class):
         assert data_class not in [dlms_data.DataArray, dlms_data.DataStructure]
@@ -280,7 +290,6 @@ class AXdrDecoder:
             elements.append(self.decode_sequence_of())
         return elements
 
-
     def decode_structure(self):
         item_count = self.get_axdr_length()
         elements = list()
@@ -295,21 +304,20 @@ class AXdrDecoder:
         self.pointer += length
         return part
 
-
     @property
     def remaining_buffer(self) -> bytearray:
-        return self.buffer[self.pointer:]
+        return self.buffer[self.pointer :]
 
     def get_axdr_length(self) -> int:
         length_data = bytearray()
-        first_byte = int.from_bytes(self.get_bytes(1), 'big')
+        first_byte = int.from_bytes(self.get_bytes(1), "big")
         length_is_multiple_bytes = bool(first_byte & 0b10000000)
         if not length_is_multiple_bytes:
             return first_byte
         number_of_bytes_representing_the_length = first_byte & 0b01111111
         for _ in range(0, number_of_bytes_representing_the_length):
             length_data.extend(self.get_bytes(1))
-        return int.from_bytes(length_data, 'big')
+        return int.from_bytes(length_data, "big")
 
 
 class DlmsDataToPythonConverter:

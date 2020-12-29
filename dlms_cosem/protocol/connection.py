@@ -265,6 +265,7 @@ class DlmsConnection:
 
         self.validate_event_conformance(event)
         self.state.process_event(event)
+        LOG.debug(f"Client wants to send {event}")
         if self.use_protection:
             event = self.protect(event)
 

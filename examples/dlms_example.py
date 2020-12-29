@@ -91,7 +91,7 @@ profile = client.get(
 )
 
 
-# print(profile)
+print(profile)
 
 # TODO: parse  b'~\xa0\x10!\x02#0\x85\xdd\xe6\xe7\x00\xd8\x01\x01<C~' and see where the error is.
 

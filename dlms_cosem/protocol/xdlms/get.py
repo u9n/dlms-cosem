@@ -3,7 +3,7 @@ from typing import *
 
 import attr
 
-from dlms_cosem.protocol import cosem
+from dlms_cosem.protocol import cosem, a_xdr
 from dlms_cosem.protocol import enumerations as enums
 from dlms_cosem.protocol.a_xdr import (
     Attribute,
@@ -168,9 +168,10 @@ class GetRequestFactory:
     def from_bytes(source_bytes: bytes):
         data = bytearray(source_bytes)
         tag = data.pop(0)
-        if tag != cls.TAG:
+        if tag != GetRequestFactory.TAG:
             raise ValueError(
-                f"Tag for GET request is not correct. Got {tag}, should be {cls.TAG}"
+                f"Tag for GET request is not correct. Got {tag}, should be "
+                f"{GetRequestFactory.TAG}"
             )
         request_type = enums.GetRequestType(data.pop(0))
         if request_type == enums.GetRequestType.NORMAL:
@@ -182,7 +183,7 @@ class GetRequestFactory:
         else:
             raise ValueError(
                 f"Received an enum request type that is not valid for "
-                f"GetRequets: {request_type}"
+                f"GetRequest: {request_type}"
             )
 
 
@@ -265,7 +266,7 @@ class GetResponseNormalWithError(AbstractXDlmsApdu):
                 f"The data choice is not 1 to indicate error but: {choice}"
             )
 
-        error = enums.GetResponseType(data.pop(0))
+        error = enums.DataAccessResult(data.pop(0))
 
         return cls(error, invoke_id_and_priority)
 
@@ -273,7 +274,7 @@ class GetResponseNormalWithError(AbstractXDlmsApdu):
         out = bytearray()
         out.append(self.TAG)
         out.append(self.RESPONSE_TYPE)
-        out.append(self.invoke_id_and_priority.to_bytes())
+        out.extend(self.invoke_id_and_priority.to_bytes())
         out.append(1)  # data error choice
         out.extend(self.error.to_bytes(1, "big"))
         return bytes(out)
@@ -281,6 +282,12 @@ class GetResponseNormalWithError(AbstractXDlmsApdu):
 
 @attr.s(auto_attribs=True)
 class GetResponseWithBlock(AbstractXDlmsApdu):
+    """
+    The data sent in a block response is an OCTET STRING. Not instance of DLMS Data.
+    So it has the length encoding first.
+
+    """
+
     TAG: ClassVar[int] = 196
     RESPONSE_TYPE: ClassVar[enums.GetResponseType] = enums.GetResponseType.WITH_BLOCK
     data: bytes = attr.ib(validator=attr.validators.instance_of(bytes))
@@ -317,16 +324,23 @@ class GetResponseWithBlock(AbstractXDlmsApdu):
         if choice != 0:
             raise ValueError(f"The data choice is not 0 to indicate data but: {choice}")
 
+        data_length, data = a_xdr.decode_variable_integer(data)
+        if data_length != len(data):
+            raise ValueError(
+                "The octet string in block data is not of the correct length"
+            )
+
         return cls(bytes(data), block_number, invoke_id_and_priority)
 
     def to_bytes(self) -> bytes:
         out = bytearray()
         out.append(self.TAG)
         out.append(self.RESPONSE_TYPE)
-        out.append(self.invoke_id_and_priority.to_bytes())
+        out.extend(self.invoke_id_and_priority.to_bytes())
         out.append(0)  # last block == False
         out.extend(self.block_number.to_bytes(4, "big"))
         out.append(0)  # data choice = data
+        out.extend(a_xdr.encode_variable_integer(len(self.data)))  # octet string length
         out.extend(self.data)
 
         return bytes(out)
@@ -367,16 +381,24 @@ class GetResponseLastBlock(AbstractXDlmsApdu):
         choice = data.pop(0)
         if choice != 0:
             raise ValueError(f"The data choice is not 0 to indicate data but: {choice}")
+
+        data_length, data = a_xdr.decode_variable_integer(data)
+        if data_length != len(data):
+            raise ValueError(
+                "The octet string in block data is not of the correct length"
+            )
+
         return cls(bytes(data), block_number, invoke_id_and_priority)
 
     def to_bytes(self) -> bytes:
         out = bytearray()
         out.append(self.TAG)
         out.append(self.RESPONSE_TYPE)
-        out.append(self.invoke_id_and_priority.to_bytes())
+        out.extend(self.invoke_id_and_priority.to_bytes())
         out.append(1)  # last block == True
         out.extend(self.block_number.to_bytes(4, "big"))
         out.append(0)  # data choice = data
+        out.extend(a_xdr.encode_variable_integer(len(self.data)))  # octet string length
         out.extend(self.data)
         return bytes(out)
 
@@ -429,7 +451,7 @@ class GetResponseLastBlockWithError(AbstractXDlmsApdu):
         out = bytearray()
         out.append(self.TAG)
         out.append(self.RESPONSE_TYPE)
-        out.append(self.invoke_id_and_priority.to_bytes())
+        out.extend(self.invoke_id_and_priority.to_bytes())
         out.append(1)  # last block == True
         out.extend(self.block_number.to_bytes(4, "big"))
         out.append(1)  # data choice = error
@@ -452,7 +474,9 @@ class GetResponseFactory:
         data = bytearray(source_bytes)
         tag = data.pop(0)
         if tag != GetResponseFactory.TAG:
-            raise ValueError(f"Tag is not correct. Should be {cls.TAG} but is {tag}")
+            raise ValueError(
+                f"Tag is not correct. Should be {GetResponseFactory.TAG} but is {tag}"
+            )
         response_type = enums.GetResponseType(data.pop(0))
         invoke_id_and_priority = InvokeIdAndPriority.from_bytes(
             data.pop(0).to_bytes(1, "big")
@@ -476,6 +500,12 @@ class GetResponseFactory:
             data = data[4:]
             choice = data.pop(0)
             if choice == 0:
+                data_length, data = a_xdr.decode_variable_integer(data)
+                if data_length != len(data):
+                    raise ValueError(
+                        "The octet string in block data is not of the correct length"
+                    )
+
                 if last_block:
                     return GetResponseLastBlock(
                         bytes(data), block_number, invoke_id_and_priority
@@ -497,9 +527,6 @@ class GetResponseFactory:
                         "GetResponseWithBlock. When an error occurs it "
                         "should always be sent in a GetResponseLastBlockWithError"
                     )
-            else:
-                raise ValueError(
-                    "Choice is not a valid choice for a GetResonseWithBlock"
-                )
+
         elif response_type == enums.GetResponseType.WITH_LIST:
             raise NotImplementedError("GetResponseWithList is not implemented.")
