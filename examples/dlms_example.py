@@ -58,45 +58,33 @@ management_client = partial(
 )
 
 port = "/dev/tty.usbserial-A704H991"
-client = public_client(serial_port=port)
+with public_client(serial_port=port).session() as client:
 
-client.associate()
-result = client.get(
-    ic=enumerations.CosemInterface.DATA,
-    instance=cosem.Obis(0, 0, 0x2B, 1, 0),
-    attribute=2,
-)
-print(f"meter_initial_invocation_counter = {result}")
-client.release_association()
+    result = client.get(
+        ic=enumerations.CosemInterface.DATA,
+        instance=cosem.Obis(0, 0, 0x2B, 1, 0),
+        attribute=2,
+    )
+    print(f"meter_initial_invocation_counter = {result}")
 
-
-client = management_client(
+with management_client(
     serial_port=port, client_initial_invocation_counter=result + 1
-)
-client.associate()
+).session() as client:
 
-result = client.get(
-    ic=enumerations.CosemInterface.DATA, instance=cosem.Obis(1, 2, 0, 2, 0), attribute=2
-)
-print(f"meter_initial_invocation_counter = {result}")
-print(">>>>>")
-print(f"{client.dlms_connection.client_invocation_counter}")
-print(f"{client.dlms_connection.meter_invocation_counter}")
-print(f">>>>>>")
+    result = client.get(
+        ic=enumerations.CosemInterface.DATA, instance=cosem.Obis(1, 2, 0, 2, 0), attribute=2
+    )
+    print(f"meter_initial_invocation_counter = {result}")
+    print(">>>>>")
+    print(f"{client.dlms_connection.client_invocation_counter}")
+    print(f"{client.dlms_connection.meter_invocation_counter}")
+    print(f">>>>>>")
 
-profile = client.get(
-    ic=enumerations.CosemInterface.PROFILE_GENERIC,
-    instance=cosem.Obis(1, 0, 99, 1, 0),
-    attribute=2,
-)
-
-
-print(profile)
-
-# TODO: parse  b'~\xa0\x10!\x02#0\x85\xdd\xe6\xe7\x00\xd8\x01\x01<C~' and see where the error is.
-
-client.release_association()
+    profile = client.get(
+        ic=enumerations.CosemInterface.PROFILE_GENERIC,
+        instance=cosem.Obis(1, 0, 99, 1, 0),
+        attribute=2,
+    )
 
 
-# INFO: Sending InformationFrame(destination_address=HdlcAddress(logical_address=1, physical_address=17, address_type='server'), source_address=HdlcAddress(logical_address=16, physical_address=None, address_type='client'), payload=bytearray(b'`\x1d\xa1\t\x06\x07`\x85t\x05\x08\x01\x01\xbe\x10\x04\x0e\x01\x00\x00\x00\x06_\x1f\x04\x00\x00\x1e\x1d\xff\xff'), segmented=False, final=False, send_sequence_number=0, receive_sequence_number=0, response_frame=False)
-# DEBUG: Sending: b'~\xa0,\x02#!\x00.\x8f\xe6\xe6\x00`\x1d\xa1\t\x06\x07`\x85t\x05\x08\x01\x01\xbe\x10\x04\x0e\x01\x00\x00\x00\x06_\x1f\x04\x00\x00\x1e\x1d\xff\xff\xc5\xe4~'
+    print(profile)

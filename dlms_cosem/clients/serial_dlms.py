@@ -127,8 +127,6 @@ class SerialDlmsClient:
                 attributes=[a_xdr.Sequence(attribute_name="data")]
             )
         )
-        print(f"data: {data}")
-        print(f"length of data: {len(data)}")
         return data_decoder.decode(data)["data"]
 
     def set(self):

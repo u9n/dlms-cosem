@@ -496,7 +496,6 @@ class DlmsConnection:
                 auth_key=self.global_authentication_key,
                 cipher_text=event.ciphered_text,
             )
-            print(self.conformance)
             event = XDlmsApduFactory.apdu_from_bytes(plain_text)
 
         else:
@@ -569,12 +568,9 @@ class DlmsConnection:
                 )
 
                 self.conformance = event.user_information.content.negotiated_conformance
-                print(f"UPDATING CONFORMANCE! {self.conformance}")
                 self.max_pdu_size = (
                     event.user_information.content.server_max_receive_pdu_size
                 )
-                print(f"MAX PDU SIZE {self.max_pdu_size}")
-
             self.meter_system_title = event.system_title
             self.authentication_method = event.authentication
             self.meter_to_client_challenge = event.authentication_value
