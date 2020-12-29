@@ -9,8 +9,11 @@ and this project adheres to `Semantic Versioning: https://semver.org/spec/v2.0.0
 
 ### Added
 
-
 * HDLC client implementation
+* DlMS client implementation
+* Support for Get service including service specific block transfer
+* Support for HLS authentication using HLS-GMAC.
+* Support for GlobalCiphering 
 
 ### Changed
 

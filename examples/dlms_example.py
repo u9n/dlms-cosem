@@ -3,9 +3,11 @@ from dlms_cosem.protocol.acse import enumerations
 
 
 from dlms_cosem.protocol.xdlms.conformance import Conformance
-from dlms_cosem.protocol import cosem, time
+from dlms_cosem.protocol import cosem, time, a_xdr
 import logging
 from functools import partial
+
+from pprint import pprint
 
 # set up logging so you get a bit nicer printout of what is happening.
 logging.basicConfig(
@@ -65,15 +67,36 @@ with public_client(serial_port=port).session() as client:
         instance=cosem.Obis(0, 0, 0x2B, 1, 0),
         attribute=2,
     )
+    data_decoder = a_xdr.AXdrDecoder(encoding_conf=a_xdr.EncodingConf(
+        attributes=[a_xdr.Sequence(attribute_name="data")]))
+    result = data_decoder.decode(result)["data"]
     print(f"meter_initial_invocation_counter = {result}")
+
+    objects = client.get(
+        ic=enumerations.CosemInterface(15),
+        instance=cosem.Obis(0, 0, 40, 0, 0),
+        attribute=2,
+    )
+    pprint(objects)
+
 
 with management_client(
     serial_port=port, client_initial_invocation_counter=result + 1
 ).session() as client:
 
+    objects = client.get(ic=enumerations.CosemInterface(15),
+        instance=cosem.Obis(0, 0, 40, 0, 0), attribute=2, )
+    pprint(objects)
+
     result = client.get(
-        ic=enumerations.CosemInterface.DATA, instance=cosem.Obis(1, 2, 0, 2, 0), attribute=2
+        ic=enumerations.CosemInterface.DATA,
+        instance=cosem.Obis(1, 2, 0, 2, 0),
+        attribute=2,
     )
+    data_decoder = a_xdr.AXdrDecoder(encoding_conf=a_xdr.EncodingConf(
+        attributes=[a_xdr.Sequence(attribute_name="data")]))
+
+    result = data_decoder.decode(result)["data"]
     print(f"meter_initial_invocation_counter = {result}")
     print(">>>>>")
     print(f"{client.dlms_connection.client_invocation_counter}")
@@ -85,6 +108,6 @@ with management_client(
         instance=cosem.Obis(1, 0, 99, 1, 0),
         attribute=2,
     )
-
-
-    print(profile)
+    data_decoder = a_xdr.AXdrDecoder(encoding_conf=a_xdr.EncodingConf(
+        attributes=[a_xdr.Sequence(attribute_name="data")]))
+    print(data_decoder.decode(profile)["data"])

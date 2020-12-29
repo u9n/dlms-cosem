@@ -82,8 +82,7 @@ class SerialDlmsClient:
 
     def get(
         self, ic: enumerations.CosemInterface, instance: cosem.Obis, attribute: int
-    ):
-        # Just a random get request.
+    ) -> bytes:
         self.send(
             xdlms.GetRequestNormal(
                 cosem_attribute=cosem.CosemAttribute(
@@ -122,12 +121,7 @@ class SerialDlmsClient:
                     f"Could not perform GET request: {get_response.error!r}"
                 )
 
-        data_decoder = a_xdr.AXdrDecoder(
-            encoding_conf=a_xdr.EncodingConf(
-                attributes=[a_xdr.Sequence(attribute_name="data")]
-            )
-        )
-        return data_decoder.decode(data)["data"]
+        return bytes(data)
 
     def set(self):
         pass
