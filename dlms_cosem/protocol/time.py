@@ -1,4 +1,5 @@
 from datetime import date, datetime, time, timedelta, timezone
+from dateutil.tz import tzoffset
 import attr
 from typing import *
 
@@ -223,8 +224,11 @@ def time_from_bytes(source_bytes: bytes) -> time:
     )
 
 
-def utc_offset_minutes(offset_minutes: Optional[int]) -> Optional[timezone]:
-    return timezone(timedelta(minutes=offset_minutes)) if offset_minutes else None
+def utc_offset_minutes(offset_minutes: Optional[int]) -> Optional[tzoffset]:
+    if offset_minutes:
+        return tzoffset(name=None, offset=offset_minutes*60)
+    else:
+        return None
 
 
 def datetime_from_bytes(source_bytes: bytes) -> Tuple[datetime, Optional[ClockStatus]]:
@@ -300,7 +304,7 @@ def datetime_to_bytes(dt: datetime, clock_status: Optional[ClockStatus] = None):
     if dt.tzinfo is None:
         timezone_bytes = b"\x80\x00"
     else:
-        timezone_bytes = int(dt.utcoffset().seconds / 60).to_bytes(
+        timezone_bytes = int(dt.utcoffset().total_seconds() / 60).to_bytes(
             2, "big", signed=True
         )
 

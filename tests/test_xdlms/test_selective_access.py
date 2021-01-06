@@ -56,17 +56,17 @@ def test_range_descriptor1():
         b'\x01\x00'
 )
 
-def test_range_descriptor():
+def test_range_descriptor_is_not_parsed():
 
     """
     Profile: 1 (15 minutes profile)
     From: 01.10.2017 00:00
     To: 01.10.2017 01:00
+
     """
 
     data = b"\xc0\x01\xc1\x00\x07\x01\x00c\x01\x00\xff\x02\x01\x01\x02\x04\x02\x04\x12\x00\x08\t\x06\x00\x00\x01\x00\x00\xff\x0f\x02\x12\x00\x00\t\x0c\x07\xe1\n\x01\x07\x00\x00\x00\x00\xff\xc4\x80\t\x0c\x07\xe1\n\x01\x07\x01\x00\x00\x00\xff\xc4\x80\x01\x00"
     g = GetRequestFactory.from_bytes(data)
-    print(g)
 
     access = (
         b"\x01"  # Optional value used
@@ -81,4 +81,4 @@ def test_range_descriptor():
         b"\t\x0c\x07\xe1\n\x01\x07\x01\x00\x00\x00\xff\xc4\x80"  # to date
         b"\x01\x00"  # selected_values empty array.
     )
-    assert False
+    assert g.access_selection == b"\x02"
