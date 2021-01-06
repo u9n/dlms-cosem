@@ -8,6 +8,7 @@ import logging
 import contextlib
 
 from dlms_cosem.protocol.xdlms import ConfirmedServiceErrorApdu
+from dlms_cosem.protocol.xdlms.selective_access import EntryDescriptor, RangeDescriptor
 
 LOG = logging.getLogger(__name__)
 
@@ -81,13 +82,18 @@ class SerialDlmsClient:
         self.release_association()
 
     def get(
-        self, ic: enumerations.CosemInterface, instance: cosem.Obis, attribute: int
+        self,
+        ic: enumerations.CosemInterface,
+        instance: cosem.Obis,
+        attribute: int,
+        access_descriptor: Optional[RangeDescriptor] = None,
     ) -> bytes:
         self.send(
             xdlms.GetRequestNormal(
                 cosem_attribute=cosem.CosemAttribute(
                     interface=ic, instance=instance, attribute=attribute
-                )
+                ),
+                access_selection=access_descriptor,
             )
         )
         all_data_received = False
@@ -114,7 +120,8 @@ class SerialDlmsClient:
 
             if isinstance(get_response, xdlms.GetResponseLastBlockWithError):
                 raise DataResultError(
-                    f"Error in blocktransfer of GET response: {get_response.error!r}")
+                    f"Error in blocktransfer of GET response: {get_response.error!r}"
+                )
 
             if isinstance(get_response, xdlms.GetResponseNormalWithError):
                 raise DataResultError(

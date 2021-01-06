@@ -3,7 +3,6 @@ from typing import *
 
 from dlms_cosem.protocol.xdlms.get import get_data_access_result_from_bytes
 from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
-from dlms_cosem.protocol.dlms_data import BaseDlmsData
 from dlms_cosem.protocol import cosem, enumerations, a_xdr
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 

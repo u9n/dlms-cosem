@@ -167,6 +167,9 @@ class IntegerData(BaseDlmsData):
             value=int.from_bytes(bytes_data, "big", signed=True)
         )
 
+    def value_to_bytes(self) -> bytes:
+        return self.value.to_bytes(1, 'big')
+
 
 @attr.s(auto_attribs=True)
 class LongData(BaseDlmsData):
@@ -204,6 +207,9 @@ class UnsignedLongData(BaseDlmsData):
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
         return cls(value=int.from_bytes(bytes_data, "big"))
+
+    def value_to_bytes(self) -> bytes:
+        return self.value.to_bytes(2, 'big')
 
 
 @attr.s(auto_attribs=True)

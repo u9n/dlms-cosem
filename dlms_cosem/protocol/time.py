@@ -38,11 +38,11 @@ class ClockStatus:
 
     """
 
-    invalid: bool
-    doubtful: bool
-    different_base: bool
-    invalid_status: bool
-    daylight_saving_active: bool
+    invalid: bool = attr.ib(default=False)
+    doubtful: bool = attr.ib(default=False)
+    different_base: bool = attr.ib(default=False)
+    invalid_status: bool = attr.ib(default=False)
+    daylight_saving_active: bool = attr.ib(default=False)
 
     @classmethod
     def from_bytes(cls, source_bytes: bytes):
@@ -112,14 +112,17 @@ def validate_hundredths(value: Optional[int]):
 
 
 def get_optional_value(
-    value: Union[bytes, int], optional_indicator: bytes, signed: bool = False
+    value: Union[bytes, int],
+    optional_indicator: bytes,
+    replace_with: Optional[int] = None,
+    signed: bool = False,
 ) -> Optional[int]:
     if isinstance(value, bytes):
         if value == optional_indicator:
-            return None
+            return replace_with
     else:
         if value == int.from_bytes(optional_indicator, "big", signed=signed):
-            return None
+            return replace_with
     return value
 
 
@@ -206,10 +209,10 @@ def time_from_bytes(source_bytes: bytes) -> time:
     if len(source_bytes) != 4:
         raise ValueError(f"Time is represented by 4 bytes, but got {len(source_bytes)}")
 
-    hour = get_optional_value(source_bytes[0], b"\xff")
-    minute = get_optional_value(source_bytes[1], b"\xff")
-    seconds = get_optional_value(source_bytes[2], b"\xff")
-    hundredths = get_optional_value(source_bytes[3], b"\xff")
+    hour = get_optional_value(source_bytes[0], b"\xff", replace_with=0)
+    minute = get_optional_value(source_bytes[1], b"\xff", replace_with=0)
+    seconds = get_optional_value(source_bytes[2], b"\xff", replace_with=0)
+    hundredths = get_optional_value(source_bytes[3], b"\xff", replace_with=0)
     validate_hour(hour)
     validate_minute_or_second(minute)
     validate_minute_or_second(seconds)
@@ -263,3 +266,47 @@ def datetime_from_bytes(source_bytes: bytes) -> Tuple[datetime, Optional[ClockSt
     )
 
     return dt, status
+
+
+def date_to_bytes(d: date) -> bytes:
+    """Will set day of week to unspecified. """
+
+    year = d.year
+    month = d.month
+    day = d.day
+    year_bytes = year.to_bytes(2, "big")
+    month_byte = month.to_bytes(1, "big")
+    day_byte = day.to_bytes(1, "big")
+    day_of_week_unspecified = b"\xff"
+    dayotw = d.weekday()
+
+    return year_bytes + month_byte + day_byte + day_of_week_unspecified
+
+
+def time_to_bytes(t: time) -> bytes:
+
+    return (
+        t.hour.to_bytes(1, "big")
+        + t.minute.to_bytes(1, "big")
+        + t.second.to_bytes(1, "big")
+        + int(t.microsecond / 10000).to_bytes(1, "big")
+    )
+
+
+def datetime_to_bytes(dt: datetime, clock_status: Optional[ClockStatus] = None):
+
+    date_bytes = date_to_bytes(dt.date())
+    time_bytes = time_to_bytes(dt.time())
+    if dt.tzinfo is None:
+        timezone_bytes = b"\x80\x00"
+    else:
+        timezone_bytes = int(dt.utcoffset().seconds / 60).to_bytes(
+            2, "big", signed=True
+        )
+
+    if clock_status is None:
+        clock_status_bytes = ClockStatus().to_bytes()
+    else:
+        clock_status_bytes = clock_status.to_bytes()
+
+    return date_bytes + time_bytes + timezone_bytes + clock_status_bytes

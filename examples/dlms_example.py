@@ -1,15 +1,20 @@
 from dlms_cosem.clients.serial_dlms import SerialDlmsClient
 from dlms_cosem.protocol.acse import enumerations
-
+from dlms_cosem.protocol.xdlms import selective_access
 
 from dlms_cosem.protocol.xdlms.conformance import Conformance
 from dlms_cosem.protocol import cosem, time, a_xdr
 import logging
 from functools import partial
+from datetime import datetime
+from dateutil import parser
+
 
 from pprint import pprint
 
 # set up logging so you get a bit nicer printout of what is happening.
+from dlms_cosem.protocol.xdlms.selective_access import EntryDescriptor, RangeDescriptor
+
 logging.basicConfig(
     level=logging.DEBUG,
     # format="%(asctime)s,%(msecs)d : %(levelname)s : %(module)s:%(lineno)d : %(message)s",
@@ -24,7 +29,7 @@ c = Conformance(
     attribute_0_supported_with_set=False,
     priority_management_supported=False,
     attribute_0_supported_with_get=False,
-    block_transfer_with_get_or_read=False,
+    block_transfer_with_get_or_read=True,
     block_transfer_with_set_or_write=False,
     block_transfer_with_action=True,
     multiple_references=True,
@@ -67,47 +72,55 @@ with public_client(serial_port=port).session() as client:
         instance=cosem.Obis(0, 0, 0x2B, 1, 0),
         attribute=2,
     )
-    data_decoder = a_xdr.AXdrDecoder(encoding_conf=a_xdr.EncodingConf(
-        attributes=[a_xdr.Sequence(attribute_name="data")]))
+    data_decoder = a_xdr.AXdrDecoder(
+        encoding_conf=a_xdr.EncodingConf(
+            attributes=[a_xdr.Sequence(attribute_name="data")]
+        )
+    )
     result = data_decoder.decode(result)["data"]
     print(f"meter_initial_invocation_counter = {result}")
-
-    objects = client.get(
-        ic=enumerations.CosemInterface(15),
-        instance=cosem.Obis(0, 0, 40, 0, 0),
-        attribute=2,
-    )
-    pprint(objects)
 
 
 with management_client(
     serial_port=port, client_initial_invocation_counter=result + 1
 ).session() as client:
 
-    objects = client.get(ic=enumerations.CosemInterface(15),
-        instance=cosem.Obis(0, 0, 40, 0, 0), attribute=2, )
-    pprint(objects)
+    # objects = client.get(ic=enumerations.CosemInterface(15),
+    #    instance=cosem.Obis(0, 0, 40, 0, 0), attribute=2, )
+    # pprint(objects)
 
-    result = client.get(
-        ic=enumerations.CosemInterface.DATA,
-        instance=cosem.Obis(1, 2, 0, 2, 0),
-        attribute=2,
-    )
-    data_decoder = a_xdr.AXdrDecoder(encoding_conf=a_xdr.EncodingConf(
-        attributes=[a_xdr.Sequence(attribute_name="data")]))
+    #entries = client.get(
+    #    ic=enumerations.CosemInterface.PROFILE_GENERIC,
+    #    instance=cosem.Obis(1, 0, 99, 1, 0),
+    #    attribute=7,
+    #)
 
-    result = data_decoder.decode(result)["data"]
-    print(f"meter_initial_invocation_counter = {result}")
-    print(">>>>>")
-    print(f"{client.dlms_connection.client_invocation_counter}")
-    print(f"{client.dlms_connection.meter_invocation_counter}")
-    print(f">>>>>>")
+    #print(f"ENTRIES: {entries}")
+
+    #entries_nr = int.from_bytes(entries[1:], "big")
 
     profile = client.get(
         ic=enumerations.CosemInterface.PROFILE_GENERIC,
         instance=cosem.Obis(1, 0, 99, 1, 0),
         attribute=2,
+        access_descriptor=RangeDescriptor(
+            restricting_object=selective_access.CaptureObject(
+                cosem_attribute=cosem.CosemAttribute(
+                    interface=enumerations.CosemInterface.CLOCK,
+                    instance=cosem.Obis(0, 0, 1, 0, 0, 255),
+                    attribute=2,
+                ),
+                data_index=0,
+            ),
+            from_value=parser.parse("2020-01-01T00:03:00-02:00"),
+            to_value=parser.parse("2020-01-06T00:03:00-01:00"),
+
+        )
+
     )
-    data_decoder = a_xdr.AXdrDecoder(encoding_conf=a_xdr.EncodingConf(
-        attributes=[a_xdr.Sequence(attribute_name="data")]))
+    data_decoder = a_xdr.AXdrDecoder(
+        encoding_conf=a_xdr.EncodingConf(
+            attributes=[a_xdr.Sequence(attribute_name="data")]
+        )
+    )
     print(data_decoder.decode(profile)["data"])
