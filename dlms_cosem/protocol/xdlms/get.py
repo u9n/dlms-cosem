@@ -12,6 +12,7 @@ from dlms_cosem.protocol.a_xdr import (
     EncodingConf,
     Sequence,
 )
+from dlms_cosem.protocol.xdlms import selective_access
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
 
@@ -74,7 +75,7 @@ class GetRequestNormal(AbstractXDlmsApdu):
         factory=InvokeIdAndPriority,
         validator=attr.validators.instance_of(InvokeIdAndPriority),
     )
-    access_selection: Optional[bytes] = attr.ib(
+    access_selection: Optional[selective_access.EntryDescriptor] = attr.ib(
         default=None, converter=if_falsy_set_none
     )
 
@@ -98,18 +99,19 @@ class GetRequestNormal(AbstractXDlmsApdu):
 
     def to_bytes(self):
         # automatically adding the choice for GetRequestNormal.
-        out = [
-            bytes([self.TAG, self.REQUEST_TYPE.value]),
-            self.invoke_id_and_priority.to_bytes(),
-            self.cosem_attribute.to_bytes(),
-        ]
-        if self.access_selection:
-            out.append(b"\x01")
-            out.append(self.access_selection)
-        else:
-            out.append(b"\x00")
+        out = bytearray()
+        out.append(self.TAG)
+        out.append(self.REQUEST_TYPE.value)
+        out.extend(self.invoke_id_and_priority.to_bytes())
+        out.extend(self.cosem_attribute.to_bytes())
 
-        return b"".join(out)
+        if self.access_selection:
+            out.extend(b"\x01")
+            out.extend(self.access_selection.to_bytes())
+        else:
+            out.extend(b"\x00")
+
+        return bytes(out)
 
 
 @attr.s(auto_attribs=True)
