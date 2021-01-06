@@ -44,8 +44,25 @@ class Obis:
             )
         return cls(data[0], data[1], data[2], data[3], data[4], data[5])
 
-    def from_dotted(self, dotted: str):
-        pass
+    @classmethod
+    def from_dotted(cls, dotted: str):
+        numbers = dotted.split(".")
+        if len(numbers) != 6:
+            raise ValueError("dotted obis representation does not contain 6 elements")
+        return cls(
+            a=int(numbers[0]),
+            b=int(numbers[1]),
+            c=int(numbers[2]),
+            d=int(numbers[3]),
+            e=int(numbers[4]),
+            f=int(numbers[5]),
+        )
+
+    def dotted_repr(self) -> str:
+        return f"{self.a}.{self.b}.{self.c}.{self.d}.{self.e}.{self.f}"
+
+    def verbose_repr(self) -> str:
+        return f"{self.a}-{self.b}:{self.c}.{self.d}.{self.e}*{self.f}"
 
     def to_bytes(self) -> bytes:
         return bytes(bytearray([self.a, self.b, self.c, self.d, self.e, self.f]))

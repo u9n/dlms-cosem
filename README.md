@@ -41,12 +41,124 @@ Current release:
 
 Current Work:
 
-    * GET, SET, ACTION over pre-established associations.
-    * Interface classes implementation.
-    * DLMS Client to handle communication.
-    * GBT, ACCESS.
-    * Establish Connections.
-    * More Security options.
+    * GET, GET.WITH_BLOCK
+    * Simple blocking DLMS Client for HDLC and TCP/IP
+    * GlobalCiphering
+    * HLS-GMAC auth
+    * Selective access for ProfileGeneric via RangeDescriptor
+    * Parsing of ProfileGeneric buffers
+
+# Example use:
+
+Reading the billing data from an IDIS Electricity meter, over HDLC via an USB optical 
+probe.
+
+```python
+encryption_key = bytes.fromhex("D0D1D2D3D4D5D6D7D8D9DADBDCDDDEDF")
+authentication_key = bytes.fromhex("000102030405060708090A0B0C0D0E0F")
+auth = enumerations.AuthenticationMechanism.HLS_GMAC
+
+# simple partial to creat a public client. physical address depends on meter model.
+public_client = partial(
+    SerialDlmsClient,
+    server_logical_address=1,
+    server_physical_address=17,
+    client_logical_address=16,
+)
+
+# simple partial to create a managment client. physical address depends on meter model
+management_client = partial(
+    SerialDlmsClient,
+    server_logical_address=1,
+    server_physical_address=17,
+    client_logical_address=1,
+    authentication_method=auth,
+    encryption_key=encryption_key,
+    authentication_key=authentication_key,
+)
+
+port = "/dev/tty.usbserial-A704H991"
+
+# we need to read the current invocation counter from the public client to be able to 
+# set up a correct authenticated and encrypted session with the meter.
+with public_client(serial_port=port).session() as client:
+    
+    response_data = client.get(
+       cosem.CosemAttribute(
+            interface=enumerations.CosemInterface.DATA,
+            instance=cosem.Obis(0, 0, 0x2B, 1, 0),
+            attribute=2,
+        )
+    )
+    
+    data_decoder = a_xdr.AXdrDecoder(
+        encoding_conf=a_xdr.EncodingConf(
+            attributes=[a_xdr.Sequence(attribute_name="data")]
+        )
+    )
+    invocation_counter = data_decoder.decode(response_data)["data"]
+    print(f"meter_initial_invocation_counter = {invocation_counter}")
+
+
+# Now that we have the initial invocation counter we can create a management client 
+# to read data from the protected parts of the meter.
+with management_client(
+    serial_port=port, client_initial_invocation_counter=invocation_counter + 1
+).session() as client:
+
+    # Get on billing profile. Blockwise transfer handled automatically.
+    # Requesting data in a date range.
+    profile = client.get(
+        cosem.CosemAttribute(
+            interface=enumerations.CosemInterface.PROFILE_GENERIC,
+            instance=cosem.Obis(1, 0, 99, 1, 0),
+            attribute=2,
+        ),
+        access_descriptor=RangeDescriptor(
+            restricting_object=selective_access.CaptureObject(
+                cosem_attribute=cosem.CosemAttribute(
+                    interface=enumerations.CosemInterface.CLOCK,
+                    instance=cosem.Obis.from_dotted("0.0.1.0.0.255"),
+                    attribute=2,
+                ),
+                data_index=0,
+            ),
+            from_value=dateparse("2020-01-01T00:03:00-02:00"),
+            to_value=dateparse("2020-01-06T00:03:00-01:00"),
+        ),
+    )
+    
+    # Defining profile data parser
+    parser = ProfileGenericBufferParser(
+        capture_objects=[
+            cosem.CosemAttribute(
+                interface=enumerations.CosemInterface.CLOCK,
+                instance=cosem.Obis(0, 0, 1, 0, 0, 255),
+                attribute=2,
+            ),
+            cosem.CosemAttribute(
+                interface=enumerations.CosemInterface.DATA,
+                instance=cosem.Obis(0, 0, 96, 10, 1, 255),
+                attribute=2,
+            ),
+            cosem.CosemAttribute(
+                interface=enumerations.CosemInterface.REGISTER,
+                instance=cosem.Obis(1, 0, 1, 8, 0, 255),
+                attribute=2,
+            ),
+            cosem.CosemAttribute(
+                interface=enumerations.CosemInterface.REGISTER,
+                instance=cosem.Obis(1, 0, 2, 8, 0, 255),
+                attribute=2,
+            ),
+        ],
+        capture_period=60,
+    )
+    
+    result = parser.parse_bytes(profile)
+    pprint(result)
+
+```
     
 # Supported meters
 
