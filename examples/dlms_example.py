@@ -1,23 +1,21 @@
-from dlms_cosem.clients.serial_dlms import SerialDlmsClient
-from dlms_cosem.protocol.acse import enumerations
-from dlms_cosem.protocol.xdlms import selective_access
-
-from dlms_cosem.protocol.xdlms.conformance import Conformance
-from dlms_cosem.protocol import cosem, time, a_xdr
 import logging
-from functools import partial
 from datetime import datetime
-from dateutil import parser
-
-
+from functools import partial
 from pprint import pprint
 
-# set up logging so you get a bit nicer printout of what is happening.
-from dlms_cosem.protocol.xdlms.selective_access import EntryDescriptor, RangeDescriptor
+from dateutil import parser
 
+from dlms_cosem.clients.serial_dlms import SerialDlmsClient
+from dlms_cosem.protocol import a_xdr, cosem, time
+from dlms_cosem.protocol.acse import enumerations
+from dlms_cosem.protocol.parsers import ProfileGenericBufferParser
+from dlms_cosem.protocol.xdlms import selective_access
+from dlms_cosem.protocol.xdlms.conformance import Conformance
+from dlms_cosem.protocol.xdlms.selective_access import RangeDescriptor
+
+# set up logging so you get a bit nicer printout of what is happening.
 logging.basicConfig(
     level=logging.DEBUG,
-    # format="%(asctime)s,%(msecs)d : %(levelname)s : %(module)s:%(lineno)d : %(message)s",
     format="%(asctime)s,%(msecs)d : %(levelname)s : %(message)s",
     datefmt="%H:%M:%S",
 )
@@ -67,60 +65,70 @@ management_client = partial(
 port = "/dev/tty.usbserial-A704H991"
 with public_client(serial_port=port).session() as client:
 
-    result = client.get(
-        ic=enumerations.CosemInterface.DATA,
-        instance=cosem.Obis(0, 0, 0x2B, 1, 0),
-        attribute=2,
+    response_data = client.get(
+        cosem.CosemAttribute(
+            interface=enumerations.CosemInterface.DATA,
+            instance=cosem.Obis(0, 0, 0x2B, 1, 0),
+            attribute=2,
+        )
     )
     data_decoder = a_xdr.AXdrDecoder(
         encoding_conf=a_xdr.EncodingConf(
             attributes=[a_xdr.Sequence(attribute_name="data")]
         )
     )
-    result = data_decoder.decode(result)["data"]
-    print(f"meter_initial_invocation_counter = {result}")
+    invocation_counter = data_decoder.decode(response_data)["data"]
+    print(f"meter_initial_invocation_counter = {invocation_counter}")
 
 
 with management_client(
-    serial_port=port, client_initial_invocation_counter=result + 1
+    serial_port=port, client_initial_invocation_counter=invocation_counter + 1
 ).session() as client:
 
-    # objects = client.get(ic=enumerations.CosemInterface(15),
-    #    instance=cosem.Obis(0, 0, 40, 0, 0), attribute=2, )
-    # pprint(objects)
-
-    #entries = client.get(
-    #    ic=enumerations.CosemInterface.PROFILE_GENERIC,
-    #    instance=cosem.Obis(1, 0, 99, 1, 0),
-    #    attribute=7,
-    #)
-
-    #print(f"ENTRIES: {entries}")
-
-    #entries_nr = int.from_bytes(entries[1:], "big")
-
     profile = client.get(
-        ic=enumerations.CosemInterface.PROFILE_GENERIC,
-        instance=cosem.Obis(1, 0, 99, 1, 0),
-        attribute=2,
+        cosem.CosemAttribute(
+            interface=enumerations.CosemInterface.PROFILE_GENERIC,
+            instance=cosem.Obis(1, 0, 99, 1, 0),
+            attribute=2,
+        ),
         access_descriptor=RangeDescriptor(
             restricting_object=selective_access.CaptureObject(
                 cosem_attribute=cosem.CosemAttribute(
                     interface=enumerations.CosemInterface.CLOCK,
-                    instance=cosem.Obis(0, 0, 1, 0, 0, 255),
+                    instance=cosem.Obis.from_dotted("0.0.1.0.0.255"),
                     attribute=2,
                 ),
                 data_index=0,
             ),
-            from_value=parser.parse("2020-01-01T00:03:00-02:00"),
-            to_value=parser.parse("2020-01-06T00:03:00-01:00"),
-
-        )
-
+            from_value=parser.parse("2020-01-01T00:00:00-02:00"),
+            to_value=parser.parse("2020-01-01T02:00:00-01:00"),
+        ),
     )
-    data_decoder = a_xdr.AXdrDecoder(
-        encoding_conf=a_xdr.EncodingConf(
-            attributes=[a_xdr.Sequence(attribute_name="data")]
-        )
+
+    parser = ProfileGenericBufferParser(
+        capture_objects=[
+            cosem.CosemAttribute(
+                interface=enumerations.CosemInterface.CLOCK,
+                instance=cosem.Obis(0, 0, 1, 0, 0, 255),
+                attribute=2,
+            ),
+            cosem.CosemAttribute(
+                interface=enumerations.CosemInterface.DATA,
+                instance=cosem.Obis(0, 0, 96, 10, 1, 255),
+                attribute=2,
+            ),
+            cosem.CosemAttribute(
+                interface=enumerations.CosemInterface.REGISTER,
+                instance=cosem.Obis(1, 0, 1, 8, 0, 255),
+                attribute=2,
+            ),
+            cosem.CosemAttribute(
+                interface=enumerations.CosemInterface.REGISTER,
+                instance=cosem.Obis(1, 0, 2, 8, 0, 255),
+                attribute=2,
+            ),
+        ],
+        capture_period=60,
     )
-    print(data_decoder.decode(profile)["data"])
+    result = parser.parse_bytes(profile)
+    pprint(result)

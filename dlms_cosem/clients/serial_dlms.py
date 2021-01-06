@@ -83,17 +83,12 @@ class SerialDlmsClient:
 
     def get(
         self,
-        ic: enumerations.CosemInterface,
-        instance: cosem.Obis,
-        attribute: int,
+        cosem_attribute: cosem.CosemAttribute,
         access_descriptor: Optional[RangeDescriptor] = None,
     ) -> bytes:
         self.send(
             xdlms.GetRequestNormal(
-                cosem_attribute=cosem.CosemAttribute(
-                    interface=ic, instance=instance, attribute=attribute
-                ),
-                access_selection=access_descriptor,
+                cosem_attribute=cosem_attribute, access_selection=access_descriptor
             )
         )
         all_data_received = False
