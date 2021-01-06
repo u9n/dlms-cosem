@@ -18,6 +18,7 @@ REQUIRED = [
     "pyserial~=3.5",
     "cryptography~=3.3.1",
     "asn1crypto==0.24.0",
+    "python-dateutil~=2.8.1",
 ]
 
 # What packages are optional?
