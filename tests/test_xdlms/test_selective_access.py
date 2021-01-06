@@ -1,7 +1,9 @@
 import pytest
+from dateutil import parser
 
 from dlms_cosem.protocol import cosem, enumerations
 from dlms_cosem.protocol.xdlms import GetRequestFactory, selective_access
+from dlms_cosem.protocol.xdlms.selective_access import RangeDescriptor
 
 
 def test_capture_object_definition():
@@ -55,6 +57,24 @@ def test_range_descriptor1():
         b'\t\x0c\x07\xe3\x02\x0c\xff\x00\x00\x00\x00\x80\x00\x00'
         b'\x01\x00'
 )
+
+
+def test_range_descriptor_to_bytes():
+    rd = RangeDescriptor(
+            restricting_object=selective_access.CaptureObject(
+                cosem_attribute=cosem.CosemAttribute(
+                    interface=enumerations.CosemInterface.CLOCK,
+                    instance=cosem.Obis(0, 0, 1, 0, 0, 255),
+                    attribute=2,
+                ),
+                data_index=0,
+            ),
+            from_value=parser.parse("2020-01-01T00:03:00-02:00"),
+            to_value=parser.parse("2020-01-06T00:03:00-01:00"),
+
+        )
+    print(rd.to_bytes())
+    assert False
 
 def test_range_descriptor_is_not_parsed():
 
