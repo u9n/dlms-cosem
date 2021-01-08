@@ -1,92 +1,121 @@
 import attr
 from typing import *
 
-from dlms_cosem.protocol.xdlms.get import get_data_access_result_from_bytes
 from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
-from dlms_cosem.protocol import cosem, enumerations, a_xdr
+from dlms_cosem.protocol import cosem, enumerations
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 
 
+# TODO:  Use same kind of setup as with GET.
+# Several classes depending on the type of Action Request/Response
+# ActionRequestNormal, ActionResponseNormal, ActionResponseNormalWithError,
+
+
 @attr.s(auto_attribs=True)
-class ActionRequest(AbstractXDlmsApdu):
+class ActionRequestNormal(AbstractXDlmsApdu):
     TAG: ClassVar[int] = 195
-    ENCODING_CONF: ClassVar[a_xdr.EncodingConf] = a_xdr.EncodingConf(
-        attributes=[
-            a_xdr.Attribute(
-                attribute_name="invoke_id_and_priority",
-                create_instance=InvokeIdAndPriority.from_bytes,
-            ),
-            a_xdr.Attribute(
-                attribute_name="cosem_method",
-                create_instance=cosem.CosemMethod.from_bytes,
-            ),
-            a_xdr.Attribute(attribute_name="parameters", create_instance=bytes),
-        ]
+    ACTION_TYPE: ClassVar[enumerations.ActionType] = enumerations.ActionType.NORMAL
+
+    cosem_method: cosem.CosemMethod = attr.ib(
+        validator=attr.validators.instance_of(cosem.CosemMethod)
     )
-    cosem_method: cosem.CosemMethod
-    parameters: Optional[bytes]
+    data: Optional[bytes] = attr.ib(default=None)
     invoke_id_and_priority: InvokeIdAndPriority = attr.ib(
-        default=InvokeIdAndPriority(0, True, True)
-    )
-    action_type: enumerations.ActionType = attr.ib(
-        default=enumerations.ActionType.NORMAL
+        default=InvokeIdAndPriority(0, True, True),
+        validator=attr.validators.instance_of(InvokeIdAndPriority),
     )
 
     def to_bytes(self):
         out = bytearray()
         out.append(self.TAG)
-        out.append(self.action_type.value)
+        out.append(self.ACTION_TYPE.value)
         out.extend(self.invoke_id_and_priority.to_bytes())
         out.extend(self.cosem_method.to_bytes())
-        if self.parameters:
+        if self.data:
             out.append(0x01)
-            out.extend(self.parameters)
+            out.extend(self.data)
         else:
             out.append(0x00)
         return bytes(out)
 
     @classmethod
-    def from_bytes(cls):
-        pass
+    def from_bytes(cls, source_bytes: bytes):
+        data = bytearray(source_bytes)
+        tag = data.pop(0)
+        if tag != cls.TAG:
+            raise ValueError(
+                f"Tag {tag} is not the correct tag for an ActionRequest, should "
+                f"be {cls.TAG}"
+            )
+        request_type = enumerations.ActionType(data.pop(0))
 
+        if request_type != enumerations.ActionType.NORMAL:
+            raise ValueError(
+                f"Bytes are not representing a ActionRequestNormal. Action type "
+                f"is {request_type}"
+            )
+        invoke_id_and_priority = InvokeIdAndPriority.from_bytes(
+            data.pop(0).to_bytes(1, "big")
+        )
+        cosem_method = cosem.CosemMethod.from_bytes(data[:9])
+        has_data = bool(data[9])
+        if has_data:
+            request_data = data[10:]
+        else:
+            request_data = None
 
-import attr
-from typing import *
-
-from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
-from dlms_cosem.protocol.dlms_data import BaseDlmsData
-from dlms_cosem.protocol import cosem, enumerations, a_xdr
+        return cls(
+            cosem_method=cosem_method,
+            data=request_data,
+            invoke_id_and_priority=invoke_id_and_priority,
+        )
 
 
 @attr.s(auto_attribs=True)
-class ActionResponse(AbstractXDlmsApdu):
+class ActionRequestFactory:
+    """
+    Factory that will parse the ActionRequest and return the correct class for the
+    particular instance
+    """
+
+    TAG: ClassVar[int] = 195
+
+    @staticmethod
+    def from_bytes(source_bytes: bytes):
+        data = bytearray(source_bytes)
+        tag = data.pop(0)
+        if tag != ActionRequestFactory.TAG:
+            raise ValueError(
+                f"Tag for GET request is not correct. Got {tag}, should be "
+                f"{ActionRequestFactory.TAG}"
+            )
+        request_type = enumerations.ActionType(data.pop(0))
+        if request_type == enumerations.ActionType.NORMAL:
+            return ActionRequestNormal.from_bytes(source_bytes)
+        else:
+            raise NotImplementedError(
+                f"no class to support action request type {request_type}"
+            )
+
+
+@attr.s(auto_attribs=True)
+class ActionResponseNormal(AbstractXDlmsApdu):
     TAG: ClassVar[int] = 199
-    ENCODING_CONF: ClassVar[a_xdr.EncodingConf] = a_xdr.EncodingConf(
-        attributes=[
-            a_xdr.Attribute(
-                attribute_name="invoke_id_and_priority",
-                create_instance=InvokeIdAndPriority.from_bytes,
-            ),
-            a_xdr.Attribute(attribute_name="parameters", create_instance=bytes),
-        ]
-    )
-    result: enumerations.ActionResult
-    result_data: Optional[Any] = attr.ib(default=None)
+    ACTION_TYPE: ClassVar[enumerations.ActionType] = enumerations.ActionType.NORMAL
+
+    status: enumerations.ActionResultStatus
     invoke_id_and_priority: InvokeIdAndPriority = attr.ib(
         default=InvokeIdAndPriority(0, True, True)
-    )
-    action_type: enumerations.ActionType = attr.ib(
-        default=enumerations.ActionType.NORMAL
     )
 
     def to_bytes(self):
         out = bytearray()
         out.append(self.TAG)
-        out.append(self.action_type.value)
+        out.append(self.ACTION_TYPE.value)
         out.extend(self.invoke_id_and_priority.to_bytes())
-        out.append(self.result.value)
-        # optinal result data not used.
-        out.append(0)
+        out.append(self.status.value)
+        out.extend(b"\x00")
+
         return bytes(out)
 
     @classmethod
@@ -98,39 +127,236 @@ class ActionResponse(AbstractXDlmsApdu):
                 f"Tag {tag} is not correct for ActionResponse. Should be {cls.TAG}"
             )
         action_type = enumerations.ActionType(data.pop(0))
+
+        if action_type != enumerations.ActionType.NORMAL:
+            raise ValueError(
+                f"Bytes are not representing a ActionResponseNormal. Action type "
+                f"is {action_type}"
+            )
+
         invoke_id_and_priority = InvokeIdAndPriority.from_bytes(
             data.pop(0).to_bytes(1, "big")
         )
-        result = enumerations.ActionResult(data.pop(0))
-        has_parameters = bool(data.pop(0))
-        if has_parameters:
-            decoder = a_xdr.AXdrDecoder(
-                encoding_conf=a_xdr.EncodingConf(
-                    attributes=[
-                        a_xdr.Choice(
-                            choices={
-                                b"\x00": a_xdr.Sequence(attribute_name="result_data"),
-                                b"\x01": a_xdr.Attribute(
-                                    attribute_name="result_data",
-                                    create_instance=get_data_access_result_from_bytes,
-                                    length=1,
-                                ),
-                            }
-                        )
-                    ]
-                )
-            )
-            result_data = decoder.decode(data).get("result_data", None)
 
-            return cls(
-                invoke_id_and_priority=invoke_id_and_priority,
-                action_type=action_type,
-                result=result,
-                result_data=result_data
+        status = enumerations.ActionResultStatus(data.pop(0))
+        has_data = bool(data.pop(0))
+        if has_data:
+            raise ValueError(
+                f"ActionResponse has data and should not be a " f"ActionResponseNormal"
             )
+
+        return cls(invoke_id_and_priority=invoke_id_and_priority, status=status)
+
+
+@attr.s(auto_attribs=True)
+class ActionResponseNormalWithData(AbstractXDlmsApdu):
+    TAG: ClassVar[int] = 199
+    ACTION_TYPE: ClassVar[enumerations.ActionType] = enumerations.ActionType.NORMAL
+
+    status: enumerations.ActionResultStatus
+    data: bytes = attr.ib(default=None)
+    invoke_id_and_priority: InvokeIdAndPriority = attr.ib(
+        default=InvokeIdAndPriority(0, True, True)
+    )
+
+    def to_bytes(self):
+        out = bytearray()
+        out.append(self.TAG)
+        out.append(self.ACTION_TYPE.value)
+        out.extend(self.invoke_id_and_priority.to_bytes())
+        out.append(self.status.value)
+        out.extend(b"\x01")  # has data
+        out.extend(b"\x00")  # data result choice
+        out.extend(self.data)
+        return bytes(out)
+
+    @classmethod
+    def from_bytes(cls, source_bytes: bytes):
+        data = bytearray(source_bytes)
+        tag = data.pop(0)
+        if tag != cls.TAG:
+            raise ValueError(
+                f"Tag {tag} is not correct for ActionResponse. Should be {cls.TAG}"
+            )
+        action_type = enumerations.ActionType(data.pop(0))
+
+        if action_type != enumerations.ActionType.NORMAL:
+            raise ValueError(
+                f"Bytes are not representing a ActionResponseNormal. Action type "
+                f"is {action_type}"
+            )
+
+        invoke_id_and_priority = InvokeIdAndPriority.from_bytes(
+            data.pop(0).to_bytes(1, "big")
+        )
+
+        status = enumerations.ActionResultStatus(data.pop(0))
+        has_data = bool(data.pop(0))
+        if has_data:
+            data_is_result = data.pop(0) == 0
+            if not data_is_result:
+                raise ValueError(
+                    "Data is not a ActionResponseNormalWithData, maybe a "
+                    "ActionResponseNormalWithError"
+                )
+            response_data = data
+
         else:
-            return cls(
-                invoke_id_and_priority=invoke_id_and_priority,
-                action_type=action_type,
-                result=result,
+            raise ValueError(
+                f"ActionResponseNormalWithData does not contain any data. "
+                f"Should probably be an ActionResponseNormal"
+            )
+
+        return cls(
+            invoke_id_and_priority=invoke_id_and_priority,
+            status=status,
+            data=response_data,
+        )
+
+
+@attr.s(auto_attribs=True)
+class ActionResponseNormalWithError(AbstractXDlmsApdu):
+    TAG: ClassVar[int] = 199
+    ACTION_TYPE: ClassVar[enumerations.ActionType] = enumerations.ActionType.NORMAL
+
+    status: enumerations.ActionResultStatus
+    error: enumerations.DataAccessResult
+    invoke_id_and_priority: InvokeIdAndPriority = attr.ib(
+        default=InvokeIdAndPriority(0, True, True)
+    )
+
+    def to_bytes(self):
+        out = bytearray()
+        out.append(self.TAG)
+        out.append(self.ACTION_TYPE.value)
+        out.extend(self.invoke_id_and_priority.to_bytes())
+        out.append(self.status.value)
+
+        out.extend(b"\x01")
+        out.extend(b"\x01")  # data result data (error) choice
+        out.append(self.error.value)
+
+        return bytes(out)
+
+    @classmethod
+    def from_bytes(cls, source_bytes: bytes):
+
+        data = bytearray(source_bytes)
+        tag = data.pop(0)
+        if tag != cls.TAG:
+            raise ValueError(
+                f"Tag {tag} is not correct for ActionResponse. Should be {cls.TAG}"
+            )
+        action_type = enumerations.ActionType(data.pop(0))
+
+        if action_type != enumerations.ActionType.NORMAL:
+            raise ValueError(
+                f"Bytes are not representing a ActionResponseNormal. Action type "
+                f"is {action_type}"
+            )
+
+        invoke_id_and_priority = InvokeIdAndPriority.from_bytes(
+            data.pop(0).to_bytes(1, "big")
+        )
+
+        status = enumerations.ActionResultStatus(data.pop(0))
+        has_data = bool(data.pop(0))
+        if has_data:
+            data_is_error = data.pop(0) == 1
+            if not data_is_error:
+                raise ValueError(
+                    "Data is not a ActionResponseNormalWithError, maybe a "
+                    "ActionResponseNormal"
+                )
+            assert len(data) == 1
+            error = enumerations.DataAccessResult(data.pop(0))
+
+        else:
+            raise ValueError("No error data in ActionResponseWithError")
+
+        return cls(
+            invoke_id_and_priority=invoke_id_and_priority, status=status, error=error
+        )
+
+
+@attr.s(auto_attribs=True)
+class ActionResponseFactory:
+
+    """
+    Action-Response ::= CHOICE
+    {
+    action-response-normal      [1] IMPLICIT Action-Response-Normal
+    action-response-with-pblock [2] IMPLICIT Action-Response-With-Pblock,
+    action-response-with-list   [3] IMPLICIT Action-Response-With-List,
+    action-response-next-pblock [4] IMPLICIT Action-Response-Next-Pblock,
+    }
+
+    Action-Response-Normal ::= SEQUENCE
+    {
+    invoke-id-and-priority  Invoke-Id-And-Priority,
+    single-response         Action-Response-With-Optional-Data
+    }
+
+    Action-Response-With-Pblock ::= SEQUENCE
+    {
+    invoke-id-and-priority  Invoke-Id-And-Priority,
+    pblock                  DataBlock-SA
+    }
+
+    Action-Response-With-List ::= SEQUENCE
+    {
+    invoke-id-and-priority  Invoke-Id-And-Priority,
+    list-of-responses       SEQUENCE OF Action-Response-With-Optional-Data
+    }
+
+    Action-Response-Next-Pblock ::= SEQUENCE
+    {
+    invoke-id-and-priority  Invoke-Id-And-Priority,
+    block-number            Unsigned32
+    }
+
+    Action-Response-With-Optional-Data ::= SEQUENCE
+    {
+    result              Action-Result,
+    return-parameters   Get-Data-Result OPTIONAL
+    }
+
+    Get-Data-Result ::= CHOICE
+    {
+    data                [0] Data,
+    ata-access-result   [1] IMPLICIT Data-Access-Result
+    }
+
+    """
+
+    TAG: ClassVar[int] = 199
+
+    @staticmethod
+    def from_bytes(source_bytes: bytes):
+        data = bytearray(source_bytes)
+        tag = data.pop(0)
+        if tag != ActionResponseFactory.TAG:
+            raise ValueError(
+                f"Tag is not correct. Should be {ActionResponseFactory.TAG} but is {tag}"
+            )
+        response_type = enumerations.ActionType(data.pop(0))
+        invoke_id_and_priority = InvokeIdAndPriority.from_bytes(
+            data.pop(0).to_bytes(1, "big")
+        )
+        if response_type == enumerations.ActionType.NORMAL:
+            status = enumerations.ActionResultStatus(data.pop(0))
+            # check if it is an error or data response by assesing the choice.
+            has_data = bool(data.pop(0))
+            if has_data:
+                choice = data.pop(0)
+                if choice == 0:
+                    return ActionResponseNormalWithData.from_bytes(source_bytes)
+                elif choice == 1:
+                    return ActionResponseNormalWithError.from_bytes(source_bytes)
+            else:
+                return ActionResponseNormal.from_bytes(source_bytes)
+        else:
+            raise NotImplementedError(
+                "Only implemented the ActionResponse Normal "
+                "class types is not implemented."
             )

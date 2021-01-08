@@ -330,7 +330,8 @@ class AssociationResult(IntEnum):
     REJECTED_TRANSIENT = 2
     # TODO: What does transient rejection mean?
 
-class ActionResult(IntEnum):
+
+class ActionResultStatus(IntEnum):
     SUCCESS = 0
     HARDWARE_FAULT = 1
     TEMPORARY_FAILURE = 2

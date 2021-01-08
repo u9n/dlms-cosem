@@ -92,19 +92,23 @@ DLMS_STATE_TRANSITIONS = {
         RejectAssociation: NO_ASSOCIATION,
     },
     SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT: {
-        xdlms.ActionRequest: AWAITING_HLS_CLIENT_CHALLENGE_RESULT
+        xdlms.ActionRequestNormal: AWAITING_HLS_CLIENT_CHALLENGE_RESULT
     },
-    AWAITING_HLS_CLIENT_CHALLENGE_RESULT: {xdlms.ActionResponse: HLS_DONE},
+    AWAITING_HLS_CLIENT_CHALLENGE_RESULT: {
+        xdlms.ActionResponseNormalWithData: HLS_DONE,
+        xdlms.ActionResponseNormal: NO_ASSOCIATION,
+        xdlms.ActionResponseNormalWithError: NO_ASSOCIATION,
+    },
     HLS_DONE: {HlsSuccess: READY, HlsFailed: NO_ASSOCIATION},
     AWAITING_GET_RESPONSE: {
         xdlms.GetResponseNormal: READY,
         xdlms.GetResponseWithBlock: SHOULD_ACK_LAST_GET_BLOCK,
-        xdlms.GetResponseNormalWithError:  READY,
+        xdlms.GetResponseNormalWithError: READY,
         xdlms.ExceptionResponseApdu: READY,
     },
     AWAITING_GET_BLOCK_RESPONSE: {
         xdlms.GetResponseWithBlock: SHOULD_ACK_LAST_GET_BLOCK,
-        xdlms.GetResponseNormalWithError:  READY,
+        xdlms.GetResponseNormalWithError: READY,
         xdlms.ExceptionResponseApdu: READY,
         xdlms.GetResponseLastBlockWithError: READY,
         xdlms.GetResponseLastBlock: READY,

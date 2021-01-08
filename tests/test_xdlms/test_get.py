@@ -376,6 +376,7 @@ class TestGetResponseFactory:
         apdu = GetResponseFactory.from_bytes(data)
 
         assert isinstance(apdu, GetResponseLastBlockWithError)
+
     def test_wrong_tag_raises_valueerror(self):
         data = b"\xcc\x02\xc1\x01\x00\x00\x00\x13\x01\x01"
         with pytest.raises(ValueError):

@@ -22,7 +22,14 @@ from dlms_cosem.protocol.xdlms.get import (
 )
 from dlms_cosem.protocol.xdlms.conformance import Conformance
 from dlms_cosem.protocol.xdlms.exception_response import ExceptionResponseApdu
-from dlms_cosem.protocol.xdlms.action import ActionResponse, ActionRequest
+from dlms_cosem.protocol.xdlms.action import (
+    ActionResponseNormal,
+    ActionResponseNormalWithData,
+    ActionResponseNormalWithError,
+    ActionResponseFactory,
+    ActionRequestNormal,
+    ActionRequestFactory,
+)
 
 __all__ = [
     "InitiateRequestApdu",
@@ -39,10 +46,14 @@ __all__ = [
     "GetResponseLastBlock",
     "GetResponseLastBlockWithError",
     "GetRequestFactory",
-    "GetResponseFactory"
+    "GetResponseFactory",
     "ExceptionResponseApdu",
     "GlobalCipherInitiateRequest",
     "GlobalCipherInitiateResponse",
-    "ActionResponse",
-    "ActionRequest",
+    "ActionResponseNormal",
+    "ActionResponseNormalWithData",
+    "ActionResponseNormalWithError",
+    "ActionResponseFactory",
+    "ActionRequestNormal",
+    "ActionRequestFactory",
 ]

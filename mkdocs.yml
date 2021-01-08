@@ -5,6 +5,8 @@ site_author: 'Henrik Palmlund Wahlgren @ Utilitarian'
 nav:
   - Home: index.md
   - About DLMS/COSEM: dlms_cosem.md
+  - Getting Started:
+      - Connect to your meter: connect_to_your_meter.md
 
 
 theme:

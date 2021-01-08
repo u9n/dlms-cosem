@@ -30,22 +30,7 @@ blocking I/O.
 
 We have not implemented full support to be able to build a server (meter) emulator. If 
 this is a use-case you need, consider sponsoring the development and contact us.    
-
-## Supported features
-
-Current release:
-
-    * Parsing DataNotification via UDP.
-
-Current Work:
-
-    * GET, SET, ACTION over pre-established associations.
-    * Interface classes implementation.
-    * DLMS Client to handle communication.
-    * GBT, ACCESS.
-    * Establish Connections.
-    * More Security options.
-    
+ 
 ## Supported meters
 
 Technically we aim to support any DLMS enabled meter. But since the library is low 
@@ -56,6 +41,7 @@ customary that a meter also adheres to a companion standard. In the companion st
 it is defined exactly how certain use-cases are to be performed and how data is modeled.
 
 Examples of companion standards are:
+
 * DSMR (Netherlands)
 * IDIS (all Europe)
 * UNI/TS 11291 (Italy)
@@ -74,7 +60,7 @@ We have some meters we have run tests on or know the library is used for in prod
 This library is developed by Palmlund Wahlgren Innovative Technology AB. We are
 based in Sweden and are members of the DLMS User Association.
 
-If you find an bug pleas raise an issue on Github.
+If you find a bug pleas raise an issue on Github.
 
 We welcome contributions of any kind.
 

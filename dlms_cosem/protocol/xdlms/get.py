@@ -189,9 +189,7 @@ class GetRequestFactory:
             )
 
 
-get_data_access_result_from_bytes = partial(
-    enums.DataAccessResult.from_bytes, byteorder="big"
-)
+
 
 
 @attr.s(auto_attribs=True)

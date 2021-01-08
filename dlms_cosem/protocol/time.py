@@ -210,10 +210,10 @@ def time_from_bytes(source_bytes: bytes) -> time:
     if len(source_bytes) != 4:
         raise ValueError(f"Time is represented by 4 bytes, but got {len(source_bytes)}")
 
-    hour = get_optional_value(source_bytes[0], b"\xff", replace_with=0)
-    minute = get_optional_value(source_bytes[1], b"\xff", replace_with=0)
-    seconds = get_optional_value(source_bytes[2], b"\xff", replace_with=0)
-    hundredths = get_optional_value(source_bytes[3], b"\xff", replace_with=0)
+    hour: int = get_optional_value(source_bytes[0], b"\xff", replace_with=0)
+    minute: int = get_optional_value(source_bytes[1], b"\xff", replace_with=0)
+    seconds: int = get_optional_value(source_bytes[2], b"\xff", replace_with=0)
+    hundredths: int = get_optional_value(source_bytes[3], b"\xff", replace_with=0)
     validate_hour(hour)
     validate_minute_or_second(minute)
     validate_minute_or_second(seconds)

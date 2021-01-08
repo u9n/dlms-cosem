@@ -1,3 +1,7 @@
+import attr
+
+
+@attr.s(auto_attribs=True)
 class WrapperHeader:
     """
     The wrapper header contains 4 parts. Each is an unsigned 16 bit integer.
@@ -39,34 +43,35 @@ class WrapperHeader:
 
     """
 
-    def __init__(self, source_wport: int, destination_wport: int, length: int,
-                 version: int = 1):
-        self.source_wport = source_wport
-        self.destination_wport = destination_wport
-        self.length = length
-        self.version = version
+    source_wport: int
+    destination_wport: int
+    length: int
+    version: int = attr.ib(default=1)
 
     def to_bytes(self):
-        _version = self.version.to_bytes(2, 'big')
-        _source_wport = self.source_wport.to_bytes(2, 'big')
-        _destination_wport = self.destination_wport.to_bytes(2, 'big')
-        _length = self.length.to_bytes(2, 'big')
+        _version = self.version.to_bytes(2, "big")
+        _source_wport = self.source_wport.to_bytes(2, "big")
+        _destination_wport = self.destination_wport.to_bytes(2, "big")
+        _length = self.length.to_bytes(2, "big")
 
         return _version + _source_wport + _destination_wport + _length
 
     @classmethod
     def from_bytes(cls, in_data):
         if len(in_data) != 8:
-            raise ValueError(f'Wrapper Header can only consists of 8 bytes and '
-                             f'got {len(in_data)}')
-        version = int.from_bytes(in_data[0:2], 'big')
-        source_wport = int.from_bytes(in_data[2:4], 'big')
-        destination_wport = int.from_bytes(in_data[4:6], 'big')
-        length = int.from_bytes(in_data[6:8], 'big')
+            raise ValueError(
+                f"Wrapper Header can only consists of 8 bytes and "
+                f"got {len(in_data)}"
+            )
+        version = int.from_bytes(in_data[0:2], "big")
+        source_wport = int.from_bytes(in_data[2:4], "big")
+        destination_wport = int.from_bytes(in_data[4:6], "big")
+        length = int.from_bytes(in_data[6:8], "big")
 
         return cls(source_wport, destination_wport, length, version)
 
 
+@attr.s(auto_attribs=True)
 class WrapperProtocolDataUnit:
     """
 
@@ -83,9 +88,8 @@ class WrapperProtocolDataUnit:
         information on how to handle the data sent.
        """
 
-    def __init__(self, data: bytes, wrapper_header: WrapperHeader):
-        self.wrapper_header = wrapper_header
-        self.data = data
+    data: bytes
+    wrapper_header: WrapperHeader
 
     def to_bytes(self):
         return self.wrapper_header.to_bytes() + self.data
@@ -100,10 +104,13 @@ class WrapperProtocolDataUnit:
         data_length = len(data)
         if not wrapper_header.length == data_length:
             raise ValueError(
-                (f'Length of data in Wrapper Protocol Data Unit class '
-                 f'{cls.__class__.__name__}, ({data_length}) does not match '
-                 f'the length parameter in the Wrapper Header '
-                 f'({wrapper_header.length})'))
+                (
+                    f"Length of data in Wrapper Protocol Data Unit class "
+                    f"{cls.__class__.__name__}, ({data_length}) does not match "
+                    f"the length parameter in the Wrapper Header "
+                    f"({wrapper_header.length})"
+                )
+            )
 
         return cls(data, wrapper_header)
 
@@ -112,4 +119,5 @@ class DlmsUdpMessage(WrapperProtocolDataUnit):
     """
     Handle UPD messages with DLMS APDU content
     """
+
     pass

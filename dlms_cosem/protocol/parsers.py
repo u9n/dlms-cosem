@@ -1,5 +1,5 @@
 import attr
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import *
 
 from dlms_cosem.protocol import a_xdr, enumerations

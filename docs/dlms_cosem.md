@@ -63,13 +63,13 @@ clients.
 
 The DLMS/COSEM application layer provides:
 
-*   the ACSE services to connect the clients and the servers.
-*   the xDLMS services to access the data held by the COSEM objects. The xDLMS
-    services are the same for each object; this allows new objects to be added
-    to the model without affecting the application layer.
-*   The application layer also builds the messages (APDUs, Application Protocol
-    Data Units), applies, check and removes cryptographic protection as needed
-    and manages transferring long messages in blocks.
+* the ACSE services to connect the clients and the servers.
+* the xDLMS services to access the data held by the COSEM objects. The xDLMS 
+  services are the same for each object; this allows new objects to be added
+  to the model without affecting the application layer.
+* The application layer also builds the messages (APDUs, Application Protocol
+  Data Units), applies, check and removes cryptographic protection as needed
+  and manages transferring long messages in blocks.
 
 The messages can transported over virtually any communication media.
 

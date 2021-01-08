@@ -3,7 +3,8 @@ from typing import *
 import attr
 
 from dlms_cosem.protocol.xdlms.conformance import Conformance
-from dlms_cosem.protocol import acse, xdlms, exceptions, security, cosem, dlms_data
+from dlms_cosem.protocol import acse, xdlms, exceptions, security, cosem, dlms_data, \
+    utils
 from dlms_cosem.protocol import enumerations as enums
 from dlms_cosem.protocol import state as dlms_state
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
@@ -38,9 +39,9 @@ class XDlmsApduFactory:
         98: acse.ReleaseRequestApdu,
         99: acse.ReleaseResponseApdu,
         192: xdlms.GetRequestFactory,
-        195: xdlms.ActionRequest,
+        195: xdlms.ActionRequestFactory,
         196: xdlms.GetResponseFactory,
-        199: xdlms.ActionResponse,
+        199: xdlms.ActionResponseFactory,
     }
 
     @classmethod
@@ -100,6 +101,10 @@ def make_conformance(encryption_key: Optional[bytes], use_block_transfer: bool):
     )
 
 
+class ProtectionError(Exception):
+    """Unable to perform cryptographic function"""
+
+
 @attr.s(auto_attribs=True)
 class DlmsConnection:
     """
@@ -109,7 +114,9 @@ class DlmsConnection:
     # Client system title can be any combination of 8 bytes.
     # But is should not be the same as the metering the connection is set up too.
     client_system_title: bytes = attr.ib(
-        converter=attr.converters.default_if_none(factory=default_system_title)
+        converter=attr.converters.default_if_none(
+            factory=default_system_title
+        )  # type: ignore
     )
 
     global_encryption_key: Optional[bytes] = attr.ib(default=None)
@@ -358,15 +365,24 @@ class DlmsConnection:
             elif apdu.authentication == enums.AuthenticationMechanism.HLS_GMAC:
                 self.state.process_event(dlms_state.HlsStart())
 
-        if isinstance(apdu, xdlms.ActionResponse):
-            if self.state.current_state == dlms_state.HLS_DONE:
-                if apdu.result != enums.ActionResult.SUCCESS:
+        # Handle HLS verification
+        if self.state.current_state == dlms_state.HLS_DONE:
+            if isinstance(apdu, xdlms.ActionResponseNormalWithData):
+                if apdu.status != enums.ActionResultStatus.SUCCESS:
                     self.state.process_event(dlms_state.HlsFailed())
+                if self.hls_response_valid(utils.parse_as_dlms_data(apdu.data)):
+                    self.state.process_event(dlms_state.HlsSuccess())
                 else:
-                    if self.hls_response_valid(apdu.result_data):
-                        self.state.process_event(dlms_state.HlsSuccess())
-                    else:
-                        self.state.process_event(dlms_state.HlsFailed())
+                    self.state.process_event(dlms_state.HlsFailed())
+            elif isinstance(
+                apdu, (xdlms.ActionResponseNormalWithError, xdlms.ActionResponseNormal)
+            ):
+                self.state.process_event(dlms_state.HlsFailed())
+
+            else:
+                raise exceptions.LocalDlmsProtocolError(
+                    "Received a non Action response when in HLS DONE"
+                )
 
         return apdu
 
@@ -433,6 +449,15 @@ class DlmsConnection:
         """
         Encrypts plain bytes according to the current association and connection.
         """
+        if not self.global_encryption_key:
+            raise ProtectionError(
+                "Unable to encrypt plain text. Missing global_encryption_key"
+            )
+        if not self.global_authentication_key:
+            raise ProtectionError(
+                "Unable to encrypt plain text. Missing global_authentication_key"
+            )
+
         return security.encrypt(
             self.security_control,
             system_title=self.client_system_title,
@@ -446,6 +471,20 @@ class DlmsConnection:
         """
         Encrypts ciphered bytes according to the current association and connection.
         """
+
+        if not self.global_encryption_key:
+            raise ProtectionError(
+                "Unable to decrypt ciphered text. Missing global_encryption_key"
+            )
+        if not self.global_authentication_key:
+            raise ProtectionError(
+                "Unable to decrypt ciphered text. Missing global_authentication_key"
+            )
+        if not self.meter_system_title:
+            raise ProtectionError(
+                "Unable to decrypt ciphered text. Have not received the meters system title."
+            )
+
         return security.decrypt(
             self.security_control,
             system_title=self.meter_system_title,
@@ -496,6 +535,7 @@ class DlmsConnection:
                 auth_key=self.global_authentication_key,
                 cipher_text=event.ciphered_text,
             )
+            print(plain_text)
             event = XDlmsApduFactory.apdu_from_bytes(plain_text)
 
         else:
@@ -588,6 +628,14 @@ class DlmsConnection:
         """
         if not self.meter_to_client_challenge:
             raise exceptions.LocalDlmsProtocolError("Meter has not send challenge")
+        if not self.global_encryption_key:
+            raise ProtectionError(
+                "Unable to create GMAC. Missing global_encryption_key"
+            )
+        if not self.global_authentication_key:
+            raise ProtectionError(
+                "Unable to create GMAC. Missing global_authentication_key"
+            )
         if self.authentication_method == enums.AuthenticationMechanism.HLS_GMAC:
             only_auth_security_control = security.SecurityControlField(
                 security_suite=self.security_suite, authenticated=True, encrypted=False
@@ -628,6 +676,23 @@ class DlmsConnection:
         )
         invocation_counter = int.from_bytes(response_to_client_challenge[1:5], "big")
         gmac_result = response_to_client_challenge[-12:]
+
+        if not self.global_encryption_key:
+            raise ProtectionError(
+                "Unable to verify GMAC. Missing global_encryption_key"
+            )
+        if not self.global_authentication_key:
+            raise ProtectionError(
+                "Unable to verify GMAC. Missing global_authentication_key"
+            )
+        if not self.meter_system_title:
+            raise ProtectionError(
+                "Unable to verify GMAC. Have not received the meters system title."
+            )
+        if not self.client_to_meter_challenge:
+            raise ProtectionError(
+                "Unable to verify GMAC. Have not received the meters system title."
+            )
 
         correct_gmac = security.gmac(
             security_control=security_control,
