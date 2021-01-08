@@ -3,10 +3,10 @@ from typing import *
 
 import attr
 
-from dlms_cosem.protocol.crc import CRCCCITT
-from dlms_cosem.protocol.hdlc import exceptions as hdlc_exceptions, address, validators
-from dlms_cosem.protocol.hdlc.address import HdlcAddress
-from dlms_cosem.protocol.hdlc import fields
+from dlms_cosem.crc import CRCCCITT
+from dlms_cosem.hdlc import exceptions as hdlc_exceptions
+from dlms_cosem.hdlc import address, validators, fields
+from dlms_cosem.hdlc.address import HdlcAddress
 
 HDLC_FLAG = b"\x7e"
 

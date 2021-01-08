@@ -2,7 +2,7 @@ from typing import *
 
 import attr
 
-from dlms_cosem.protocol.hdlc import validators
+from dlms_cosem.hdlc import validators
 
 
 @attr.s(auto_attribs=True)

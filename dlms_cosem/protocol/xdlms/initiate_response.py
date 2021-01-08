@@ -1,8 +1,7 @@
 from typing import *
 import attr
 
-from dlms_cosem.protocol import security
-from dlms_cosem.protocol.ber import BER
+from dlms_cosem import security
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 from dlms_cosem.protocol.xdlms.conformance import Conformance
 

@@ -1,7 +1,7 @@
 import attr
 from typing import *
 from datetime import datetime
-from dlms_cosem.protocol import enumerations, cosem, dlms_data, time
+from dlms_cosem import cosem, time, dlms_data
 
 
 @attr.s(auto_attribs=True)
@@ -130,10 +130,4 @@ class EntryDescriptor:
         pass
 
     def to_bytes(self) -> bytes:
-        out = bytearray()
-        out.append(self.ACCESS_DESCRIPTOR)
-        out.extend(self.from_entry.to_bytes(4, "big"))
-        out.extend(self.to_entry.to_bytes(4, "big"))
-        out.extend(self.from_selected_value.to_bytes(2, "big"))
-        out.extend(self.to_selected_value.to_bytes(2, "big"))
-        return bytes(out)
+        raise NotImplementedError()

@@ -1,7 +1,6 @@
-import pytest
 from dateutil import parser
 
-from dlms_cosem.protocol import cosem, enumerations
+from dlms_cosem import cosem, enumerations
 from dlms_cosem.protocol.xdlms import GetRequestFactory, selective_access
 from dlms_cosem.protocol.xdlms.selective_access import RangeDescriptor
 

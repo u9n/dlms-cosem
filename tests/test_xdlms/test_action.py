@@ -1,6 +1,7 @@
 import pytest
 
-from dlms_cosem.protocol import xdlms, cosem, enumerations
+from dlms_cosem.protocol import xdlms
+from dlms_cosem import cosem, enumerations
 
 
 class TestActionRequestNormal:

@@ -1,7 +1,7 @@
 import pytest
 
-from dlms_cosem.protocol import enumerations
-from dlms_cosem.protocol.cosem import CosemAttribute, Obis
+from dlms_cosem import enumerations
+from dlms_cosem.cosem import CosemAttribute, Obis
 from dlms_cosem.protocol.xdlms import GetResponseNormal, GetRequestNormal
 from dlms_cosem.protocol.xdlms.get import (
     InvokeIdAndPriority,
@@ -13,7 +13,7 @@ from dlms_cosem.protocol.xdlms.get import (
     GetResponseLastBlockWithError,
     GetResponseFactory,
 )
-from dlms_cosem.protocol.dlms_data import DoubleLongUnsignedData
+from dlms_cosem.dlms_data import DoubleLongUnsignedData
 
 
 class TestGetRequestNormal:

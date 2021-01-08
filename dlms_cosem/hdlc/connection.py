@@ -2,15 +2,16 @@ import logging
 
 import attr
 
-from dlms_cosem.protocol.hdlc import address, exceptions, frames
-from dlms_cosem.protocol.hdlc.state import (
+from dlms_cosem.hdlc import exceptions, frames
+from dlms_cosem.hdlc import address
+from dlms_cosem.hdlc.state import (
     AWAITING_CONNECTION,
     AWAITING_DISCONNECT,
     AWAITING_RESPONSE,
     NEED_DATA,
     HdlcConnectionState,
 )
-from dlms_cosem.protocol.hdlc.exceptions import LocalProtocolError
+from dlms_cosem.hdlc.exceptions import LocalProtocolError
 
 
 LOG = logging.getLogger(__name__)
@@ -179,7 +180,7 @@ class HdlcConnection:
         """
         try:
             frame_end = (
-                self.buffer.index(frames.HDLC_FLAG, self.buffer_search_position) + 1
+                    self.buffer.index(frames.HDLC_FLAG, self.buffer_search_position) + 1
             )
         except ValueError:
             # .index raises ValueError on not finding subsection

@@ -3,8 +3,8 @@ from typing import *
 
 import attr
 
-from dlms_cosem.protocol import enumerations, xdlms
-from dlms_cosem.protocol.ber import BER
+from dlms_cosem import enumerations
+from dlms_cosem.ber import BER
 
 
 class AbstractAcseApdu(abc.ABC):

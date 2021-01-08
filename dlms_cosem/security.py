@@ -1,8 +1,7 @@
 from cryptography.hazmat.primitives.keywrap import aes_key_wrap, aes_key_unwrap
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from typing import *
 import attr
-from dlms_cosem.protocol.exceptions import CipheringError
+from dlms_cosem.exceptions import CipheringError
 
 """
 Security Suites in DLMS/COSEM define what cryptographic algorithms that are

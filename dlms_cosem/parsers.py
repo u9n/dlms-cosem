@@ -2,9 +2,9 @@ import attr
 from datetime import timedelta, datetime
 from typing import *
 
-from dlms_cosem.protocol import a_xdr, enumerations
-from dlms_cosem.protocol.cosem import CosemAttribute
-from dlms_cosem.protocol.time import datetime_from_bytes
+from dlms_cosem import enumerations, a_xdr
+from dlms_cosem.cosem import CosemAttribute
+from dlms_cosem.time import datetime_from_bytes
 
 
 @attr.s(auto_attribs=True)

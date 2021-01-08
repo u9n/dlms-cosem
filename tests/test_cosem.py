@@ -1,6 +1,4 @@
-import pytest
-
-from dlms_cosem.protocol import cosem
+from dlms_cosem import cosem
 
 
 class TestObis:

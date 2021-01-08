@@ -2,7 +2,7 @@ import attr
 from typing import *
 
 from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
-from dlms_cosem.protocol import cosem, enumerations
+from dlms_cosem import cosem, enumerations
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 
 

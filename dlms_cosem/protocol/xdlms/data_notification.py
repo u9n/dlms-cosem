@@ -2,14 +2,14 @@ from typing import *
 
 import attr
 
-from dlms_cosem.protocol.a_xdr import (
+from dlms_cosem.a_xdr import (
     Attribute,
     AXdrDecoder,
     DlmsDataToPythonConverter,
     EncodingConf,
     Sequence,
 )
-from dlms_cosem.protocol.dlms_data import BaseDlmsData, DateTimeData
+from dlms_cosem.dlms_data import BaseDlmsData, DateTimeData
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 
 

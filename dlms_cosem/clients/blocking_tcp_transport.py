@@ -14,6 +14,7 @@ class BlockingTcpTransport:
     port: int
     client_logical_address: int
     server_logical_address: int
+    timeout: int = attr.ib(default=5)
     tcp_socket: Optional[socket.socket] = attr.ib(init=False, default=None)
 
     @property
@@ -36,10 +37,9 @@ class BlockingTcpTransport:
 
     def connect(self):
         """Create a new socket and set it on the transport"""
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.tcp_socket = sock
-        self.tcp_socket.connect(self.address)
-        LOG.info(f"Connected to ()")
+
+        self.tcp_socket = socket.create_connection(address=self.address, timeout=self.timeout)
+        LOG.info(f"Connected to {self.address}")
 
     def disconnect(self):
         """Close socket and remove it from the transport"""

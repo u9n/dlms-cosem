@@ -2,7 +2,6 @@ from typing import *
 
 import attr
 
-from dlms_cosem.protocol.ber import BER
 
 # TODO: when using ciphered apdus we will get other apdus. (33 64) global or dedicated cipered iniitate requests
 

@@ -1,6 +1,7 @@
 import attr
 from typing import *
-from dlms_cosem.protocol import ber
+from dlms_cosem import ber
+
 
 @attr.s(auto_attribs=True)
 class UserInformation:

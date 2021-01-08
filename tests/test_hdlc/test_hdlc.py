@@ -1,10 +1,8 @@
 import pytest
 
-from dlms_cosem.protocol.hdlc import (
-    frames,
-    fields,
-    address,
-)
+from dlms_cosem.hdlc import (
+    frames, )
+from dlms_cosem.hdlc import address, fields
 
 
 def test_hdlc_frame_format_field_from_bytes():

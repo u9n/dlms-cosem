@@ -1,4 +1,4 @@
-from dlms_cosem.protocol import a_xdr
+from dlms_cosem import a_xdr
 
 
 def parse_as_dlms_data(data: bytes):

@@ -1,7 +1,8 @@
 import pytest
 
-from dlms_cosem.protocol import acse, xdlms, cosem, enumerations, dlms_data
-from dlms_cosem.protocol.connection import DlmsConnection
+from dlms_cosem.protocol import acse, xdlms
+from dlms_cosem import cosem, enumerations
+from dlms_cosem.connection import DlmsConnection
 
 
 @pytest.fixture()
@@ -90,12 +91,11 @@ def aarq():
 
 @pytest.fixture()
 def aare():
-    from dlms_cosem.protocol import acse, xdlms, cosem, enumerations
+    from dlms_cosem.protocol import acse
+    from dlms_cosem import enumerations
     from dlms_cosem.protocol.xdlms import (
         InitiateResponseApdu,
-        Conformance,
-        InitiateRequestApdu,
-    )
+        Conformance, )
 
     return acse.ApplicationAssociationResponseApdu(
         result=enumerations.AssociationResult.ACCEPTED,
@@ -185,10 +185,10 @@ def exception_response() -> xdlms.ExceptionResponseApdu:
 def connection_with_hls(system_title, global_encryption_key, global_authentication_key) -> DlmsConnection:
 
     return DlmsConnection(client_system_title=system_title,
-                authentication_method=enumerations.AuthenticationMechanism.HLS_GMAC,
-                global_encryption_key=global_encryption_key,
-                global_authentication_key=global_authentication_key,
-                security_suite=0)
+                          authentication_method=enumerations.AuthenticationMechanism.HLS_GMAC,
+                          global_encryption_key=global_encryption_key,
+                          global_authentication_key=global_authentication_key,
+                          security_suite=0)
 
 
 

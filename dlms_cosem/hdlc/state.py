@@ -2,8 +2,8 @@ import logging
 
 import attr
 
-from dlms_cosem.protocol.hdlc import frames
-from dlms_cosem.protocol.hdlc.exceptions import LocalProtocolError
+from dlms_cosem.hdlc import frames
+from dlms_cosem.hdlc.exceptions import LocalProtocolError
 
 
 LOG = logging.getLogger(__name__)

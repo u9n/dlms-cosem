@@ -5,9 +5,9 @@ from asn1crypto.core import Choice, Integer
 
 from dlms_cosem.protocol.acse import base as acse_base
 from dlms_cosem.protocol.acse.user_information import UserInformation
-from dlms_cosem.protocol import enumerations
+from dlms_cosem import enumerations
 from dlms_cosem.protocol.acse.aarq import aarq_should_set_authenticated
-from dlms_cosem.protocol.ber import BER
+from dlms_cosem.ber import BER
 
 
 @attr.s(auto_attribs=True)

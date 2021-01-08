@@ -3,9 +3,9 @@ from enum import IntEnum
 import attr
 from typing import *
 
-from dlms_cosem.protocol.a_xdr import EncodingConf, Choice, Attribute, AXdrDecoder
+from dlms_cosem.a_xdr import EncodingConf, Choice, Attribute, AXdrDecoder
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
-from dlms_cosem.protocol import enumerations
+from dlms_cosem import enumerations
 
 
 class ErrorFactory:

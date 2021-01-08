@@ -106,44 +106,33 @@ using keys of the correct length.
 
 ```python3
 from dlms_cosem.clients.dlms_client import DlmsClient
-from dlms_cosem.protocol import cosem, enumerations
+from dlms_cosem import cosem, enumerations
 
 usb_port: str = "/dev/tty.usbserial-A704H991"
 
 # public client
-dlms_client = DlmsClient.with_serial_hdlc_transport(
-    serial_port=usb_port,
-    server_logical_address=1,
-    server_physical_address=17,
-    client_logical_address=16,
-)
+dlms_client = DlmsClient.with_serial_hdlc_transport(serial_port=usb_port,
+                                                    server_logical_address=1,
+                                                    server_physical_address=17,
+                                                    client_logical_address=16, )
 
 # Send HDLC connection and send an ApplicationAssociationRequest (AARQ)
 dlms_client.associate()
 
 # read an invocation counter
 data: bytes = dlms_client.get(
-        cosem.CosemAttribute(
-            interface=enumerations.CosemInterface.DATA,
-            instance=cosem.Obis(0, 0, 0x2B, 1, 0),
-            attribute=2,
-        )
-    )
+    cosem.CosemAttribute(interface=enumerations.CosemInterface.DATA,
+                         instance=cosem.Obis(0, 0, 0x2B, 1, 0), attribute=2, ))
 
 # Release the association by sending a ReleaseRequest and then closing the HDLC connection
 dlms_client.release_association()
-
 
 # alternatively use the contextmanager .session() to handle the association and 
 # connection automatically.
 with dlms_client.session() as client:
     data: bytes = client.get(
-        cosem.CosemAttribute(
-            interface=enumerations.CosemInterface.DATA,
-            instance=cosem.Obis(0, 0, 0x2B, 1, 0),
-            attribute=2,
-        )
-    )
+        cosem.CosemAttribute(interface=enumerations.CosemInterface.DATA,
+                             instance=cosem.Obis(0, 0, 0x2B, 1, 0), attribute=2, ))
 
 ```
 

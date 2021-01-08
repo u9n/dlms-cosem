@@ -2,7 +2,7 @@ import datetime
 import abc
 from typing import *
 import attr
-from dlms_cosem.protocol import time
+from dlms_cosem import time
 
 VARIABLE_LENGTH = -1
 

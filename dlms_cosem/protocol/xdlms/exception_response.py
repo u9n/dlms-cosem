@@ -3,7 +3,7 @@ from enum import IntEnum
 import attr
 from typing import *
 
-from dlms_cosem.protocol import enumerations
+from dlms_cosem import enumerations
 
 
 @attr.s(auto_attribs=True)

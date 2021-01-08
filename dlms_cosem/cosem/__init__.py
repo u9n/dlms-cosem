@@ -2,8 +2,8 @@ from typing import *
 
 import attr
 
-from dlms_cosem.protocol.cosem.obis import Obis
-from dlms_cosem.protocol import enumerations
+from dlms_cosem.cosem.obis import Obis
+from dlms_cosem import enumerations
 
 
 @attr.s(auto_attribs=True)

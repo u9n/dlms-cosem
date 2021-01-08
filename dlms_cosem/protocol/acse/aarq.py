@@ -2,11 +2,12 @@ from typing import *
 
 import attr
 
-from dlms_cosem.protocol.ber import BER
+from dlms_cosem.ber import BER
 
 from dlms_cosem.protocol.acse import base as acse_base
 from dlms_cosem.protocol.acse.user_information import UserInformation
-from dlms_cosem.protocol import xdlms, enumerations
+from dlms_cosem.protocol import xdlms
+from dlms_cosem import enumerations
 
 
 def user_information_holds_initiate_request(

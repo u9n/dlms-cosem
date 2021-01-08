@@ -2,7 +2,8 @@ import abc
 
 import attr
 
-from dlms_cosem.protocol.hdlc import exceptions as hdlc_exceptions, validators
+from dlms_cosem.hdlc import exceptions as hdlc_exceptions
+from dlms_cosem.hdlc import validators
 
 
 class _AbstractHdlcControlField(abc.ABC):

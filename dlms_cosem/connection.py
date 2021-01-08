@@ -3,10 +3,9 @@ from typing import *
 import attr
 
 from dlms_cosem.protocol.xdlms.conformance import Conformance
-from dlms_cosem.protocol import acse, xdlms, exceptions, security, cosem, dlms_data, \
+from dlms_cosem.protocol import acse, xdlms
+from dlms_cosem import enumerations as enums, exceptions, security, state as dlms_state, \
     utils
-from dlms_cosem.protocol import enumerations as enums
-from dlms_cosem.protocol import state as dlms_state
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 import logging
 import os

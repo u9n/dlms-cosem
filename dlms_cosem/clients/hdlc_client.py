@@ -3,14 +3,9 @@ import logging
 import attr
 import serial
 
-from dlms_cosem.protocol.hdlc import (
-    address,
-    state,
-    connection,
-    frames,
-    exceptions as hdlc_exception,
-)
-
+from dlms_cosem.hdlc import (connection,
+    frames, )
+from dlms_cosem.hdlc import state, address
 
 LOG = logging.getLogger(__name__)
 

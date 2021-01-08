@@ -4,9 +4,10 @@ from typing_extensions import Protocol  # type: ignore
 from dlms_cosem.clients.hdlc_client import SerialHdlcClient
 
 from dlms_cosem.clients.blocking_tcp_transport import BlockingTcpTransport
-from dlms_cosem.protocol.connection import DlmsConnection
-from dlms_cosem.protocol import xdlms, cosem, exceptions, enumerations, dlms_data, utils
-from dlms_cosem.protocol import acse, state
+from dlms_cosem.connection import DlmsConnection
+from dlms_cosem.protocol import xdlms
+from dlms_cosem import cosem, enumerations, exceptions, state, utils, dlms_data
+from dlms_cosem.protocol import acse
 import logging
 import contextlib
 
@@ -285,8 +286,8 @@ class DlmsClient:
 
     def should_send_hls_reply(self) -> bool:
         return (
-            self.dlms_connection.state.current_state
-            == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
+                self.dlms_connection.state.current_state
+                == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
         )
 
     def send_hls_reply(self) -> xdlms.ActionRequestNormal:

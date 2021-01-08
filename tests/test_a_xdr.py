@@ -1,9 +1,7 @@
 from functools import partial
 
-import pytest
-
-from dlms_cosem.protocol import enumerations as enums
-from dlms_cosem.protocol.a_xdr import (
+from dlms_cosem import enumerations as enums
+from dlms_cosem.a_xdr import (
     Attribute,
     AXdrDecoder,
     Choice,
@@ -11,7 +9,7 @@ from dlms_cosem.protocol.a_xdr import (
     Sequence,
     get_axdr_length,
 )
-from dlms_cosem.protocol.connection import XDlmsApduFactory
+from dlms_cosem.connection import XDlmsApduFactory
 from dlms_cosem.protocol.xdlms.get import GetResponseWithBlock
 
 get_data_access_result_from_bytes = partial(

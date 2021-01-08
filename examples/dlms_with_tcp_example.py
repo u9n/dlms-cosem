@@ -5,9 +5,8 @@ from pprint import pprint
 from dateutil import parser as dateparser
 from time import sleep
 from dlms_cosem.clients.dlms_client import DlmsClient
-from dlms_cosem.protocol import a_xdr, cosem, time
-from dlms_cosem.protocol.acse import enumerations
-from dlms_cosem.protocol.parsers import ProfileGenericBufferParser
+from dlms_cosem import cosem, enumerations, a_xdr
+from dlms_cosem.parsers import ProfileGenericBufferParser
 from dlms_cosem.protocol.xdlms import selective_access
 from dlms_cosem.protocol.xdlms.conformance import Conformance
 from dlms_cosem.protocol.xdlms.selective_access import RangeDescriptor

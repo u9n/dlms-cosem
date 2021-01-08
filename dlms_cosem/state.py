@@ -2,7 +2,7 @@ import logging
 
 import attr
 
-from dlms_cosem.protocol.exceptions import LocalDlmsProtocolError
+from dlms_cosem.exceptions import LocalDlmsProtocolError
 from dlms_cosem.protocol import acse, xdlms
 
 LOG = logging.getLogger(__name__)

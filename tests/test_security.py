@@ -1,8 +1,7 @@
-import pytest
 from cryptography.hazmat.primitives.ciphers import algorithms, modes
 from cryptography.hazmat.primitives.ciphers.base import Cipher
 
-from dlms_cosem.protocol.security import encrypt, decrypt, SecurityControlField, gmac
+from dlms_cosem.security import encrypt, decrypt, SecurityControlField, gmac
 
 
 def test_encrypt():

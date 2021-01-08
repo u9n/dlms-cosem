@@ -1,23 +1,15 @@
-import os
-
 import pytest
 
-from dlms_cosem.protocol.connection import (
+from dlms_cosem.connection import (
     DlmsConnection,
     XDlmsApduFactory,
     make_client_to_server_challenge,
 )
 from dlms_cosem.protocol import (
     acse,
-    xdlms,
-    state,
-    enumerations,
-    exceptions,
-    cosem,
-    dlms_data,
-    security,
-)
-from dlms_cosem.protocol.exceptions import LocalDlmsProtocolError
+    xdlms, )
+from dlms_cosem import enumerations, exceptions, security, state
+from dlms_cosem.exceptions import LocalDlmsProtocolError
 from dlms_cosem.protocol.xdlms import Conformance
 
 
@@ -139,8 +131,8 @@ def test_hls_is_started_automatically(
     connection_with_hls.receive_data(ciphered_hls_aare.to_bytes())
     connection_with_hls.next_event()
     assert (
-        connection_with_hls.state.current_state
-        == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
+            connection_with_hls.state.current_state
+            == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
     )
 
 

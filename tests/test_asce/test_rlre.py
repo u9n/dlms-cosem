@@ -1,6 +1,7 @@
 import pytest
 
-from dlms_cosem.protocol import enumerations, xdlms
+from dlms_cosem.protocol import xdlms
+from dlms_cosem import enumerations
 from dlms_cosem.protocol.acse import ReleaseResponseApdu
 
 
