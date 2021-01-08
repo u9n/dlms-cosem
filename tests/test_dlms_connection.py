@@ -18,8 +18,7 @@ from dlms_cosem.protocol import (
     security,
 )
 from dlms_cosem.protocol.exceptions import LocalDlmsProtocolError
-from dlms_cosem.protocol.xdlms import Conformance, ActionResponse
-from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
+from dlms_cosem.protocol.xdlms import Conformance
 
 
 def test_conformance_exists_on_simple_init():
@@ -150,8 +149,8 @@ def test_hls_fails(connection_with_hls: DlmsConnection):
     connection_with_hls.state.current_state = state.AWAITING_HLS_CLIENT_CHALLENGE_RESULT
     connection_with_hls.meter_system_title = b"12345678"
     connection_with_hls.meter_invocation_counter = 1
-    failing_action_response = xdlms.ActionResponse(
-        result=enumerations.ActionResultStatus.OTHER_REASON, result_data=None
+    failing_action_response = xdlms.ActionResponseNormal(
+        status=enumerations.ActionResultStatus.OTHER_REASON
     )
     ciphered = security.encrypt(
         security_control=connection_with_hls.security_control,
@@ -170,6 +169,7 @@ def test_hls_fails(connection_with_hls: DlmsConnection):
     connection_with_hls.receive_data(ciphered_action_response.to_bytes())
     connection_with_hls.next_event()
     assert connection_with_hls.state.current_state == state.NO_ASSOCIATION
+
 
 def test_rejection_resets_connection_state(
     connection_with_hls: DlmsConnection,

@@ -14,7 +14,7 @@ class TestDecodeAARE:
         )
         aare = acse.ApplicationAssociationResponseApdu.from_bytes(data)
         assert not aare.ciphered
-        assert aare.status == enumerations.AssociationResult.ACCEPTED
+        assert aare.result == enumerations.AssociationResult.ACCEPTED
         assert (
             aare.result_source_diagnostics
             == enumerations.AcseServiceUserDiagnostics.NULL
@@ -27,7 +27,7 @@ class TestDecodeAARE:
         )
         aare = acse.ApplicationAssociationResponseApdu.from_bytes(data)
         assert not aare.ciphered
-        assert aare.status == enumerations.AssociationResult.REJECTED_PERMANENT
+        assert aare.result == enumerations.AssociationResult.REJECTED_PERMANENT
         assert (
             aare.result_source_diagnostics
             == enumerations.AcseServiceUserDiagnostics.APPLICATION_CONTEXT_NAME_NOT_SUPPORTED
@@ -40,7 +40,7 @@ class TestDecodeAARE:
         )
         aare = acse.ApplicationAssociationResponseApdu.from_bytes(data)
         assert not aare.ciphered
-        assert aare.status == enumerations.AssociationResult.REJECTED_PERMANENT
+        assert aare.result == enumerations.AssociationResult.REJECTED_PERMANENT
         assert (
             aare.result_source_diagnostics
             == enumerations.AcseServiceUserDiagnostics.NO_REASON_GIVEN
@@ -55,7 +55,7 @@ class TestDecodeAARE:
         )
         aare = acse.ApplicationAssociationResponseApdu.from_bytes(data)
         assert not aare.ciphered
-        assert aare.status == enumerations.AssociationResult.ACCEPTED
+        assert aare.result == enumerations.AssociationResult.ACCEPTED
         assert (
             aare.result_source_diagnostics
             == enumerations.AcseServiceUserDiagnostics.AUTHENTICATION_REQUIRED
@@ -71,7 +71,7 @@ class TestDecodeAARE:
 
         aare = acse.ApplicationAssociationResponseApdu.from_bytes(data)
 
-        assert aare.status == enumerations.AssociationResult.ACCEPTED
+        assert aare.result == enumerations.AssociationResult.ACCEPTED
         assert (
             aare.result_source_diagnostics
             == enumerations.AcseServiceUserDiagnostics.NULL
