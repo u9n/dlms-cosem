@@ -5,8 +5,7 @@ from dlms_cosem.clients.hdlc_client import SerialHdlcClient
 
 from dlms_cosem.clients.blocking_tcp_transport import BlockingTcpTransport
 from dlms_cosem.protocol.connection import DlmsConnection
-from dlms_cosem.protocol import xdlms, cosem, exceptions, enumerations, dlms_data, \
-    a_xdr, utils
+from dlms_cosem.protocol import xdlms, cosem, exceptions, enumerations, dlms_data, utils
 from dlms_cosem.protocol import acse, state
 import logging
 import contextlib
@@ -219,8 +218,9 @@ class DlmsClient:
     def set(self):
         pass
 
-    def action(self):
-        pass
+    def action(self, method: cosem.CosemMethod, data: bytes):
+        self.send(xdlms.ActionRequestNormal(cosem_method=method, data=data))
+        return self.next_event()
 
     def associate(
         self,
@@ -228,6 +228,8 @@ class DlmsClient:
     ) -> acse.ApplicationAssociationResponseApdu:
 
         self.io_interface.connect()
+
+        # the aarq can be overridden or the standard one from the connection is used.
         aarq = association_request or self.dlms_connection.get_aarq()
 
         try:
@@ -258,15 +260,18 @@ class DlmsClient:
                 )
 
             if self.should_send_hls_reply():
+                hls_response = self.send_hls_reply()
 
-                self.send(self.get_hls_reply())
-                action_response = self.next_event()
-                hls_data = utils.parse_as_dlms_data(action_response.data)
-                print(hls_data)
+                hls_data = utils.parse_as_dlms_data(hls_response.data)
 
-                if action_response.status != enumerations.ActionResultStatus.SUCCESS:
+                if not isinstance(hls_response, xdlms.ActionResponseNormalWithData):
+                    raise exceptions.LocalDlmsProtocolError(
+                        "Received an incorrect ActionResponse to HLS"
+                    )
+
+                if hls_response.status != enumerations.ActionResultStatus.SUCCESS:
                     raise HLSError(
-                        f"HLS authentication failed: {action_response.status!r}"
+                        f"HLS authentication failed: {hls_response.status!r}"
                     )
 
                 if not self.dlms_connection.hls_response_valid(hls_data):
@@ -284,9 +289,9 @@ class DlmsClient:
             == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
         )
 
-    def get_hls_reply(self) -> xdlms.ActionRequestNormal:
-        return xdlms.ActionRequestNormal(
-            cosem_method=cosem.CosemMethod(
+    def send_hls_reply(self) -> xdlms.ActionRequestNormal:
+        return self.action(
+            method=cosem.CosemMethod(
                 enumerations.CosemInterface.ASSOCIATION_LN,
                 cosem.Obis(0, 0, 40, 0, 0),
                 1,
