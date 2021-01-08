@@ -8,6 +8,7 @@ from dlms_cosem.protocol.xdlms.initiate_response import (
     InitiateResponseApdu,
     GlobalCipherInitiateResponse,
 )
+from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
 from dlms_cosem.protocol.xdlms.confirmed_service_error import ConfirmedServiceErrorApdu
 from dlms_cosem.protocol.xdlms.get import (
     GetRequestNormal,
@@ -56,4 +57,5 @@ __all__ = [
     "ActionResponseFactory",
     "ActionRequestNormal",
     "ActionRequestFactory",
+    "InvokeIdAndPriority",
 ]
