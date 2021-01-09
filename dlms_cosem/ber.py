@@ -1,5 +1,6 @@
 from typing import *
 
+
 class BER:
 
     """
@@ -13,7 +14,7 @@ class BER:
         if isinstance(tag, int):
             # Simplification since we now just use ints as tags when they are single
             # bytes.
-            _tag_bytes = tag.to_bytes(1, 'big')
+            _tag_bytes = tag.to_bytes(1, "big")
         else:
             _tag_bytes = tag
 
@@ -22,9 +23,10 @@ class BER:
 
         if not isinstance(data, (bytes, bytearray)):
             raise ValueError(
-                f"BER encoding requires bytes or bytearray, got {data!r} of {type(data)}")
+                f"BER encoding requires bytes or bytearray, got {data!r} of {type(data)}"
+            )
 
-        length = len(data).to_bytes(1, 'big')
+        length = len(data).to_bytes(1, "big")
         if length == 0:
             return b""
 
@@ -33,7 +35,7 @@ class BER:
     @staticmethod
     def decode(_bytes: bytes, tag_length: int = 1) -> Tuple[bytes, int, bytes]:
         input = bytearray(_bytes)
-        tag = b"".join([input.pop(0).to_bytes(1, 'big') for _ in range(tag_length)])
+        tag = b"".join([input.pop(0).to_bytes(1, "big") for _ in range(tag_length)])
         length = input.pop(0)
         data = input
         if len(data) != length:

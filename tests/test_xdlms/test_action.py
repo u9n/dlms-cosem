@@ -1,7 +1,7 @@
 import pytest
 
-from dlms_cosem.protocol import xdlms
 from dlms_cosem import cosem, enumerations
+from dlms_cosem.protocol import xdlms
 
 
 class TestActionRequestNormal:
@@ -175,7 +175,6 @@ class TestActionResponseWithError:
 
 
 class TestActionResponseFactory:
-
     def test_parse_action_response_normal(self):
         data = b"\xc7\x01\xc0\x00\x00"
         action = xdlms.ActionResponseFactory.from_bytes(data)

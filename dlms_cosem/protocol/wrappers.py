@@ -75,18 +75,18 @@ class WrapperHeader:
 class WrapperProtocolDataUnit:
     """
 
-       When sending DLMS data over UDP or TCP you need to include an additional
-       wrapper to:
+    When sending DLMS data over UDP or TCP you need to include an additional
+    wrapper to:
 
-       * Provide additional addressing functionality on top of UDP/TCP port. (Since
-         a physical device can host several logical devices)
-       * Describe the length of the data sent. Especially for TCP where the data
-         can be split up in several packets.
+    * Provide additional addressing functionality on top of UDP/TCP port. (Since
+      a physical device can host several logical devices)
+    * Describe the length of the data sent. Especially for TCP where the data
+      can be split up in several packets.
 
-       :param data: The bytes of the xDLMS APDU transported.
-       :param WrapperHeader wrapper_header: Wrapper header to declare additional
-        information on how to handle the data sent.
-       """
+    :param data: The bytes of the xDLMS APDU transported.
+    :param WrapperHeader wrapper_header: Wrapper header to declare additional
+     information on how to handle the data sent.
+    """
 
     data: bytes
     wrapper_header: WrapperHeader

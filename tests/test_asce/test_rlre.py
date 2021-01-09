@@ -1,7 +1,7 @@
 import pytest
 
-from dlms_cosem.protocol import xdlms
 from dlms_cosem import enumerations
+from dlms_cosem.protocol import xdlms
 from dlms_cosem.protocol.acse import ReleaseResponseApdu
 
 
@@ -13,11 +13,10 @@ class TestDecodeRLRE:
         assert rlre.user_information is None
 
     def test_with_initiate_response(self):
-        data = b'c\x16\x80\x01\x00\xbe\x11\x04\x0f\x08\x01\x00\x06_\x1f\x04\x00\x00\x1e\x1d\x04\xc8\x00\x07'
+        data = b"c\x16\x80\x01\x00\xbe\x11\x04\x0f\x08\x01\x00\x06_\x1f\x04\x00\x00\x1e\x1d\x04\xc8\x00\x07"
         rlre = ReleaseResponseApdu.from_bytes(data)
         assert rlre.reason == enumerations.ReleaseResponseReason.NORMAL
-        assert isinstance(rlre.user_information.content,
-                          xdlms.InitiateResponseApdu)
+        assert isinstance(rlre.user_information.content, xdlms.InitiateResponseApdu)
 
     def test_with_ciphered_initiate_response(self):
         data = bytes.fromhex(
@@ -25,4 +24,6 @@ class TestDecodeRLRE:
         )
         rlre = ReleaseResponseApdu.from_bytes(data)
         assert rlre.reason == enumerations.ReleaseResponseReason.NORMAL
-        assert isinstance(rlre.user_information.content, xdlms.GlobalCipherInitiateResponse)
+        assert isinstance(
+            rlre.user_information.content, xdlms.GlobalCipherInitiateResponse
+        )

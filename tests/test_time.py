@@ -1,9 +1,10 @@
-import pytest
 import datetime
+
+import pytest
 from dateutil.parser import parse as dt_parse
 
-
 from dlms_cosem.time import datetime_from_bytes, datetime_to_bytes
+
 
 @pytest.mark.parametrize(
     "bytes_representation, dt",

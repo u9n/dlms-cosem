@@ -1,10 +1,11 @@
 import pytest
-from dlms_cosem.protocol import acse
+
 from dlms_cosem import enumerations
+from dlms_cosem.protocol import acse
 
 # Example encodings from DLMS Green book v10 page:
 from dlms_cosem.protocol.acse import UserInformation
-from dlms_cosem.protocol.xdlms import InitiateResponseApdu, Conformance
+from dlms_cosem.protocol.xdlms import Conformance, InitiateResponseApdu
 from dlms_cosem.protocol.xdlms.confirmed_service_error import ConfirmedServiceErrorApdu
 
 
@@ -17,8 +18,8 @@ class TestDecodeAARE:
         assert not aare.ciphered
         assert aare.result == enumerations.AssociationResult.ACCEPTED
         assert (
-                aare.result_source_diagnostics
-                == enumerations.AcseServiceUserDiagnostics.NULL
+            aare.result_source_diagnostics
+            == enumerations.AcseServiceUserDiagnostics.NULL
         )
         assert aare.user_information is not None
 
@@ -30,8 +31,8 @@ class TestDecodeAARE:
         assert not aare.ciphered
         assert aare.result == enumerations.AssociationResult.REJECTED_PERMANENT
         assert (
-                aare.result_source_diagnostics
-                == enumerations.AcseServiceUserDiagnostics.APPLICATION_CONTEXT_NAME_NOT_SUPPORTED
+            aare.result_source_diagnostics
+            == enumerations.AcseServiceUserDiagnostics.APPLICATION_CONTEXT_NAME_NOT_SUPPORTED
         )
         assert isinstance(aare.user_information.content, InitiateResponseApdu)
 
@@ -43,12 +44,15 @@ class TestDecodeAARE:
         assert not aare.ciphered
         assert aare.result == enumerations.AssociationResult.REJECTED_PERMANENT
         assert (
-                aare.result_source_diagnostics
-                == enumerations.AcseServiceUserDiagnostics.NO_REASON_GIVEN
+            aare.result_source_diagnostics
+            == enumerations.AcseServiceUserDiagnostics.NO_REASON_GIVEN
         )
         print(aare.user_information)
         assert aare.user_information.content is not None
-        assert aare.user_information.content.error == enumerations.InitiateError.DLMS_VERSION_TOO_LOW
+        assert (
+            aare.user_information.content.error
+            == enumerations.InitiateError.DLMS_VERSION_TOO_LOW
+        )
 
     def test_no_ciher_hls_ok(self):
         data = bytes.fromhex(
@@ -58,8 +62,8 @@ class TestDecodeAARE:
         assert not aare.ciphered
         assert aare.result == enumerations.AssociationResult.ACCEPTED
         assert (
-                aare.result_source_diagnostics
-                == enumerations.AcseServiceUserDiagnostics.AUTHENTICATION_REQUIRED
+            aare.result_source_diagnostics
+            == enumerations.AcseServiceUserDiagnostics.AUTHENTICATION_REQUIRED
         )
         assert aare.authentication_value is not None
         assert aare.authentication == enumerations.AuthenticationMechanism.HLS_GMAC
@@ -74,8 +78,8 @@ class TestDecodeAARE:
 
         assert aare.result == enumerations.AssociationResult.ACCEPTED
         assert (
-                aare.result_source_diagnostics
-                == enumerations.AcseServiceUserDiagnostics.NULL
+            aare.result_source_diagnostics
+            == enumerations.AcseServiceUserDiagnostics.NULL
         )
         assert not aare.ciphered
         assert not aare.authentication

@@ -2,7 +2,6 @@ import abc
 
 
 class AbstractXDlmsApdu(abc.ABC):
-
     @classmethod
     @abc.abstractmethod
     def from_bytes(cls, source_bytes: bytes):

@@ -1,7 +1,7 @@
 import pytest
 
-from dlms_cosem.protocol.acse import ReleaseRequestApdu
 from dlms_cosem import enumerations
+from dlms_cosem.protocol.acse import ReleaseRequestApdu
 
 
 class TestDecodeRLRQ:

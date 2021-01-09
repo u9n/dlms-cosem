@@ -3,11 +3,10 @@ from typing import *
 
 import attr
 
+from dlms_cosem import a_xdr, dlms_data, security
 from dlms_cosem.protocol import xdlms
-from dlms_cosem import a_xdr, security, dlms_data
-
-from dlms_cosem.protocol.xdlms.conformance import Conformance
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
+from dlms_cosem.protocol.xdlms.conformance import Conformance
 
 int_from_bytes = partial(int.from_bytes, byteorder="big")
 
@@ -116,7 +115,7 @@ class InitiateRequestApdu(AbstractXDlmsApdu):
         out.append(0x06)
         out.extend(b"_\x1f\x04")
         out.extend(self.proposed_conformance.to_bytes())
-        out.extend(self.client_max_receive_pdu_size.to_bytes(2, 'big'))
+        out.extend(self.client_max_receive_pdu_size.to_bytes(2, "big"))
         return bytes(out)
 
 

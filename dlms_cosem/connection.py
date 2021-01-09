@@ -1,14 +1,16 @@
+import logging
+import os
 from typing import *
 
 import attr
 
-from dlms_cosem.protocol.xdlms.conformance import Conformance
+from dlms_cosem import enumerations as enums
+from dlms_cosem import exceptions, security
+from dlms_cosem import state as dlms_state
+from dlms_cosem import utils
 from dlms_cosem.protocol import acse, xdlms
-from dlms_cosem import enumerations as enums, exceptions, security, state as dlms_state, \
-    utils
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
-import logging
-import os
+from dlms_cosem.protocol.xdlms.conformance import Conformance
 
 LOG = logging.getLogger(__name__)
 
@@ -519,8 +521,8 @@ class DlmsConnection:
                         auth_key=self.global_authentication_key,
                         cipher_text=event.user_information.content.ciphered_text,
                     )
-                    event.user_information.content = xdlms.InitiateResponseApdu.from_bytes(
-                        plain_text
+                    event.user_information.content = (
+                        xdlms.InitiateResponseApdu.from_bytes(plain_text)
                     )
 
         elif isinstance(event, xdlms.GeneralGlobalCipherApdu):

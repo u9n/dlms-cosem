@@ -1,9 +1,9 @@
+import logging
+
 from dlms_cosem.clients.serial_hdlc import SerialHdlcClient
 from dlms_cosem.protocol.acse import ApplicationAssociationRequestApdu, UserInformation
-
 from dlms_cosem.protocol.xdlms.conformance import Conformance
 from dlms_cosem.protocol.xdlms.initiate_request import InitiateRequestApdu
-import logging
 
 # set up logging so you get a bit nicer printout of what is happening.
 logging.basicConfig(
@@ -22,8 +22,6 @@ client = SerialHdlcClient(
 with client as c:
 
     aarq = ApplicationAssociationRequestApdu(
-
-
         user_information=UserInformation(
             content=InitiateRequestApdu(
                 proposed_conformance=Conformance(
@@ -51,7 +49,7 @@ with client as c:
                 response_allowed=True,
                 dedicated_key=None,
             )
-        ),
+        )
     )
 
     response = client.send(aarq.to_bytes())

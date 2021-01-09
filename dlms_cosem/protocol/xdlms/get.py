@@ -3,10 +3,9 @@ from typing import *
 
 import attr
 
-from dlms_cosem import cosem, enumerations as enums, a_xdr
-from dlms_cosem.a_xdr import (
-    Attribute,
-    AXdrDecoder, EncodingConf, )
+from dlms_cosem import a_xdr, cosem
+from dlms_cosem import enumerations as enums
+from dlms_cosem.a_xdr import Attribute, AXdrDecoder, EncodingConf
 from dlms_cosem.protocol.xdlms import selective_access
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
@@ -182,9 +181,6 @@ class GetRequestFactory:
                 f"Received an enum request type that is not valid for "
                 f"GetRequest: {request_type}"
             )
-
-
-
 
 
 @attr.s(auto_attribs=True)

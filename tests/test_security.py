@@ -1,7 +1,7 @@
 from cryptography.hazmat.primitives.ciphers import algorithms, modes
 from cryptography.hazmat.primitives.ciphers.base import Cipher
 
-from dlms_cosem.security import encrypt, decrypt, SecurityControlField, gmac
+from dlms_cosem.security import SecurityControlField, decrypt, encrypt, gmac
 
 
 def test_encrypt():
@@ -107,8 +107,7 @@ def test_gmac():
         auth_key=authentication_key,
         invocation_counter=client_invocation_counter,
         system_title=client_system_title,
-        challenge=server_to_client_challenge
-
+        challenge=server_to_client_challenge,
     )
     assert len(result) == 12
     assert result == bytes.fromhex("1A52FE7DD3E72748973C1E28")
@@ -117,8 +116,9 @@ def test_gmac():
 def test_gmac2():
     encryption_key = bytes.fromhex("000102030405060708090A0B0C0D0E0F")
     authentication_key = bytes.fromhex("D0D1D2D3D4D5D6D7D8D9DADBDCDDDEDF")
-    security_control = SecurityControlField(security_suite=0, authenticated=True,
-        encrypted=False)
+    security_control = SecurityControlField(
+        security_suite=0, authenticated=True, encrypted=False
+    )
     client_invocation_counter = int.from_bytes(bytes.fromhex("00000001"), "big")
     client_system_title = bytes.fromhex("4D4D4D0000000001")
     server_system_title = bytes.fromhex("4D4D4D0000BC614E")
@@ -131,15 +131,20 @@ def test_gmac2():
     assert iv == bytes.fromhex("4D4D4D000000000100000001")
 
     # Construct an AES-GCM Cipher object with the given key and iv
-    encryptor = Cipher(algorithms.AES(encryption_key),
-        modes.GCM(initialization_vector=iv, tag=None,
-                  min_tag_length=12), ).encryptor()
+    encryptor = Cipher(
+        algorithms.AES(encryption_key),
+        modes.GCM(initialization_vector=iv, tag=None, min_tag_length=12),
+    ).encryptor()
 
     # associated_data will be authenticated but not encrypted,
     # it must also be passed in on decryption.
-    associated_data = security_control.to_bytes() + authentication_key + server_to_client_challenge
+    associated_data = (
+        security_control.to_bytes() + authentication_key + server_to_client_challenge
+    )
 
-    assert associated_data == bytes.fromhex("10D0D1D2D3D4D5D6D7D8D9DADBDCDDDEDF503677524A323146")
+    assert associated_data == bytes.fromhex(
+        "10D0D1D2D3D4D5D6D7D8D9DADBDCDDDEDF503677524A323146"
+    )
     encryptor.authenticate_additional_data(associated_data)
 
     # Encrypt the plaintext and get the associated ciphertext.

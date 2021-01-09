@@ -2,7 +2,6 @@ from dlms_cosem import cosem
 
 
 class TestObis:
-
     def test_obis_to_dotted(self):
         obis = cosem.Obis(1, 0, 1, 8, 0, 255)
         assert obis.dotted_repr() == "1.0.1.8.0.255"
@@ -22,5 +21,3 @@ class TestObis:
     def test_obis_to_bytes(self):
         data = b"\x00\x00+\x01\x00\xff"
         assert cosem.Obis(0, 0, 43, 1, 0, 255).to_bytes() == data
-
-

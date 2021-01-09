@@ -1,7 +1,8 @@
-from setuptools import setup, find_packages, Command
-import sys
 import os
+import sys
 from shutil import rmtree
+
+from setuptools import Command, find_packages, setup
 
 # Package meta-data.
 NAME = "dlms-cosem"

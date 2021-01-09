@@ -1,6 +1,6 @@
-from dlms_cosem.protocol import xdlms
 from dlms_cosem import security
 from dlms_cosem.connection import XDlmsApduFactory
+from dlms_cosem.protocol import xdlms
 
 
 class TestInitiateRequest:

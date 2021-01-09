@@ -20,7 +20,7 @@ class _SentinelBase(type):
      next_event() and do some sort of dispatch based on type(event).
 
      Taken from h11.
-     """
+    """
 
     def __repr__(self):
         return self.__name__

@@ -1,8 +1,9 @@
-import attr
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from typing import *
 
-from dlms_cosem import enumerations, a_xdr
+import attr
+
+from dlms_cosem import a_xdr, enumerations
 from dlms_cosem.cosem import CosemAttribute
 from dlms_cosem.time import datetime_from_bytes
 

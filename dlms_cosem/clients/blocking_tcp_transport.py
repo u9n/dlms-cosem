@@ -1,8 +1,10 @@
-import attr
-from typing import *
-import socket
 import logging
-from dlms_cosem.protocol.wrappers import WrapperProtocolDataUnit, WrapperHeader
+import socket
+from typing import *
+
+import attr
+
+from dlms_cosem.protocol.wrappers import WrapperHeader, WrapperProtocolDataUnit
 
 LOG = logging.getLogger(__name__)
 
@@ -38,7 +40,9 @@ class BlockingTcpTransport:
     def connect(self):
         """Create a new socket and set it on the transport"""
 
-        self.tcp_socket = socket.create_connection(address=self.address, timeout=self.timeout)
+        self.tcp_socket = socket.create_connection(
+            address=self.address, timeout=self.timeout
+        )
         LOG.info(f"Connected to {self.address}")
 
     def disconnect(self):
@@ -59,4 +63,3 @@ class BlockingTcpTransport:
         header = WrapperHeader.from_bytes(self.tcp_socket.recv(8))
         data = self.tcp_socket.recv(header.length)
         return data
-

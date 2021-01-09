@@ -5,9 +5,7 @@ import attr
 from dlms_cosem import a_xdr
 from dlms_cosem.dlms_data import OctetStringData
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
-
 from dlms_cosem.security import SecurityControlField, decrypt
-
 
 int_from_bytes = partial(int.from_bytes, "big")
 

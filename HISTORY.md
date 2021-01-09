@@ -14,7 +14,7 @@ and this project adheres to `Semantic Versioning: https://semver.org/spec/v2.0.0
 * Support for Get service including service specific block transfer
 * Support for selective access via range descriptor
 * Support for HLS authentication using HLS-GMAC.
-* Support for GlobalCiphering 
+* Support for GlobalCiphering
 * Parsing of ProfileGeneric buffer
 
 ### Changed

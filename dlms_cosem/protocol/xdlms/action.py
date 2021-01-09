@@ -1,10 +1,10 @@
-import attr
 from typing import *
 
-from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
+import attr
+
 from dlms_cosem import cosem, enumerations
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
-
+from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
 
 # TODO:  Use same kind of setup as with GET.
 # Several classes depending on the type of Action Request/Response

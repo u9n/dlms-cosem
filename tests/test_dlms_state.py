@@ -1,9 +1,9 @@
 import pytest
 
-from dlms_cosem.protocol import acse
 from dlms_cosem import enumerations, state
-from dlms_cosem.protocol.acse import UserInformation
 from dlms_cosem.exceptions import LocalDlmsProtocolError
+from dlms_cosem.protocol import acse
+from dlms_cosem.protocol.acse import UserInformation
 from dlms_cosem.protocol.xdlms import Conformance, InitiateRequestApdu
 
 

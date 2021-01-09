@@ -2,7 +2,6 @@ from typing import *
 
 import attr
 
-
 # TODO: when using ciphered apdus we will get other apdus. (33 64) global or dedicated cipered iniitate requests
 
 
@@ -96,4 +95,3 @@ class Conformance:
         # It is a bit string so need to encode how many bits that are unused in the
         # last byte. Its none so we can just put 0x00 infront.
         return b"\x00" + out.to_bytes(3, "big")
-

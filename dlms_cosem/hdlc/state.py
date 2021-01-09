@@ -5,7 +5,6 @@ import attr
 from dlms_cosem.hdlc import frames
 from dlms_cosem.hdlc.exceptions import LocalProtocolError
 
-
 LOG = logging.getLogger(__name__)
 
 
@@ -21,7 +20,8 @@ class _SentinelBase(type):
      next_event() and do some sort of dispatch based on type(event).
 
      Taken from h11.
-     """
+    """
+
     def __repr__(self):
         return self.__name__
 
@@ -58,12 +58,9 @@ HDLC_STATE_TRANSITIONS = {
     IDLE: {
         frames.InformationFrame: AWAITING_RESPONSE,
         frames.DisconnectFrame: AWAITING_DISCONNECT,
-        frames.ReceiveReadyFrame: AWAITING_RESPONSE
+        frames.ReceiveReadyFrame: AWAITING_RESPONSE,
     },
-    AWAITING_RESPONSE: {
-        frames.InformationFrame: IDLE,
-        frames.ReceiveReadyFrame: IDLE,
-    },
+    AWAITING_RESPONSE: {frames.InformationFrame: IDLE, frames.ReceiveReadyFrame: IDLE},
     AWAITING_DISCONNECT: {frames.UnNumberedAcknowledgmentFrame: NOT_CONNECTED},
 }
 

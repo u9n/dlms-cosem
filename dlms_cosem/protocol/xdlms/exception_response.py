@@ -1,7 +1,7 @@
 from enum import IntEnum
+from typing import *
 
 import attr
-from typing import *
 
 from dlms_cosem import enumerations
 

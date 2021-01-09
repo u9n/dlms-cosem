@@ -2,18 +2,19 @@ from typing import *
 
 import attr
 
+from dlms_cosem import enumerations
 from dlms_cosem.ber import BER
-
+from dlms_cosem.protocol import xdlms
 from dlms_cosem.protocol.acse import base as acse_base
 from dlms_cosem.protocol.acse.user_information import UserInformation
-from dlms_cosem.protocol import xdlms
-from dlms_cosem import enumerations
 
 
 def user_information_holds_initiate_request(
     instance, attribute, value: UserInformation
 ):
-    if not isinstance(value.content, (xdlms.InitiateRequestApdu, xdlms.GlobalCipherInitiateRequest)):
+    if not isinstance(
+        value.content, (xdlms.InitiateRequestApdu, xdlms.GlobalCipherInitiateRequest)
+    ):
         raise ValueError(
             f"ApplicationAssociationRequestApdu.user_information should "
             f"only hold a UserInformation where .content is a "
@@ -22,7 +23,7 @@ def user_information_holds_initiate_request(
 
 
 def aarq_should_set_authenticated(
-    mechanism: Optional[enumerations.AuthenticationMechanism]
+    mechanism: Optional[enumerations.AuthenticationMechanism],
 ):
     """
     * If Lowest Level Scurity (None) is used it shall not be present.
@@ -137,10 +138,7 @@ class ApplicationAssociationRequestApdu:
         0x8B: ("mechanism_name", acse_base.MechanismName),
         0xAC: ("calling_authentication_value", acse_base.AuthenticationValue),
         0xBD: ("implementation_information", None),
-        0xBE: (
-            "user_information",
-            UserInformation,
-        ),  # Context specific, constructed 30
+        0xBE: ("user_information", UserInformation),  # Context specific, constructed 30
     }
 
     user_information: UserInformation = attr.ib(
@@ -286,9 +284,7 @@ class ApplicationAssociationRequestApdu:
         else:
             object_dict["system_title"] = None
 
-        client_public_cert = object_dict.pop(
-            "calling_ae_qualifier", None
-        )
+        client_public_cert = object_dict.pop("calling_ae_qualifier", None)
         if client_public_cert:
             # it is ber encoded universal tag ocetctring. simple handling
             object_dict["public_cert"] = client_public_cert[2:]

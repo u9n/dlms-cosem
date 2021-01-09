@@ -1,11 +1,12 @@
-import datetime
 import abc
+import datetime
 from typing import *
+
 import attr
+
 from dlms_cosem import time
 
 VARIABLE_LENGTH = -1
-
 
 
 class AbstractDlmsData(abc.ABC):
@@ -100,9 +101,7 @@ class DoubleLongData(BaseDlmsData):
 
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
-        return cls(
-            value=int.from_bytes(bytes_data, "big", signed=True)
-        )
+        return cls(value=int.from_bytes(bytes_data, "big", signed=True))
 
 
 @attr.s(auto_attribs=True)
@@ -117,7 +116,7 @@ class DoubleLongUnsignedData(BaseDlmsData):
         return cls(value=int.from_bytes(bytes_data, "big"))
 
     def value_to_bytes(self) -> bytes:
-        return self.value.to_bytes(4, 'big')
+        return self.value.to_bytes(4, "big")
 
 
 @attr.s(auto_attribs=True)
@@ -163,12 +162,10 @@ class IntegerData(BaseDlmsData):
 
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
-        return cls(
-            value=int.from_bytes(bytes_data, "big", signed=True)
-        )
+        return cls(value=int.from_bytes(bytes_data, "big", signed=True))
 
     def value_to_bytes(self) -> bytes:
-        return self.value.to_bytes(1, 'big')
+        return self.value.to_bytes(1, "big")
 
 
 @attr.s(auto_attribs=True)
@@ -180,9 +177,7 @@ class LongData(BaseDlmsData):
 
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
-        return cls(
-            value=int.from_bytes(bytes_data, "big", signed=True)
-        )
+        return cls(value=int.from_bytes(bytes_data, "big", signed=True))
 
 
 @attr.s(auto_attribs=True)
@@ -209,7 +204,7 @@ class UnsignedLongData(BaseDlmsData):
         return cls(value=int.from_bytes(bytes_data, "big"))
 
     def value_to_bytes(self) -> bytes:
-        return self.value.to_bytes(2, 'big')
+        return self.value.to_bytes(2, "big")
 
 
 @attr.s(auto_attribs=True)
@@ -235,9 +230,7 @@ class Long64Data(BaseDlmsData):
 
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
-        return cls(
-            value=int.from_bytes(bytes_data, "big", signed=True)
-        )
+        return cls(value=int.from_bytes(bytes_data, "big", signed=True))
 
 
 @attr.s(auto_attribs=True)
@@ -290,8 +283,7 @@ class Float64Data(BaseDlmsData):
 
 @attr.s(auto_attribs=True)
 class DateTimeData(BaseDlmsData):
-    """Octet string of 12 bytes
-    """
+    """Octet string of 12 bytes"""
 
     TAG = 25
     LENGTH = 12
@@ -301,7 +293,6 @@ class DateTimeData(BaseDlmsData):
         if len(bytes_data) != cls.LENGTH:
             raise ValueError(f"Datetime should be 12 bytes long, got {len(bytes_data)}")
         return cls(time.datetime_from_bytes(bytes_data))
-
 
 
 @attr.s(auto_attribs=True)

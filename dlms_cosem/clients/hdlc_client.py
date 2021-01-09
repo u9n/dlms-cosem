@@ -1,16 +1,16 @@
-from typing import Optional
 import logging
+from typing import Optional
+
 import attr
 import serial
 
-from dlms_cosem.hdlc import (connection,
-    frames, )
-from dlms_cosem.hdlc import state, address
+from dlms_cosem.hdlc import address, connection, frames, state
 
 LOG = logging.getLogger(__name__)
 
 LLC_COMMAND_HEADER = b"\xe6\xe6\x00"
 LLC_RESPONSE_HEADER = b"\xe6\xe7\x00"
+
 
 class ClientError(Exception):
     """General error in client"""
@@ -147,7 +147,8 @@ class SerialHdlcClient:
                 rr = frames.ReceiveReadyFrame(
                     destination_address=self.server_hdlc_address,
                     source_address=self.client_hdlc_address,
-                    receive_sequence_number=self.hdlc_connection.server_rsn)
+                    receive_sequence_number=self.hdlc_connection.server_rsn,
+                )
                 self.out_buffer += self.hdlc_connection.send(rr)
                 self.drain_out_buffer()
 
@@ -193,8 +194,6 @@ class SerialHdlcClient:
                     # send the next information frame.
                     continue
             break
-
-
 
     def generate_information_frame(
         self, payload: bytes, segmented: bool, final: bool

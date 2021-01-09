@@ -1,16 +1,15 @@
-import attr
-from typing import *
-from typing_extensions import Protocol  # type: ignore
-from dlms_cosem.clients.hdlc_client import SerialHdlcClient
-
-from dlms_cosem.clients.blocking_tcp_transport import BlockingTcpTransport
-from dlms_cosem.connection import DlmsConnection
-from dlms_cosem.protocol import xdlms
-from dlms_cosem import cosem, enumerations, exceptions, state, utils, dlms_data
-from dlms_cosem.protocol import acse
-import logging
 import contextlib
+import logging
+from typing import *
 
+import attr
+from typing_extensions import Protocol  # type: ignore
+
+from dlms_cosem import cosem, dlms_data, enumerations, exceptions, state, utils
+from dlms_cosem.clients.blocking_tcp_transport import BlockingTcpTransport
+from dlms_cosem.clients.hdlc_client import SerialHdlcClient
+from dlms_cosem.connection import DlmsConnection
+from dlms_cosem.protocol import acse, xdlms
 from dlms_cosem.protocol.xdlms import ConfirmedServiceErrorApdu
 from dlms_cosem.protocol.xdlms.selective_access import RangeDescriptor
 
@@ -286,8 +285,8 @@ class DlmsClient:
 
     def should_send_hls_reply(self) -> bool:
         return (
-                self.dlms_connection.state.current_state
-                == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
+            self.dlms_connection.state.current_state
+            == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
         )
 
     def send_hls_reply(self) -> xdlms.ActionRequestNormal:

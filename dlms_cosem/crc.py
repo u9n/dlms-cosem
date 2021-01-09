@@ -9,6 +9,7 @@
 from ctypes import c_ushort
 from typing import *
 
+
 class CRCCCITT:
     crc_ccitt_table: List[int] = list()
 
@@ -39,11 +40,11 @@ class CRCCCITT:
         lsb_rev = reversed_crc & 0x00FF
         lsb: int = ord(reverse_byte(lsb_rev))
         lsb ^= 0xFF
-        lsb_byte = lsb.to_bytes(1, 'big')
+        lsb_byte = lsb.to_bytes(1, "big")
         msb_rev = (reversed_crc & 0xFF00) >> 8
         msb = ord(reverse_byte(msb_rev))
         msb ^= 0xFF
-        msb_byte = msb.to_bytes(1, 'big')
+        msb_byte = msb.to_bytes(1, "big")
 
         if lsb_first:
             return b"".join([lsb_byte, msb_byte])
@@ -55,8 +56,8 @@ class CRCCCITT:
         crc_value = self.starting_value
 
         for c in input_data:
-            tmp = ((crc_value >> 8) & 0xff) ^ c
-            crc_shifted = ((crc_value << 8) & 0xff00)
+            tmp = ((crc_value >> 8) & 0xFF) ^ c
+            crc_shifted = (crc_value << 8) & 0xFF00
             crc_value = crc_shifted ^ self.crc_ccitt_table[tmp]
 
         return crc_value
@@ -85,13 +86,11 @@ def reverse_byte(byte_to_reverse):
         reversed_byte += ((byte_to_reverse & and_value) >> i) * (2 ** (7 - i))
         and_value += and_value
 
-    return (chr(reversed_byte)).encode('latin-1')
+    return (chr(reversed_byte)).encode("latin-1")
 
 
 def reverse_byte_message(msg):
-    reversed_mgs = b''
+    reversed_mgs = b""
     for char in msg:
         reversed_mgs += reverse_byte(char)
     return reversed_mgs
-
-

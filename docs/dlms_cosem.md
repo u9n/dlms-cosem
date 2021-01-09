@@ -1,5 +1,5 @@
 # About DLMS/COSEM
-    
+
 DLMS/COSEM (IEC 62056, EN13757-1) is the global standard for smart energy
 metering, control and management. It specifies an object-oriented data model,
 an application layer protocol and media-specific communication profiles.
@@ -13,10 +13,10 @@ that turns the information held by COSEM objects into messages.
 DLMS/COSEM can be used for all utilities / energy kinds, all market segments,
 all applications and over virtually any communication media.
 
-### COSEM 
+### COSEM
 Companion Specification for Energy Metering - the object model capable of
  describing virtually any application.
-  
+
 ### OBIS
 Object Identification System, the naming system of the objects
 
@@ -64,7 +64,7 @@ clients.
 The DLMS/COSEM application layer provides:
 
 * the ACSE services to connect the clients and the servers.
-* the xDLMS services to access the data held by the COSEM objects. The xDLMS 
+* the xDLMS services to access the data held by the COSEM objects. The xDLMS
   services are the same for each object; this allows new objects to be added
   to the model without affecting the application layer.
 * The application layer also builds the messages (APDUs, Application Protocol

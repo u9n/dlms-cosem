@@ -1,4 +1,3 @@
-
 class LocalProtocolError(Exception):
     """Error in HDLC Protocol"""
 

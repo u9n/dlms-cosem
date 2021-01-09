@@ -1,8 +1,6 @@
 import pytest
 
-from dlms_cosem.hdlc import (
-    frames, )
-from dlms_cosem.hdlc import address, fields
+from dlms_cosem.hdlc import address, fields, frames
 
 
 def test_hdlc_frame_format_field_from_bytes():
@@ -34,14 +32,14 @@ def test_hdlc_frame_format_to_bytes_segmented():
     assert f.to_bytes().hex() == "a81d"
 
 
-
 class TestHdlcAddress:
     def test_find_address(self):
         frame = "7ea87e210396a4090f01160002020f02160002020f03160002020f04160002020f05160002020f0616000204120017110009060000160000ff0202010902030f0116010002030f0216010002030f0316010002030f0416010002030f0516010002030f0616010002030f0716010002030f0816010002030f09160100016ff37e"
         frame_bytes = bytes.fromhex(frame)
-        destination_address, source_address = address.HdlcAddress.find_address_in_frame_bytes(
-            frame_bytes
-        )
+        (
+            destination_address,
+            source_address,
+        ) = address.HdlcAddress.find_address_in_frame_bytes(frame_bytes)
         assert destination_address == (16, None, 1)
         assert source_address == (1, None, 1)
 
@@ -77,7 +75,6 @@ class TestCrc:
 
 
 class TestHdlcFrameValidation:
-
     def test_frame_is_enclosed_by_hdlc_flag(self):
         data = b"\x7effff\x7e"
         assert frames.frame_is_enclosed_by_hdlc_flags(data)

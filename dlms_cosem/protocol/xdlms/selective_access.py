@@ -1,7 +1,9 @@
-import attr
-from typing import *
 from datetime import datetime
-from dlms_cosem import cosem, time, dlms_data
+from typing import *
+
+import attr
+
+from dlms_cosem import cosem, dlms_data, time
 
 
 @attr.s(auto_attribs=True)
@@ -51,12 +53,8 @@ class RangeDescriptor:
     restricting_object: CaptureObject = attr.ib(
         validator=attr.validators.instance_of(CaptureObject)
     )
-    from_value: datetime = attr.ib(
-        validator=attr.validators.instance_of(datetime)
-    )
-    to_value: datetime = attr.ib(
-        validator=attr.validators.instance_of(datetime)
-    )
+    from_value: datetime = attr.ib(validator=attr.validators.instance_of(datetime))
+    to_value: datetime = attr.ib(validator=attr.validators.instance_of(datetime))
     # selected_values: List[CaptureObject] = attr.ib(factory=list)
 
     @classmethod

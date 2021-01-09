@@ -197,5 +197,3 @@ class AuthFunctionalUnit:
             # when not using authentication this the sender-acse-requirements
             # should not be in the data.
             return None
-
-

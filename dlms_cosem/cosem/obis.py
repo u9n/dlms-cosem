@@ -1,5 +1,6 @@
-import attr
 from typing import *
+
+import attr
 
 
 def allowed_range_for_obis_code(instance, attribute, value: int):

@@ -2,18 +2,18 @@ import pytest
 
 from dlms_cosem import enumerations
 from dlms_cosem.cosem import CosemAttribute, Obis
-from dlms_cosem.protocol.xdlms import GetResponseNormal, GetRequestNormal
+from dlms_cosem.dlms_data import DoubleLongUnsignedData
+from dlms_cosem.protocol.xdlms import GetRequestNormal, GetResponseNormal
 from dlms_cosem.protocol.xdlms.get import (
-    InvokeIdAndPriority,
-    GetRequestNext,
     GetRequestFactory,
-    GetResponseNormalWithError,
-    GetResponseWithBlock,
+    GetRequestNext,
+    GetResponseFactory,
     GetResponseLastBlock,
     GetResponseLastBlockWithError,
-    GetResponseFactory,
+    GetResponseNormalWithError,
+    GetResponseWithBlock,
+    InvokeIdAndPriority,
 )
-from dlms_cosem.dlms_data import DoubleLongUnsignedData
 
 
 class TestGetRequestNormal:
@@ -42,8 +42,8 @@ class TestGetRequestNormal:
 
     def test_wrong_request_type_raises_valueerror(self):
         data = (
-            b"\xc0\x02\xc1\x00\x01\x00\x00+\x01\x00\xff\x02\x00"
-        )  # Wrong request type
+            b"\xc0\x02\xc1\x00\x01\x00\x00+\x01\x00\xff\x02\x00"  # Wrong request type
+        )
         with pytest.raises(ValueError):
             GetRequestNormal.from_bytes(data)
 

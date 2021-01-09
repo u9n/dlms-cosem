@@ -38,8 +38,10 @@ integer data. ex 0b10000010 -> 2 bytes after this is the integer. 0x820xff0xff =
 
 """
 
-import attr
 from typing import *
+
+import attr
+
 from dlms_cosem import dlms_data
 
 VARIABLE_LENGTH = -1
@@ -81,7 +83,7 @@ def decode_variable_integer(bytes_input: bytes):
     if is_mutliple_bytes:
         length_length = int(bytes_input[0] & 0b01111111)
         length_data = bytes_input[1 : (length_length + 1)]
-        length = int.from_bytes(length_data, 'big')
+        length = int.from_bytes(length_data, "big")
         return length, bytes_input[length_length + 1 :]
 
     else:
