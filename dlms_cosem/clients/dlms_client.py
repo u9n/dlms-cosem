@@ -7,7 +7,7 @@ from typing_extensions import Protocol  # type: ignore
 
 from dlms_cosem import cosem, dlms_data, enumerations, exceptions, state, utils
 from dlms_cosem.clients.blocking_tcp_transport import BlockingTcpTransport
-from dlms_cosem.clients.hdlc_client import SerialHdlcClient
+from dlms_cosem.clients.hdlc_transport import SerialHdlcTransport
 from dlms_cosem.connection import DlmsConnection
 from dlms_cosem.protocol import acse, xdlms
 from dlms_cosem.protocol.xdlms import ConfirmedServiceErrorApdu
@@ -98,7 +98,7 @@ class DlmsClient:
         client_initial_invocation_counter: int = 0,
         meter_initial_invocation_counter: int = 0,
     ):
-        serial_client = SerialHdlcClient(
+        serial_client = SerialHdlcTransport(
             client_logical_address=client_logical_address,
             client_physical_address=client_physical_address,
             server_logical_address=server_logical_address,

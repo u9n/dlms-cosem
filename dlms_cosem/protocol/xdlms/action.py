@@ -340,11 +340,11 @@ class ActionResponseFactory:
                 f"Tag is not correct. Should be {ActionResponseFactory.TAG} but is {tag}"
             )
         response_type = enumerations.ActionType(data.pop(0))
-        invoke_id_and_priority = InvokeIdAndPriority.from_bytes(
-            data.pop(0).to_bytes(1, "big")
-        )
+
+        data.pop(0)  # Invoke id and priority that is not needed for parsing
+
         if response_type == enumerations.ActionType.NORMAL:
-            status = enumerations.ActionResultStatus(data.pop(0))
+            data.pop(0)  # Action result status, not needed for parsing
             # check if it is an error or data response by assesing the choice.
             has_data = bool(data.pop(0))
             if has_data:

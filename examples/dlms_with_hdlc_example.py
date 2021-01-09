@@ -4,9 +4,9 @@ from pprint import pprint
 
 from dateutil import parser as dateparser
 
-from dlms_cosem import a_xdr, cosem, enumerations
+from dlms_cosem import a_xdr, cosem, enumerations, utils
 from dlms_cosem.clients.dlms_client import DlmsClient
-from dlms_cosem.parsers import ProfileGenericBufferParser
+from dlms_cosem.parsers import AssociationObjectListParser, ProfileGenericBufferParser
 from dlms_cosem.protocol.xdlms import selective_access
 from dlms_cosem.protocol.xdlms.conformance import Conformance
 from dlms_cosem.protocol.xdlms.selective_access import RangeDescriptor
@@ -79,28 +79,36 @@ with public_client(serial_port=port).session() as client:
     print(f"meter_initial_invocation_counter = {invocation_counter}")
 
 
+LOAD_PROFILE_BUFFER = cosem.CosemAttribute(
+    interface=enumerations.CosemInterface.PROFILE_GENERIC,
+    instance=cosem.Obis(1, 0, 99, 1, 0),
+    attribute=2,
+)
+
+CURRENT_ASSOCIATION_OBJECTS = cosem.CosemAttribute(
+    interface=enumerations.CosemInterface.ASSOCIATION_LN,
+    instance=cosem.Obis(0, 0, 40, 0, 0),
+    attribute=2,
+)
+
 with management_client(
     serial_port=port, client_initial_invocation_counter=invocation_counter + 1
 ).session() as client:
 
     profile = client.get(
-        cosem.CosemAttribute(
-            interface=enumerations.CosemInterface.PROFILE_GENERIC,
-            instance=cosem.Obis(1, 0, 99, 1, 0),
-            attribute=2,
-        ),
-        access_descriptor=RangeDescriptor(
-            restricting_object=selective_access.CaptureObject(
-                cosem_attribute=cosem.CosemAttribute(
-                    interface=enumerations.CosemInterface.CLOCK,
-                    instance=cosem.Obis.from_dotted("0.0.1.0.0.255"),
-                    attribute=2,
-                ),
-                data_index=0,
-            ),
-            from_value=dateparser.parse("2020-01-01T00:00:00-02:00"),
-            to_value=dateparser.parse("2020-01-01T02:00:00-01:00"),
-        ),
+        CURRENT_ASSOCIATION_OBJECTS,
+        # access_descriptor=RangeDescriptor(
+        #    restricting_object=selective_access.CaptureObject(
+        #        cosem_attribute=cosem.CosemAttribute(
+        #            interface=enumerations.CosemInterface.CLOCK,
+        #            instance=cosem.Obis.from_dotted("0.0.1.0.0.255"),
+        #            attribute=2,
+        #        ),
+        #        data_index=0,
+        #    ),
+        #    from_value=dateparser.parse("2020-01-01T00:00:00-02:00"),
+        #    to_value=dateparser.parse("2020-01-01T02:00:00-01:00"),
+        # ),
     )
 
     parser = ProfileGenericBufferParser(
@@ -128,5 +136,10 @@ with management_client(
         ],
         capture_period=60,
     )
-    result = parser.parse_bytes(profile)
-    pprint(result)
+    # result = parser.parse_bytes(profile)
+    result = utils.parse_as_dlms_data(profile)
+    meter_objects_list = AssociationObjectListParser.parse_entries(result)
+    meter_objects_dict = {
+        obj.logical_name.dotted_repr(): obj for obj in meter_objects_list
+    }
+    pprint(meter_objects_dict)

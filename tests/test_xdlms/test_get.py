@@ -96,17 +96,17 @@ class TestGetRequestFactory:
     def test_wrong_tag_raises_valuerror(self):
         data = b"\xc1\x02\xc1\x00\x00\x00\x01"  # Wrong tag
         with pytest.raises(ValueError):
-            apdu = GetRequestFactory.from_bytes(data)
+            GetRequestFactory.from_bytes(data)
 
     def test_with_list_raises_notimplemented(self):
         data = b"\xc0\x03\xc1\x00\x00\x00\x01"  # With list type
         with pytest.raises(NotImplementedError):
-            apdu = GetRequestFactory.from_bytes(data)
+            GetRequestFactory.from_bytes(data)
 
     def test_invalid_type_raises_valueerror(self):
         data = b"\xc0\x04\xc1\x00\x00\x00\x01"  # 0x04 type not possible
         with pytest.raises(ValueError):
-            apdu = GetRequestFactory.from_bytes(data)
+            GetRequestFactory.from_bytes(data)
 
 
 class TestGetResponseNormal:

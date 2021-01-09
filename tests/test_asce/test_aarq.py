@@ -2,7 +2,11 @@ import pytest
 
 from dlms_cosem import enumerations
 from dlms_cosem.protocol.acse import ApplicationAssociationRequestApdu, UserInformation
-from dlms_cosem.protocol.xdlms import Conformance, InitiateRequestApdu
+from dlms_cosem.protocol.xdlms import (
+    Conformance,
+    GlobalCipherInitiateResponse,
+    InitiateRequestApdu,
+)
 
 # Example encodings from DLMS Green Book v10: page 444
 
@@ -63,6 +67,10 @@ class TestParseAARQ:
             "6036A1090607608574050801018A0207808B0760857405080202AC0A80083132333435363738BE10040E01000000065F1F0400007E1FFFFF"
         )
         aarq = ApplicationAssociationRequestApdu.from_bytes(data)
+        assert aarq.authentication
+        assert aarq.user_information
+        assert isinstance(aarq.user_information.content, InitiateRequestApdu)
+        assert aarq.authentication_value is not None
 
 
 class TestEncodeAARE:

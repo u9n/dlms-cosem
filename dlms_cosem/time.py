@@ -283,7 +283,6 @@ def date_to_bytes(d: date) -> bytes:
     month_byte = month.to_bytes(1, "big")
     day_byte = day.to_bytes(1, "big")
     day_of_week_unspecified = b"\xff"
-    dayotw = d.weekday()
 
     return year_bytes + month_byte + day_byte + day_of_week_unspecified
 

@@ -28,7 +28,7 @@ class HdlcFrameFactory:
     def read_information_frame(frame_data: bytes):
         try:
             return frames.InformationFrame.from_bytes(frame_data)
-        except exceptions.HdlcParsingError as e:
+        except exceptions.HdlcParsingError:
             # LOG.debug(
             #    f"Unable to load and information frame from frame_data: {frame_data!r}."
             #    f"Information carried in frame might have contained the HDLC flag and "

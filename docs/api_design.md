@@ -78,3 +78,103 @@ client.set()
       <- Block, Block, Block
    <- GlobalCipheredApdu
  <- SetResponse
+
+
+The client should be in the background and an abstraction should face the user
+(if the want to).
+Ex classname: Meter
+The Meter class holds information on all objects on the meter. By reading the
+object list of the an association it is possible to get a list of all objects and the
+access rights on each attribute and method. Even the selective access information is
+available. But the attribute are different for each interface type and the data you
+read from them or write to them are different. Many interfaces attributes have a static
+value. We want the opportunity to predefine the static data so that we automatically
+can interpret the data returned from the dynamic attributes.
+For example a profile generic:
+To be able to interpret the buffer we need to know the captured_object.
+To be able to interpret the values in the buffer we need to look up the object
+(ic=DATA just holds a value, ic=Register holds a dynamic value and static information
+about the scalar and the unit.)
+
+
+So we want a way to read the current assosiation list
+For every instance object we would like to read all the static information.
+This should then be outputted into a file. yaml for humans or json for machines.
+By supplying the file to the Meter class it is possible to call instances and get
+values back. If we don't have access to do something raise an Exception.
+
+Example file structure:
+````yaml
+objects:
+  1.2.3.4.5:
+    interface_class: 3  # Register
+    version: 0
+    attributes:
+      1: "1.2.3.4.5"  # Logical Name
+      3:
+        scalar: 3
+        unit: 13
+  0.0.99.0.0.255:
+    interface_class: 7  # Profile Generic
+    version: 1
+    attributes:
+      1: "0.0.99.0.0.255"  # Logical Name
+      3:   # capture objects
+        - interface: 3
+          instance: "1.2.3.4.5"
+          attribute: 2
+          data_index: 0
+        - interface: 3
+          instance: "2.2.3.4.5"
+          attribute: 2
+          data_index: 0
+        - interface: 3
+          instance: "3.2.3.4.5"
+          attribute: 2
+          data_index: 0
+      4: 60  # capture period
+      5: 1  # sort method
+      6:   # sort object
+          interface: 3
+          instance: "1.2.3.4.5"
+          attribute: 2
+          data_index: 0
+      8: 30  # profile_entries
+    selective_access:
+      2:
+        - 1
+        - 2
+    access_rights:
+      1:
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        - 6
+        - 7
+        - 8
+
+
+````
+
+```python
+meter = Meter.from_json(my_json_file)
+meter.get("1.2.3.4.5", 2, selective_access=make_range_descriptor())
+access = meter.access()
+access.get()
+access.set()
+access.action()
+access.execute()
+
+load_profile = (
+    meter.objects.get("1.2.3.4.5", 2)
+    .filter_range(from_value="2020-02-03", to_value="2020-03-03")
+    .filter_columns(from_value=2, to_value=3)
+)
+
+
+meter["1.2.3.4.5"].capture_objects
+
+```
+s

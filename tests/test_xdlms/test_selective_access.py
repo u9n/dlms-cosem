@@ -44,6 +44,7 @@ def test_range_descriptor1():
         b"\t\x0c\x07\xe5\x01\x06\xff\x00\x03\x00\xff\xff\xc4\x00"  # to date
         b"\x01\x00"  # all columns
     )
+    assert data
 
     data2 = (
         b"\xc0\x01\xc1\x00\x07\x01\x00c\x01\x00\xff\x02\x01\x01"
@@ -57,6 +58,7 @@ def test_range_descriptor1():
         b"\t\x0c\x07\xe3\x02\x0c\xff\x00\x00\x00\x00\x80\x00\x00"
         b"\x01\x00"
     )
+    assert data2
 
 
 def test_range_descriptor_to_bytes():
@@ -101,4 +103,5 @@ def test_range_descriptor_is_not_parsed():
         b"\t\x0c\x07\xe1\n\x01\x07\x01\x00\x00\x00\xff\xc4\x80"  # to date
         b"\x01\x00"  # selected_values empty array.
     )
+    assert access
     assert g.access_selection == b"\x02"

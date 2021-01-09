@@ -19,7 +19,7 @@ def test_hdlc_frame_format_filed_from_bytes_segmented():
 
 def test_hdlc_frame_format_raises_value_error_too_long():
     with pytest.raises(ValueError):
-        f = fields.DlmsHdlcFrameFormatField(length=999999, segmented=False)
+        fields.DlmsHdlcFrameFormatField(length=999999, segmented=False)
 
 
 def test_hdlc_frame_format_to_bytes_not_segmented():

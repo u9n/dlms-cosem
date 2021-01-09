@@ -186,9 +186,8 @@ class AuthFunctionalUnit:
                 f"Authentication Functional Unit data should by 2 "
                 f"bytes. Got: {_bytes}"
             )
-        last_byte = _bytes[-1]
-        # should I check anything?
-        return cls(authentication=True)
+        last_byte = bool(_bytes[-1])
+        return cls(authentication=last_byte)
 
     def to_bytes(self):
         if self.authentication:

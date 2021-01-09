@@ -11,21 +11,40 @@ URL = "https://github.com/pwitab/dlms-cosem"
 EMAIL = "henrik@pwit.se"
 AUTHOR = "Henrik Palmlund Wahlgren @ Palmlund Wahlgren Innovative Technology AB"
 REQUIRES_PYTHON = "~=3.6"
-# VERSION = None
+VERSION = "21.1.0.dev0"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    "attrs~=20.3.0",
-    "pyserial~=3.5",
-    "cryptography~=3.3.1",
+    "attrs==20.3.0",
+    "pyserial==3.5",
+    "cryptography==3.3.1",
     "asn1crypto==0.24.0",
-    "python-dateutil~=2.8.1",
+    "python-dateutil==2.8.1",
 ]
 
-# What packages are optional?
+DOC_PACKAGES = ["mkdocs", "mkdocs-material"]
+TEST_PACKAGES = ["pytest", "pytest-cov", "pytest-sugar"]
+DEV_PACKAGES = ["pre-commit"] + DOC_PACKAGES + TEST_PACKAGES
+
 EXTRAS = {
-    # 'fancy feature': ['django'],
+    "docs": DOC_PACKAGES,
+    "test": TEST_PACKAGES,
+    "dev": DEV_PACKAGES,
 }
+
+CLASSIFIERS = [
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -75,12 +94,14 @@ with open("HISTORY.md") as history_file:
 
 setup(
     name=NAME,
-    version="0.0.2",
+    version=VERSION,
     python_requires=REQUIRES_PYTHON,
     description=DESCRIPTION,
     long_description=readme + "\n\n" + history,
     author=AUTHOR,
     author_email=EMAIL,
+    maintainer=AUTHOR,
+    maintainer_email=EMAIL,
     url=URL,
     packages=find_packages(exclude=("tests",)),
     entry_points={},
@@ -89,8 +110,8 @@ setup(
     include_package_data=True,
     license="MIT",
     zip_safe=False,
-    keywords="AMR, Metering, MDM, dlms, cosem",
-    classifiers=[],
+    keywords="AMR, Metering, smart meters, MDM, dlms, cosem",
+    classifiers=CLASSIFIERS,
     # $ setup.py publish support.
     cmdclass={"upload": UploadCommand},
 )

@@ -17,9 +17,9 @@ class ClientError(Exception):
 
 
 @attr.s(auto_attribs=True)
-class SerialHdlcClient:
+class SerialHdlcTransport:
     """
-    HDLC client to send data over serial.
+    HDLC transport to send data over serial.
     """
 
     client_logical_address: int

@@ -97,9 +97,9 @@ def test_gmac():
     )
     client_invocation_counter = int.from_bytes(bytes.fromhex("00000001"), "big")
     client_system_title = bytes.fromhex("4D4D4D0000000001")
-    server_system_title = bytes.fromhex("4D4D4D0000BC614E")
-    server_invocation_counter = int.from_bytes(bytes.fromhex("01234567"), "big")
-    client_to_server_challenge = bytes.fromhex("4B35366956616759")
+    # server_system_title = bytes.fromhex("4D4D4D0000BC614E")
+    # server_invocation_counter = int.from_bytes(bytes.fromhex("01234567"), "big")
+    # client_to_server_challenge = bytes.fromhex("4B35366956616759")
     server_to_client_challenge = bytes.fromhex("503677524A323146")
     result = gmac(
         security_control=security_control,
@@ -121,9 +121,9 @@ def test_gmac2():
     )
     client_invocation_counter = int.from_bytes(bytes.fromhex("00000001"), "big")
     client_system_title = bytes.fromhex("4D4D4D0000000001")
-    server_system_title = bytes.fromhex("4D4D4D0000BC614E")
-    server_invocation_counter = int.from_bytes(bytes.fromhex("01234567"), "big")
-    client_to_server_challenge = bytes.fromhex("4B35366956616759")
+    # server_system_title = bytes.fromhex("4D4D4D0000BC614E")
+    # server_invocation_counter = int.from_bytes(bytes.fromhex("01234567"), "big")
+    # client_to_server_challenge = bytes.fromhex("4B35366956616759")
     server_to_client_challenge = bytes.fromhex("503677524A323146")
 
     iv = client_system_title + client_invocation_counter.to_bytes(4, "big")
