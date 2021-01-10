@@ -161,11 +161,16 @@ objects:
 ```python
 meter = Meter.from_json(my_json_file)
 meter.get("1.2.3.4.5", 2, selective_access=make_range_descriptor())
+
+# pipelineing access
 access = meter.access()
 access.get()
 access.set()
 access.action()
 access.execute()
+
+# same as
+access = meter.access().get().set().action().execute()
 
 load_profile = (
     meter.objects.get("1.2.3.4.5", 2)
