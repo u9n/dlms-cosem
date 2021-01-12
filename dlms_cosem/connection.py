@@ -536,7 +536,6 @@ class DlmsConnection:
                 auth_key=self.global_authentication_key,
                 cipher_text=event.ciphered_text,
             )
-            print(plain_text)
             event = XDlmsApduFactory.apdu_from_bytes(plain_text)
 
         else:

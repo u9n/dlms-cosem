@@ -44,7 +44,13 @@ class BlockingTcpTransport:
             self.tcp_socket = socket.create_connection(
                 address=self.address, timeout=self.timeout
             )
-        except (OSError, IOError, socket.timeout, socket.error) as e:
+        except (
+            OSError,
+            IOError,
+            socket.timeout,
+            socket.error,
+            ConnectionRefusedError,
+        ) as e:
             raise exceptions.CommunicationError from e
         LOG.info(f"Connected to {self.address}")
 
