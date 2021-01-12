@@ -166,7 +166,7 @@ class DlmsClient:
         )
 
     @contextlib.contextmanager
-    def session(self):
+    def session(self) -> "DlmsClient":
         self.associate()
         yield self
         self.release_association()

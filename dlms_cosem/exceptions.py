@@ -20,3 +20,7 @@ class CipheringError(Exception):
 
 class DlmsClientException(Exception):
     """An exception that is relating to the client"""
+
+
+class CommunicationError(Exception):
+    """Something went wrong in the communication with a meter"""
