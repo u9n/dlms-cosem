@@ -1,21 +1,22 @@
 from datetime import date, datetime, time, timedelta, timezone
-from dateutil.tz import tzoffset
-import attr
 from typing import *
+
+import attr
+from dateutil.tz import tzoffset
 
 """
 About datetimes in DLMS.
 
-Date,time and date-time may be represented simply as Octetstring (Tag=9) where the length 
-shows what type of data it is. 
+Date,time and date-time may be represented simply as Octetstring (Tag=9) where the length
+shows what type of data it is.
 * 5 bytes = date
 * 4 bytes = time
-* 12 bytes = datetime. 
+* 12 bytes = datetime.
 
-Date, time and datetime may also be represented by concise data classes of Date 
+Date, time and datetime may also be represented by concise data classes of Date
 (tag=26), Time (tag=27) and DateTime (tag=25).
 
-The special cases seems to mostly be used to define "cron-like" date. For example 
+The special cases seems to mostly be used to define "cron-like" date. For example
 if you want to define a date for every year you would leave year undefined.
 Initially we will ignore this functionality.
 
@@ -210,10 +211,10 @@ def time_from_bytes(source_bytes: bytes) -> time:
     if len(source_bytes) != 4:
         raise ValueError(f"Time is represented by 4 bytes, but got {len(source_bytes)}")
 
-    hour = get_optional_value(source_bytes[0], b"\xff", replace_with=0)
-    minute = get_optional_value(source_bytes[1], b"\xff", replace_with=0)
-    seconds = get_optional_value(source_bytes[2], b"\xff", replace_with=0)
-    hundredths = get_optional_value(source_bytes[3], b"\xff", replace_with=0)
+    hour: int = get_optional_value(source_bytes[0], b"\xff", replace_with=0)
+    minute: int = get_optional_value(source_bytes[1], b"\xff", replace_with=0)
+    seconds: int = get_optional_value(source_bytes[2], b"\xff", replace_with=0)
+    hundredths: int = get_optional_value(source_bytes[3], b"\xff", replace_with=0)
     validate_hour(hour)
     validate_minute_or_second(minute)
     validate_minute_or_second(seconds)
@@ -226,24 +227,24 @@ def time_from_bytes(source_bytes: bytes) -> time:
 
 def utc_offset_minutes(offset_minutes: Optional[int]) -> Optional[tzoffset]:
     if offset_minutes:
-        return tzoffset(name=None, offset=offset_minutes*60)
+        return tzoffset(name=None, offset=offset_minutes * 60)
     else:
         return None
 
 
 def datetime_from_bytes(source_bytes: bytes) -> Tuple[datetime, Optional[ClockStatus]]:
     """
-    Datetime is represented byte 12 bytes
-    [date[year highbyte, year lowbyte, month, day of month, day of week],
-    time[hour, minute, second, hundredths], deviation_high, deviation_low, clock_status]
-    }
+     Datetime is represented byte 12 bytes
+     [date[year highbyte, year lowbyte, month, day of month, day of week],
+     time[hour, minute, second, hundredths], deviation_high, deviation_low, clock_status]
+     }
 
-   date: as above
-   time: as above
-   deviation: deviation from UTC in minutes. Shows the timezone. signed long-integer
-        (-720 < dev < 720)
-        Special case:
-            0x8000: not specified.
+    date: as above
+    time: as above
+    deviation: deviation from UTC in minutes. Shows the timezone. signed long-integer
+         (-720 < dev < 720)
+         Special case:
+             0x8000: not specified.
 
     """
     if len(source_bytes) != 12:
@@ -282,7 +283,6 @@ def date_to_bytes(d: date) -> bytes:
     month_byte = month.to_bytes(1, "big")
     day_byte = day.to_bytes(1, "big")
     day_of_week_unspecified = b"\xff"
-    dayotw = d.weekday()
 
     return year_bytes + month_byte + day_byte + day_of_week_unspecified
 

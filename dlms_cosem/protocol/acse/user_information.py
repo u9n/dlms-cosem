@@ -1,6 +1,9 @@
-import attr
 from typing import *
-from dlms_cosem.protocol import ber
+
+import attr
+
+from dlms_cosem import ber
+
 
 @attr.s(auto_attribs=True)
 class UserInformation:
@@ -19,16 +22,17 @@ class UserInformation:
     tag = b"\x04"  # is encoded as an octetstring
 
     content: Any
-    #Union[
-        #xdlms.InitiateRequestApdu,
-        #xdlms.InitiateResponseApdu,
-        #xdlms.ConfirmedServiceErrorApdu,
-        #xdlms.GlobalCipherInitiateRequest
-    #]
+    # Union[
+    # xdlms.InitiateRequestApdu,
+    # xdlms.InitiateResponseApdu,
+    # xdlms.ConfirmedServiceErrorApdu,
+    # xdlms.GlobalCipherInitiateRequest
+    # ]
 
     @classmethod
     def from_bytes(cls, _bytes):
         from dlms_cosem.protocol import xdlms
+
         tag, length, data = ber.BER.decode(_bytes)
         if tag != UserInformation.tag:
             raise ValueError(

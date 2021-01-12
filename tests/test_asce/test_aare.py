@@ -1,9 +1,11 @@
 import pytest
-from dlms_cosem.protocol import acse, enumerations
+
+from dlms_cosem import enumerations
+from dlms_cosem.protocol import acse
 
 # Example encodings from DLMS Green book v10 page:
 from dlms_cosem.protocol.acse import UserInformation
-from dlms_cosem.protocol.xdlms import InitiateResponseApdu, Conformance
+from dlms_cosem.protocol.xdlms import Conformance, InitiateResponseApdu
 from dlms_cosem.protocol.xdlms.confirmed_service_error import ConfirmedServiceErrorApdu
 
 
@@ -47,7 +49,10 @@ class TestDecodeAARE:
         )
         print(aare.user_information)
         assert aare.user_information.content is not None
-        assert aare.user_information.content.error == enumerations.InitiateError.DLMS_VERSION_TOO_LOW
+        assert (
+            aare.user_information.content.error
+            == enumerations.InitiateError.DLMS_VERSION_TOO_LOW
+        )
 
     def test_no_ciher_hls_ok(self):
         data = bytes.fromhex(

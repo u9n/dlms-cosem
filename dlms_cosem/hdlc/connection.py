@@ -2,16 +2,15 @@ import logging
 
 import attr
 
-from dlms_cosem.protocol.hdlc import address, exceptions, frames
-from dlms_cosem.protocol.hdlc.state import (
+from dlms_cosem.hdlc import address, exceptions, frames
+from dlms_cosem.hdlc.exceptions import LocalProtocolError
+from dlms_cosem.hdlc.state import (
     AWAITING_CONNECTION,
     AWAITING_DISCONNECT,
     AWAITING_RESPONSE,
     NEED_DATA,
     HdlcConnectionState,
 )
-from dlms_cosem.protocol.hdlc.exceptions import LocalProtocolError
-
 
 LOG = logging.getLogger(__name__)
 
@@ -29,12 +28,12 @@ class HdlcFrameFactory:
     def read_information_frame(frame_data: bytes):
         try:
             return frames.InformationFrame.from_bytes(frame_data)
-        except exceptions.HdlcParsingError as e:
-            #LOG.debug(
+        except exceptions.HdlcParsingError:
+            # LOG.debug(
             #    f"Unable to load and information frame from frame_data: {frame_data!r}."
             #    f"Information carried in frame might have contained the HDLC flag and "
             #    f"we have not recieved the full frame yet."
-            #)
+            # )
             return None
 
 

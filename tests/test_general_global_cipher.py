@@ -1,11 +1,6 @@
-import pytest
+from dlms_cosem.connection import XDlmsApduFactory
+from dlms_cosem.protocol.xdlms import DataNotificationApdu, GeneralGlobalCipherApdu
 
-from dlms_cosem.protocol.xdlms import (
-    GeneralGlobalCipherApdu,
-    DataNotificationApdu,
-)
-
-from dlms_cosem.protocol.connection import XDlmsApduFactory
 
 def test_gen_glo_cipher_load():
     dlms_data = b"\xdb\x08/\x19\"\x91\x99\x16A\x03;0\x00\x00\x01\xe5\x02\\\xe9\xd2'\x1f\xd7\x8b\xe8\xc2\x04!\x1a\x91j\x9d\x7fX~\nz\x81L\xad\xea\x89\xe9Y?\x01\xf9.\xa8\xc0\x87\xb5\xbd\xfd\xef\xea\xb6\xbe\xcf(-\xfeI\xc0\x8f[\xe6\xdc\x84\x00"
@@ -18,6 +13,7 @@ def test_gen_glo_cipher_load():
 
     assert apdu.system_title == system_title
 
+
 def test_gen_glo_cipher_to_apdu():
     dlms_data = b"\xdb\x08/\x19\"\x91\x99\x16A\x03;0\x00\x00\x01\xe5\x02\\\xe9\xd2'\x1f\xd7\x8b\xe8\xc2\x04!\x1a\x91j\x9d\x7fX~\nz\x81L\xad\xea\x89\xe9Y?\x01\xf9.\xa8\xc0\x87\xb5\xbd\xfd\xef\xea\xb6\xbe\xcf(-\xfeI\xc0\x8f[\xe6\xdc\x84\x00"
 
@@ -29,10 +25,15 @@ def test_gen_glo_cipher_to_apdu():
 
     assert apdu.system_title == system_title
 
-    unportected_apdu_data = apdu.to_plain_apdu(encryption_key=b"MYDUMMYGLOBALKEY", authentication_key=b"MYDUMMYGLOBALKEY")
-    unportected_apdu = XDlmsApduFactory.apdu_from_bytes(apdu_bytes=unportected_apdu_data)
+    unportected_apdu_data = apdu.to_plain_apdu(
+        encryption_key=b"MYDUMMYGLOBALKEY", authentication_key=b"MYDUMMYGLOBALKEY"
+    )
+    unportected_apdu = XDlmsApduFactory.apdu_from_bytes(
+        apdu_bytes=unportected_apdu_data
+    )
 
     assert isinstance(unportected_apdu, DataNotificationApdu)
+
 
 def test_gen_glo_cipher_to_bytes():
 

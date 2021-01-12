@@ -3,10 +3,10 @@ from typing import *
 
 import attr
 
-from dlms_cosem.protocol import enumerations
+from dlms_cosem import enumerations
+from dlms_cosem.ber import BER
 from dlms_cosem.protocol.acse.base import AbstractAcseApdu
 from dlms_cosem.protocol.acse.user_information import UserInformation
-from dlms_cosem.protocol.ber import BER
 
 # TODO: It might be a better approach to give the callable and not the class to make a
 #   object from bytes. This means we could jack into the creation if needed

@@ -2,7 +2,8 @@ import abc
 
 import attr
 
-from dlms_cosem.protocol.hdlc import exceptions as hdlc_exceptions, validators
+from dlms_cosem.hdlc import exceptions as hdlc_exceptions
+from dlms_cosem.hdlc import validators
 
 
 class _AbstractHdlcControlField(abc.ABC):
@@ -32,6 +33,7 @@ class SnrmControlField(_AbstractHdlcControlField):
     """
     S-frame fo SNRM request.
     """
+
     def is_final(self):
         """ 'Almost' all the time a SNRM frame is contaned in single frame."""
         # TODO: Handle multi frame
@@ -97,7 +99,8 @@ class ReceiveReadyControlField(_AbstractHdlcControlField):
     """
 
     receive_sequence_number: int = attr.ib(
-        validator=[validators.validate_information_sequence_number])
+        validator=[validators.validate_information_sequence_number]
+    )
 
     def is_final(self):
         """
@@ -158,6 +161,7 @@ class InformationControlField(_AbstractHdlcControlField):
 
 
     """
+
     send_sequence_number: int = attr.ib(
         validator=[validators.validate_information_sequence_number]
     )

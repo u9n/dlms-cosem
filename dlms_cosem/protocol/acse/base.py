@@ -3,8 +3,8 @@ from typing import *
 
 import attr
 
-from dlms_cosem.protocol import enumerations, xdlms
-from dlms_cosem.protocol.ber import BER
+from dlms_cosem import enumerations
+from dlms_cosem.ber import BER
 
 
 class AbstractAcseApdu(abc.ABC):
@@ -186,9 +186,8 @@ class AuthFunctionalUnit:
                 f"Authentication Functional Unit data should by 2 "
                 f"bytes. Got: {_bytes}"
             )
-        last_byte = _bytes[-1]
-        # should I check anything?
-        return cls(authentication=True)
+        last_byte = bool(_bytes[-1])
+        return cls(authentication=last_byte)
 
     def to_bytes(self):
         if self.authentication:
@@ -197,5 +196,3 @@ class AuthFunctionalUnit:
             # when not using authentication this the sender-acse-requirements
             # should not be in the data.
             return None
-
-

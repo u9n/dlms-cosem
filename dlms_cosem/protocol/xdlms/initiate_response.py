@@ -1,8 +1,8 @@
 from typing import *
+
 import attr
 
-from dlms_cosem.protocol import security
-from dlms_cosem.protocol.ber import BER
+from dlms_cosem import security
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 from dlms_cosem.protocol.xdlms.conformance import Conformance
 
@@ -46,7 +46,6 @@ class InitiateResponseApdu(AbstractXDlmsApdu):
         else:
             quality_of_service = 0
 
-
         dlms_version = data.pop(0)
 
         conformance_tag_and_length = data[:3]
@@ -75,7 +74,6 @@ class InitiateResponseApdu(AbstractXDlmsApdu):
         out.extend(self.server_max_receive_pdu_size.to_bytes(2, "big"))
 
         return b"\x08" + bytes(out) + b"\x00\x07"
-
 
 
 @attr.s(auto_attribs=True)

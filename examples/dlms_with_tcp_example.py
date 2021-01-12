@@ -1,14 +1,13 @@
 import logging
-from datetime import datetime
 from functools import partial
 from pprint import pprint
+from time import sleep
 
-from dateutil import parser
+from dateutil import parser as dateparser
 
-from dlms_cosem.clients.serial_dlms import SerialDlmsClient
-from dlms_cosem.protocol import a_xdr, cosem, time
-from dlms_cosem.protocol.acse import enumerations
-from dlms_cosem.protocol.parsers import ProfileGenericBufferParser
+from dlms_cosem import a_xdr, cosem, enumerations
+from dlms_cosem.clients.dlms_client import DlmsClient
+from dlms_cosem.parsers import ProfileGenericBufferParser
 from dlms_cosem.protocol.xdlms import selective_access
 from dlms_cosem.protocol.xdlms.conformance import Conformance
 from dlms_cosem.protocol.xdlms.selective_access import RangeDescriptor
@@ -43,27 +42,23 @@ c = Conformance(
 encryption_key = bytes.fromhex("990EB3136F283EDB44A79F15F0BFCC21")
 authentication_key = bytes.fromhex("EC29E2F4BD7D697394B190827CE3DD9A")
 auth = enumerations.AuthenticationMechanism.HLS_GMAC
-
+host = "100.119.108.3"
+port = 4059
 
 public_client = partial(
-    SerialDlmsClient,
-    server_logical_address=1,
-    server_physical_address=17,
-    client_logical_address=16,
+    DlmsClient.with_tcp_transport, server_logical_address=1, client_logical_address=16
 )
 
 management_client = partial(
-    SerialDlmsClient,
+    DlmsClient.with_tcp_transport,
     server_logical_address=1,
-    server_physical_address=17,
     client_logical_address=1,
     authentication_method=auth,
     encryption_key=encryption_key,
     authentication_key=authentication_key,
 )
 
-port = "/dev/tty.usbserial-A704H991"
-with public_client(serial_port=port).session() as client:
+with public_client(host=host, port=port).session() as client:
 
     response_data = client.get(
         cosem.CosemAttribute(
@@ -80,9 +75,12 @@ with public_client(serial_port=port).session() as client:
     invocation_counter = data_decoder.decode(response_data)["data"]
     print(f"meter_initial_invocation_counter = {invocation_counter}")
 
+# we are not reusing the socket as of now. We just need to give the meter some time to
+# close the connection on its side
+sleep(1)
 
 with management_client(
-    serial_port=port, client_initial_invocation_counter=invocation_counter + 1
+    host=host, port=port, client_initial_invocation_counter=invocation_counter + 1
 ).session() as client:
 
     profile = client.get(
@@ -100,8 +98,8 @@ with management_client(
                 ),
                 data_index=0,
             ),
-            from_value=parser.parse("2020-01-01T00:00:00-02:00"),
-            to_value=parser.parse("2020-01-01T02:00:00-01:00"),
+            from_value=dateparser.parse("2020-01-01T00:00:00-02:00"),
+            to_value=dateparser.parse("2020-01-02T00:00:00-01:00"),
         ),
     )
 

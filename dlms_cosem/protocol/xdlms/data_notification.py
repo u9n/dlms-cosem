@@ -2,14 +2,14 @@ from typing import *
 
 import attr
 
-from dlms_cosem.protocol.a_xdr import (
+from dlms_cosem.a_xdr import (
     Attribute,
     AXdrDecoder,
     DlmsDataToPythonConverter,
     EncodingConf,
     Sequence,
 )
-from dlms_cosem.protocol.dlms_data import BaseDlmsData, DateTimeData
+from dlms_cosem.dlms_data import BaseDlmsData, DateTimeData
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 
 
@@ -69,9 +69,7 @@ class NotificationBody:
     Sequence of DLMSData
     """
 
-    ENCODING_CONF = EncodingConf(
-        attributes=[Sequence(attribute_name="encoding_conf")]
-    )
+    ENCODING_CONF = EncodingConf(attributes=[Sequence(attribute_name="encoding_conf")])
 
     data: List[BaseDlmsData] = attr.ib(default=None)
     encoding_conf: EncodingConf = attr.ib(
@@ -129,8 +127,8 @@ class DataNotificationApdu(AbstractXDlmsApdu):
             ),
             Sequence(
                 attribute_name="notification_body",
-                #create_instance=NotificationBody.from_bytes,
-                #wrap_end=True,
+                # create_instance=NotificationBody.from_bytes,
+                # wrap_end=True,
             ),
         ]
     )

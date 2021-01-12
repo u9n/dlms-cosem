@@ -1,12 +1,14 @@
 import pytest
 
-from dlms_cosem.protocol import acse, xdlms, cosem, enumerations, dlms_data
-from dlms_cosem.protocol.connection import DlmsConnection
+from dlms_cosem import cosem, enumerations
+from dlms_cosem.connection import DlmsConnection
+from dlms_cosem.protocol import acse, xdlms
 
 
 @pytest.fixture()
 def system_title() -> bytes:
     return b"HEWATEST"
+
 
 @pytest.fixture()
 def meter_system_title() -> bytes:
@@ -90,12 +92,9 @@ def aarq():
 
 @pytest.fixture()
 def aare():
-    from dlms_cosem.protocol import acse, xdlms, cosem, enumerations
-    from dlms_cosem.protocol.xdlms import (
-        InitiateResponseApdu,
-        Conformance,
-        InitiateRequestApdu,
-    )
+    from dlms_cosem import enumerations
+    from dlms_cosem.protocol import acse
+    from dlms_cosem.protocol.xdlms import Conformance, InitiateResponseApdu
 
     return acse.ApplicationAssociationResponseApdu(
         result=enumerations.AssociationResult.ACCEPTED,
@@ -136,12 +135,16 @@ def aare():
         responding_ae_invocation_id=None,
     )
 
+
 @pytest.fixture()
-def ciphered_hls_aare(aare: acse.ApplicationAssociationResponseApdu, meter_system_title: bytes) -> acse.ApplicationAssociationResponseApdu:
+def ciphered_hls_aare(
+    aare: acse.ApplicationAssociationResponseApdu, meter_system_title: bytes
+) -> acse.ApplicationAssociationResponseApdu:
     aare.ciphered = True
     aare.system_title = meter_system_title
     aare.authentication = enumerations.AuthenticationMechanism.HLS_GMAC
     return aare
+
 
 @pytest.fixture()
 def rlrq() -> acse.ReleaseRequestApdu:
@@ -182,13 +185,14 @@ def exception_response() -> xdlms.ExceptionResponseApdu:
 
 
 @pytest.fixture()
-def connection_with_hls(system_title, global_encryption_key, global_authentication_key) -> DlmsConnection:
+def connection_with_hls(
+    system_title, global_encryption_key, global_authentication_key
+) -> DlmsConnection:
 
-    return DlmsConnection(client_system_title=system_title,
-                authentication_method=enumerations.AuthenticationMechanism.HLS_GMAC,
-                global_encryption_key=global_encryption_key,
-                global_authentication_key=global_authentication_key,
-                security_suite=0)
-
-
-
+    return DlmsConnection(
+        client_system_title=system_title,
+        authentication_method=enumerations.AuthenticationMechanism.HLS_GMAC,
+        global_encryption_key=global_encryption_key,
+        global_authentication_key=global_authentication_key,
+        security_suite=0,
+    )

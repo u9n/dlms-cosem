@@ -1,7 +1,5 @@
-import pytest
-from datetime import timedelta
-from dlms_cosem.protocol import cosem, enumerations
-from dlms_cosem.protocol.parsers import ProfileGenericBufferParser
+from dlms_cosem import cosem, enumerations
+from dlms_cosem.parsers import ProfileGenericBufferParser
 
 
 def test_parse_buffer():

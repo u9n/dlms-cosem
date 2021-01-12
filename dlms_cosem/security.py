@@ -1,8 +1,8 @@
-from cryptography.hazmat.primitives.keywrap import aes_key_wrap, aes_key_unwrap
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from typing import *
 import attr
-from dlms_cosem.protocol.exceptions import CipheringError
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.keywrap import aes_key_unwrap, aes_key_wrap
+
+from dlms_cosem.exceptions import CipheringError
 
 """
 Security Suites in DLMS/COSEM define what cryptographic algorithms that are
@@ -11,57 +11,11 @@ available to different services and key sizes
 The initialization vector is essentially a nonce. In DLMS/COSEM it is
     composed of two parts. The full length is 96 bits (12 bytes)
     The first part (upper 64bit/8bytes) is called the fixed field and shall
-    contain the system titel. The lower (32bit/4byte) part is called the
+    contain the system title. The lower (32bit/4byte) part is called the
     invocation field and contains an integer invocation counter.
     The system title is a unique identifier for the DLMS/COSEM identity. The
     leftmost 3 octets holds the 3 letter manufacturer ID. (FLAG ID) and the
     remaining 5 octets are to ensure uniqueness.
-
-Security Suite 0 or AES-GCM-128 contains the following:
-    Authenticated Encryption:
-        AES-GCM-128
-    Key Transport:
-        AES-128 Key Wrap
-    
-Security Suite 1 or ECDH-ECDSA-AES-GCM-128-SHA-256 contains the following:
-
-     Authenticated Encryption:
-         AES-GCM-128
-
-     Digital Signature:
-         ECDSA with P-256
-
-     Key Agreement:
-         ECDH with P-256
-
-     Hash:
-         SHA-256
-
-     Key Transport:
-         AES-128 Key Wrap
-
-     Compression:
-         V.44
-
-    Security Suite 2 or ECDH-ECDSA-AES-GCM-256-SHA-384 contains the following:
-
-     Authenticated Encryption:
-         AES-GCM-256
-
-     Digital Signature:
-         ECDSA with P-384
-
-     Key Agreement:
-         ECDH with P-384
-
-     Hash:
-         SHA-384
-
-     Key Transport:
-         AES-256 Key Wrap
-
-     Compression:
-         V.44
 """
 
 TAG_LENGTH = 12
@@ -271,7 +225,6 @@ def gmac(
     # so we put all data in the associated data.
     associated_data = security_control.to_bytes() + auth_key + challenge
     encryptor.authenticate_additional_data(associated_data)
-
 
     # Making sure to add an empty byte string as input. Then it will only be the
     # associated_data that will be authenticated.

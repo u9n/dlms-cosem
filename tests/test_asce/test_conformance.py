@@ -2,8 +2,8 @@ import pytest
 
 from dlms_cosem.protocol.xdlms import Conformance
 
-
 # Example code found encoding found in DLMS Green Book v10 page:437
+
 
 @pytest.mark.parametrize(
     "conformance,encoded",
@@ -24,7 +24,7 @@ from dlms_cosem.protocol.xdlms import Conformance
             ),
             b"\x00\x00\x7e\x1f",
         ),
-(
+        (
             Conformance(
                 priority_management_supported=True,
                 block_transfer_with_get_or_read=True,
@@ -35,7 +35,7 @@ from dlms_cosem.protocol.xdlms import Conformance
                 action=True,
             ),
             b"\x00\x00\x50\x1f",
-        )
+        ),
     ],
 )
 def test_conformance(conformance: Conformance, encoded: bytes):

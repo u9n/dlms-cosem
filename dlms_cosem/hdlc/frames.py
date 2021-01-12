@@ -3,10 +3,11 @@ from typing import *
 
 import attr
 
-from dlms_cosem.protocol.crc import CRCCCITT
-from dlms_cosem.protocol.hdlc import exceptions as hdlc_exceptions, address, validators
-from dlms_cosem.protocol.hdlc.address import HdlcAddress
-from dlms_cosem.protocol.hdlc import fields
+from dlms_cosem.crc import CRCCCITT
+from dlms_cosem.hdlc import address
+from dlms_cosem.hdlc import exceptions as hdlc_exceptions
+from dlms_cosem.hdlc import fields, validators
+from dlms_cosem.hdlc.address import HdlcAddress
 
 HDLC_FLAG = b"\x7e"
 
@@ -143,7 +144,7 @@ class BaseHdlcFrame(_AbstractHdlcFrame):
 
     @staticmethod
     def extract_format_field_from_bytes(
-        frame_bytes: bytes
+        frame_bytes: bytes,
     ) -> fields.DlmsHdlcFrameFormatField:
         """
         The format field is always on the same place in all frames.
@@ -315,6 +316,7 @@ class InformationFrame(BaseHdlcFrame):
     receive_sequence_number: int = attr.ib(
         validator=[validators.validate_information_sequence_number], default=0
     )
+
     @property
     def information(self) -> bytes:
         """

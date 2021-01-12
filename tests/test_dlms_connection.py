@@ -1,20 +1,14 @@
-import os
-
 import pytest
 
-from dlms_cosem.protocol.connection import DlmsConnection
-from dlms_cosem.protocol import (
-    acse,
-    xdlms,
-    state,
-    enumerations,
-    exceptions,
-    cosem,
-    dlms_data,
+from dlms_cosem import enumerations, exceptions, security, state
+from dlms_cosem.connection import (
+    DlmsConnection,
+    XDlmsApduFactory,
+    make_client_to_server_challenge,
 )
-from dlms_cosem.protocol.exceptions import LocalDlmsProtocolError
-from dlms_cosem.protocol.xdlms import Conformance, ActionResponse
-from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
+from dlms_cosem.exceptions import LocalDlmsProtocolError
+from dlms_cosem.protocol import acse, xdlms
+from dlms_cosem.protocol.xdlms import Conformance
 
 
 def test_conformance_exists_on_simple_init():
@@ -115,7 +109,7 @@ def test_receive_get_response_sets_state_to_ready():
 
 
 def test_receive_exception_response_sets_state_to_ready(
-    exception_response: xdlms.ExceptionResponseApdu
+    exception_response: xdlms.ExceptionResponseApdu,
 ):
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.AWAITING_GET_RESPONSE),
@@ -140,6 +134,33 @@ def test_hls_is_started_automatically(
     )
 
 
+def test_hls_fails(connection_with_hls: DlmsConnection):
+    # Force state into awaiting response
+    connection_with_hls.state.current_state = state.AWAITING_HLS_CLIENT_CHALLENGE_RESULT
+    connection_with_hls.meter_system_title = b"12345678"
+    connection_with_hls.meter_invocation_counter = 1
+    failing_action_response = xdlms.ActionResponseNormal(
+        status=enumerations.ActionResultStatus.OTHER_REASON
+    )
+    ciphered = security.encrypt(
+        security_control=connection_with_hls.security_control,
+        system_title=connection_with_hls.meter_system_title,
+        auth_key=connection_with_hls.global_authentication_key,
+        key=connection_with_hls.global_encryption_key,
+        invocation_counter=2,
+        plain_text=failing_action_response.to_bytes(),
+    )
+    ciphered_action_response = xdlms.GeneralGlobalCipherApdu(
+        security_control=connection_with_hls.security_control,
+        system_title=connection_with_hls.meter_system_title,
+        invocation_counter=2,
+        ciphered_text=ciphered,
+    )
+    connection_with_hls.receive_data(ciphered_action_response.to_bytes())
+    connection_with_hls.next_event()
+    assert connection_with_hls.state.current_state == state.NO_ASSOCIATION
+
+
 def test_rejection_resets_connection_state(
     connection_with_hls: DlmsConnection,
     ciphered_hls_aare: acse.ApplicationAssociationResponseApdu,
@@ -149,6 +170,7 @@ def test_rejection_resets_connection_state(
     connection_with_hls.receive_data(ciphered_hls_aare.to_bytes())
     connection_with_hls.next_event()
     assert connection_with_hls.state.current_state == state.NO_ASSOCIATION
+
 
 # what happens if the gmac provided by the meter is wrong
 # -> we get an error
@@ -187,3 +209,45 @@ class TestPreEstablishedAssociation:
 
         with pytest.raises(exceptions.PreEstablishedAssociationError):
             c.send(rlrq)
+
+
+class TestXDlmsApduFactory:
+    def test_nonexistent_tag_raises_key_error(self):
+        dumb_data = bytearray([255, 1, 10, 10, 23])
+        with pytest.raises(KeyError):
+            XDlmsApduFactory.apdu_from_bytes(dumb_data)
+
+
+class TestMakeClientToServerChallenge:
+    def test_no_auth_returns_none(self):
+        challenge = make_client_to_server_challenge(
+            enumerations.AuthenticationMechanism.NONE
+        )
+        assert challenge is None
+
+    def test_lls_returns_none(self):
+        challenge = make_client_to_server_challenge(
+            enumerations.AuthenticationMechanism.LLS
+        )
+        assert challenge is None
+
+    def test_hls_gmac_returns_correct_bytes(self):
+        challenge = make_client_to_server_challenge(
+            enumerations.AuthenticationMechanism.HLS_GMAC, 16
+        )
+        assert challenge
+        assert len(challenge) == 16
+        assert type(challenge) == bytes
+
+    def test_too_short_length_raises_value_error(self):
+
+        with pytest.raises(ValueError):
+            make_client_to_server_challenge(
+                enumerations.AuthenticationMechanism.HLS_GMAC, 7
+            )
+
+    def test_too_long_length_raises_value_error(self):
+        with pytest.raises(ValueError):
+            make_client_to_server_challenge(
+                enumerations.AuthenticationMechanism.HLS_GMAC, 65
+            )

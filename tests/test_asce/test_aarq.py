@@ -1,13 +1,15 @@
 import pytest
 
-from dlms_cosem.protocol import enumerations
-from dlms_cosem.protocol.acse import (
-    ApplicationAssociationRequestApdu,
-    UserInformation,
+from dlms_cosem import enumerations
+from dlms_cosem.protocol.acse import ApplicationAssociationRequestApdu, UserInformation
+from dlms_cosem.protocol.xdlms import (
+    Conformance,
+    GlobalCipherInitiateResponse,
+    InitiateRequestApdu,
 )
-from dlms_cosem.protocol.xdlms import InitiateRequestApdu, Conformance
 
 # Example encodings from DLMS Green Book v10: page 444
+
 
 class TestParseAARQ:
     def test_parse_no_ciphering_no_sercurity(self):
@@ -47,7 +49,9 @@ class TestParseAARQ:
         assert aarq.authentication_value is not None
 
     def test_parse_ciphered_low_security2(self):
-        data = bytes.fromhex("6066a109060760857405080103a60a04084D4D4D0000BC614E8a0207808b0760857405080201ac0a80083132333435363738be34043221303001234567801302FF8A7874133D414CED25B42534D28DB0047720606B175BD52211BE6841DB204D39EE6FDB8E356855")
+        data = bytes.fromhex(
+            "6066a109060760857405080103a60a04084D4D4D0000BC614E8a0207808b0760857405080201ac0a80083132333435363738be34043221303001234567801302FF8A7874133D414CED25B42534D28DB0047720606B175BD52211BE6841DB204D39EE6FDB8E356855"
+        )
         aarq = ApplicationAssociationRequestApdu.from_bytes(data)
         print(aarq)
         assert aarq.ciphered
@@ -60,9 +64,13 @@ class TestParseAARQ:
 
     def test_hls(self):
         data = bytes.fromhex(
-            "6036A1090607608574050801018A0207808B0760857405080202AC0A80083132333435363738BE10040E01000000065F1F0400007E1FFFFF")
+            "6036A1090607608574050801018A0207808B0760857405080202AC0A80083132333435363738BE10040E01000000065F1F0400007E1FFFFF"
+        )
         aarq = ApplicationAssociationRequestApdu.from_bytes(data)
-
+        assert aarq.authentication
+        assert aarq.user_information
+        assert isinstance(aarq.user_information.content, InitiateRequestApdu)
+        assert aarq.authentication_value is not None
 
 
 class TestEncodeAARE:

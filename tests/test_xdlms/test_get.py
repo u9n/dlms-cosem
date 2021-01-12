@@ -1,19 +1,19 @@
 import pytest
 
-from dlms_cosem.protocol import enumerations
-from dlms_cosem.protocol.cosem import CosemAttribute, Obis
-from dlms_cosem.protocol.xdlms import GetResponseNormal, GetRequestNormal
+from dlms_cosem import enumerations
+from dlms_cosem.cosem import CosemAttribute, Obis
+from dlms_cosem.dlms_data import DoubleLongUnsignedData
+from dlms_cosem.protocol.xdlms import GetRequestNormal, GetResponseNormal
 from dlms_cosem.protocol.xdlms.get import (
-    InvokeIdAndPriority,
-    GetRequestNext,
     GetRequestFactory,
-    GetResponseNormalWithError,
-    GetResponseWithBlock,
+    GetRequestNext,
+    GetResponseFactory,
     GetResponseLastBlock,
     GetResponseLastBlockWithError,
-    GetResponseFactory,
+    GetResponseNormalWithError,
+    GetResponseWithBlock,
+    InvokeIdAndPriority,
 )
-from dlms_cosem.protocol.dlms_data import DoubleLongUnsignedData
 
 
 class TestGetRequestNormal:
@@ -42,8 +42,8 @@ class TestGetRequestNormal:
 
     def test_wrong_request_type_raises_valueerror(self):
         data = (
-            b"\xc0\x02\xc1\x00\x01\x00\x00+\x01\x00\xff\x02\x00"
-        )  # Wrong request type
+            b"\xc0\x02\xc1\x00\x01\x00\x00+\x01\x00\xff\x02\x00"  # Wrong request type
+        )
         with pytest.raises(ValueError):
             GetRequestNormal.from_bytes(data)
 
@@ -96,17 +96,17 @@ class TestGetRequestFactory:
     def test_wrong_tag_raises_valuerror(self):
         data = b"\xc1\x02\xc1\x00\x00\x00\x01"  # Wrong tag
         with pytest.raises(ValueError):
-            apdu = GetRequestFactory.from_bytes(data)
+            GetRequestFactory.from_bytes(data)
 
     def test_with_list_raises_notimplemented(self):
         data = b"\xc0\x03\xc1\x00\x00\x00\x01"  # With list type
         with pytest.raises(NotImplementedError):
-            apdu = GetRequestFactory.from_bytes(data)
+            GetRequestFactory.from_bytes(data)
 
     def test_invalid_type_raises_valueerror(self):
         data = b"\xc0\x04\xc1\x00\x00\x00\x01"  # 0x04 type not possible
         with pytest.raises(ValueError):
-            apdu = GetRequestFactory.from_bytes(data)
+            GetRequestFactory.from_bytes(data)
 
 
 class TestGetResponseNormal:
@@ -376,6 +376,7 @@ class TestGetResponseFactory:
         apdu = GetResponseFactory.from_bytes(data)
 
         assert isinstance(apdu, GetResponseLastBlockWithError)
+
     def test_wrong_tag_raises_valueerror(self):
         data = b"\xcc\x02\xc1\x01\x00\x00\x00\x13\x01\x01"
         with pytest.raises(ValueError):

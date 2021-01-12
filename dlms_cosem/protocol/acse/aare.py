@@ -3,11 +3,11 @@ from typing import *
 import attr
 from asn1crypto.core import Choice, Integer
 
+from dlms_cosem import enumerations
+from dlms_cosem.ber import BER
 from dlms_cosem.protocol.acse import base as acse_base
-from dlms_cosem.protocol.acse.user_information import UserInformation
-from dlms_cosem.protocol import enumerations
 from dlms_cosem.protocol.acse.aarq import aarq_should_set_authenticated
-from dlms_cosem.protocol.ber import BER
+from dlms_cosem.protocol.acse.user_information import UserInformation
 
 
 @attr.s(auto_attribs=True)
@@ -120,10 +120,7 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
         0x89: ("mechanism_name", acse_base.MechanismName),
         170: ("responding_authentication_value", acse_base.AuthenticationValue),
         189: ("implementation_information", None),
-        0xBE: (
-            "user_information",
-            UserInformation,
-        ),  # Context specific, constructed 30
+        0xBE: ("user_information", UserInformation),  # Context specific, constructed 30
     }
 
     result: enumerations.AssociationResult
@@ -294,8 +291,6 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
             object_dict["public_cert"] = bytes(meter_public_cert[2:])
         else:
             object_dict["public_cert"] = None
-
-
 
         auth_value: Optional[acse_base.AuthenticationValue] = object_dict.pop(
             "responding_authentication_value", None

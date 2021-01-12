@@ -1,5 +1,6 @@
-import attr
 from typing import *
+
+import attr
 
 
 @attr.s(auto_attribs=True)

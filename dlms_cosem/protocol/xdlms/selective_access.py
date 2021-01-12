@@ -1,7 +1,9 @@
-import attr
-from typing import *
 from datetime import datetime
-from dlms_cosem.protocol import enumerations, cosem, dlms_data, time
+from typing import *
+
+import attr
+
+from dlms_cosem import cosem, dlms_data, time
 
 
 @attr.s(auto_attribs=True)
@@ -51,12 +53,8 @@ class RangeDescriptor:
     restricting_object: CaptureObject = attr.ib(
         validator=attr.validators.instance_of(CaptureObject)
     )
-    from_value: datetime = attr.ib(
-        validator=attr.validators.instance_of(datetime)
-    )
-    to_value: datetime = attr.ib(
-        validator=attr.validators.instance_of(datetime)
-    )
+    from_value: datetime = attr.ib(validator=attr.validators.instance_of(datetime))
+    to_value: datetime = attr.ib(validator=attr.validators.instance_of(datetime))
     # selected_values: List[CaptureObject] = attr.ib(factory=list)
 
     @classmethod
@@ -130,10 +128,4 @@ class EntryDescriptor:
         pass
 
     def to_bytes(self) -> bytes:
-        out = bytearray()
-        out.append(self.ACCESS_DESCRIPTOR)
-        out.extend(self.from_entry.to_bytes(4, "big"))
-        out.extend(self.to_entry.to_bytes(4, "big"))
-        out.extend(self.from_selected_value.to_bytes(2, "big"))
-        out.extend(self.to_selected_value.to_bytes(2, "big"))
-        return bytes(out)
+        raise NotImplementedError()

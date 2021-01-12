@@ -2,7 +2,7 @@ from typing import *
 
 import attr
 
-from dlms_cosem.protocol.hdlc import validators
+from dlms_cosem.hdlc import validators
 
 
 @attr.s(auto_attribs=True)
@@ -91,9 +91,11 @@ class HdlcAddress:
         destination_address_data, _ = HdlcAddress.find_address_in_frame_bytes(
             frame_bytes
         )
-        destination_logical, destination_physical, destination_length = (
-            destination_address_data
-        )
+        (
+            destination_logical,
+            destination_physical,
+            destination_length,
+        ) = destination_address_data
 
         return cls(destination_logical, destination_physical, address_type)
 
@@ -106,7 +108,7 @@ class HdlcAddress:
 
     @staticmethod
     def find_address_in_frame_bytes(
-        hdlc_frame_bytes: bytes
+        hdlc_frame_bytes: bytes,
     ) -> Tuple[Tuple[int, Optional[int], int], Tuple[int, Optional[int], int]]:
         """
         address can be 1, 2 or 4 bytes long. the end byte is indicated by the of

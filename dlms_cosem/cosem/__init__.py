@@ -2,8 +2,8 @@ from typing import *
 
 import attr
 
-from dlms_cosem.protocol.cosem.obis import Obis
-from dlms_cosem.protocol import enumerations
+from dlms_cosem import enumerations
+from dlms_cosem.cosem.obis import Obis
 
 
 @attr.s(auto_attribs=True)
@@ -36,6 +36,7 @@ class CosemAttribute:
                 self.attribute.to_bytes(1, "big"),
             ]
         )
+
 
 @attr.s(auto_attribs=True)
 class CosemMethod:

@@ -1,23 +1,26 @@
 
 # Changelog
 
-The format is based on `Keep a Changelog: https://keepachangelog.com/en/1.0.0/`,
-and this project adheres to `Semantic Versioning: https://semver.org/spec/v2.0.0.html`
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Calendar Versioning](https://calver.org/)
 
 ## Unreleased
 
 
 ### Added
 
-* HDLC client implementation
+* HDLC transport implementation
+* TCP transport implementation
 * DlMS client implementation
 * Support for Get service including service specific block transfer
 * Support for selective access via range descriptor
 * Support for HLS authentication using HLS-GMAC.
-* Support for GlobalCiphering 
+* Support for GlobalCiphering
 * Parsing of ProfileGeneric buffer
 
 ### Changed
+
+* Changed project versioning scheme to Calendar versioning
 
 
 ### Deprecated

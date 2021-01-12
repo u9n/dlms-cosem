@@ -26,10 +26,12 @@ class GetRequestType(IntEnum):
     NEXT = 2
     WITH_LIST = 3
 
+
 class GetResponseType(IntEnum):
     NORMAL = 1
     WITH_BLOCK = 2
     WITH_LIST = 3
+
 
 class ActionType(IntEnum):
     NORMAL = 1
@@ -330,7 +332,8 @@ class AssociationResult(IntEnum):
     REJECTED_TRANSIENT = 2
     # TODO: What does transient rejection mean?
 
-class ActionResult(IntEnum):
+
+class ActionResultStatus(IntEnum):
     SUCCESS = 0
     HARDWARE_FAULT = 1
     TEMPORARY_FAILURE = 2
