@@ -88,16 +88,6 @@ def test_can_send_get_when_ready(get_request: xdlms.GetRequestNormal):
     assert c.state.current_state == state.AWAITING_GET_RESPONSE
 
 
-def test_cannot_send_get_if_conformance_does_not_allow_it(get_request):
-    c = DlmsConnection(
-        state=state.DlmsConnectionState(current_state=state.READY),
-        conformance=Conformance(get=False),
-        client_system_title=b"12345678",
-    )
-    with pytest.raises(exceptions.ConformanceError):
-        c.send(get_request)
-
-
 def test_receive_get_response_sets_state_to_ready():
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.AWAITING_GET_RESPONSE),
@@ -219,22 +209,12 @@ class TestXDlmsApduFactory:
 
 
 class TestMakeClientToServerChallenge:
-    def test_no_auth_returns_none(self):
-        challenge = make_client_to_server_challenge(
-            enumerations.AuthenticationMechanism.NONE
-        )
-        assert challenge is None
-
-    def test_lls_returns_none(self):
-        challenge = make_client_to_server_challenge(
-            enumerations.AuthenticationMechanism.LLS
-        )
-        assert challenge is None
+    def test_standard_length(self):
+        challenge = make_client_to_server_challenge()
+        assert len(challenge) == 8
 
     def test_hls_gmac_returns_correct_bytes(self):
-        challenge = make_client_to_server_challenge(
-            enumerations.AuthenticationMechanism.HLS_GMAC, 16
-        )
+        challenge = make_client_to_server_challenge(16)
         assert challenge
         assert len(challenge) == 16
         assert type(challenge) == bytes
@@ -242,12 +222,8 @@ class TestMakeClientToServerChallenge:
     def test_too_short_length_raises_value_error(self):
 
         with pytest.raises(ValueError):
-            make_client_to_server_challenge(
-                enumerations.AuthenticationMechanism.HLS_GMAC, 7
-            )
+            make_client_to_server_challenge(7)
 
     def test_too_long_length_raises_value_error(self):
         with pytest.raises(ValueError):
-            make_client_to_server_challenge(
-                enumerations.AuthenticationMechanism.HLS_GMAC, 65
-            )
+            make_client_to_server_challenge(65)

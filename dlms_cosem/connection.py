@@ -261,7 +261,6 @@ class DlmsConnection:
                     f"pre-established "
                 )
 
-        # self.validate_event_conformance(event)
         self.state.process_event(event)
         LOG.debug(f"Client wants to send {event}")
         if self.use_protection:
@@ -272,48 +271,6 @@ class DlmsConnection:
         #    # TODO: How to handle the subcase of sending blocks?
         LOG.info(f"Sending : {event}")
         return event.to_bytes()
-
-    # def validate_event_conformance(self, event):
-    #     """
-    #     Will check for each APDU type that it corresponds to the correct parameters for
-    #     the connection.
-    #     """
-    #
-    #     if isinstance(event, acse.ApplicationAssociationRequestApdu):
-    #         if self.global_encryption_key and not event.ciphered:
-    #             raise exceptions.ConformanceError(
-    #                 "Connection is ciphered but AARQ does not indicate ciphering."
-    #             )
-    #         if self.global_encryption_key and not event.user_information:
-    #             raise exceptions.ConformanceError(
-    #                 "Connection is ciphered but AARQ does not "
-    #                 "contain a InitiateRequest."
-    #             )
-    #         if (
-    #             self.global_encryption_key
-    #             and not event.user_information.content.proposed_conformance.general_protection
-    #         ):
-    #             raise exceptions.ConformanceError(
-    #                 "Connection is ciphered but the conformance block in the "
-    #                 "InitiateRequest doesn't indicate support of general-protection"
-    #             )
-    #         if not self.global_encryption_key and event.ciphered:
-    #             raise exceptions.ConformanceError(
-    #                 "Connection is not ciphered, but the AARQ indicates ciphering"
-    #             )
-    #
-    #     elif isinstance(event, acse.ApplicationAssociationResponseApdu):
-    #         if self.global_encryption_key and not event.ciphered:
-    #             raise exceptions.ConformanceError(
-    #                 "Connection is ciphered but AARE does not indicate ciphering."
-    #             )
-    #
-    #     if isinstance(event, xdlms.GetRequestNormal):
-    #         if not self.conformance.get:
-    #             raise exceptions.ConformanceError(
-    #                 "Tried sending a get request during association that doesnt "
-    #                 "support the service."
-    #             )
 
     def receive_data(self, data: bytes):
         """
@@ -340,7 +297,6 @@ class DlmsConnection:
 
         self.update_negotiated_parameters(apdu)
 
-        # self.validate_event_conformance(apdu)
         self.state.process_event(apdu)
         self.clear_buffer()
 
