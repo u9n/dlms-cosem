@@ -51,7 +51,7 @@ class BlockingTcpTransport:
             socket.error,
             ConnectionRefusedError,
         ) as e:
-            raise exceptions.CommunicationError from e
+            raise exceptions.CommunicationError("Unable to connect socket") from e
         LOG.info(f"Connected to {self.address}")
 
     def disconnect(self):
@@ -68,7 +68,7 @@ class BlockingTcpTransport:
         try:
             self.tcp_socket.sendall(self.wrap(bytes_to_send))
         except (OSError, IOError, socket.timeout, socket.error) as e:
-            raise exceptions.CommunicationError from e
+            raise exceptions.CommunicationError("Could no send data") from e
 
         return self.recv()
 
@@ -79,5 +79,5 @@ class BlockingTcpTransport:
         try:
             data = self.tcp_socket.recv(header.length)
         except (OSError, IOError, socket.timeout, socket.error) as e:
-            raise exceptions.CommunicationError from e
+            raise exceptions.CommunicationError("Could not receive data") from e
         return data

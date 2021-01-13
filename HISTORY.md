@@ -11,8 +11,14 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 ### Added
 
+* Better handling of TCP errors in `BlockingTcpTransport`
+
 
 ### Changed
+
+* It is now explicitly possible to connect and disconnect a transport in the
+  `DlmsClient` instead of it being done automatically in `.associate()` and
+  `.release_association()`. Context manager `.session()` works the same.
 
 
 ### Deprecated

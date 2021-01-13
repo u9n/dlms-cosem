@@ -167,9 +167,11 @@ class DlmsClient:
 
     @contextlib.contextmanager
     def session(self) -> "DlmsClient":
+        self.connect()
         self.associate()
         yield self
         self.release_association()
+        self.disconnect()
 
     def get(
         self,
@@ -227,60 +229,53 @@ class DlmsClient:
         association_request: Optional[acse.ApplicationAssociationRequestApdu] = None,
     ) -> acse.ApplicationAssociationResponseApdu:
 
-        self.io_interface.connect()
-
         # the aarq can be overridden or the standard one from the connection is used.
         aarq = association_request or self.dlms_connection.get_aarq()
 
-        try:
-            self.send(aarq)
-            response = self.next_event()
-            # we could have received an exception from the meter.
-            if isinstance(response, xdlms.ExceptionResponseApdu):
+        self.send(aarq)
+        response = self.next_event()
+        # we could have received an exception from the meter.
+        if isinstance(response, xdlms.ExceptionResponseApdu):
+            raise exceptions.DlmsClientException(
+                f"DLMS Exception: {response.state_error!r}:{response.service_error!r}"
+            )
+        # the association might not be accepted by the meter
+        if isinstance(response, acse.ApplicationAssociationResponseApdu):
+            if response.result is not enumerations.AssociationResult.ACCEPTED:
+                # there could be an error suppled with the reject.
+                extra_error = None
+                if response.user_information:
+                    if isinstance(
+                        response.user_information.content, ConfirmedServiceErrorApdu
+                    ):
+                        extra_error = response.user_information.content.error
                 raise exceptions.DlmsClientException(
-                    f"DLMS Exception: {response.state_error!r}:{response.service_error!r}"
+                    f"Unable to perform Association: {response.result!r} and "
+                    f"{response.result_source_diagnostics!r}, extra info: {extra_error}"
                 )
-            # the association might not be accepted by the meter
-            if isinstance(response, acse.ApplicationAssociationResponseApdu):
-                if response.result is not enumerations.AssociationResult.ACCEPTED:
-                    # there could be an error suppled with the reject.
-                    extra_error = None
-                    if response.user_information:
-                        if isinstance(
-                            response.user_information.content, ConfirmedServiceErrorApdu
-                        ):
-                            extra_error = response.user_information.content.error
-                    raise exceptions.DlmsClientException(
-                        f"Unable to perform Association: {response.result!r} and "
-                        f"{response.result_source_diagnostics!r}, extra info: {extra_error}"
-                    )
-            else:
+        else:
+            raise exceptions.LocalDlmsProtocolError(
+                "Did not receive an AARE after sending AARQ"
+            )
+
+        if self.should_send_hls_reply():
+            hls_response = self.send_hls_reply()
+
+            hls_data = utils.parse_as_dlms_data(hls_response.data)
+
+            if not isinstance(hls_response, xdlms.ActionResponseNormalWithData):
                 raise exceptions.LocalDlmsProtocolError(
-                    "Did not receive an AARE after sending AARQ"
+                    "Received an incorrect ActionResponse to HLS"
                 )
 
-            if self.should_send_hls_reply():
-                hls_response = self.send_hls_reply()
+            if hls_response.status != enumerations.ActionResultStatus.SUCCESS:
+                raise HLSError(f"HLS authentication failed: {hls_response.status!r}")
 
-                hls_data = utils.parse_as_dlms_data(hls_response.data)
+            if not self.dlms_connection.hls_response_valid(hls_data):
+                raise HLSError(
+                    f"Meter did not respond with correct challenge calculation"
+                )
 
-                if not isinstance(hls_response, xdlms.ActionResponseNormalWithData):
-                    raise exceptions.LocalDlmsProtocolError(
-                        "Received an incorrect ActionResponse to HLS"
-                    )
-
-                if hls_response.status != enumerations.ActionResultStatus.SUCCESS:
-                    raise HLSError(
-                        f"HLS authentication failed: {hls_response.status!r}"
-                    )
-
-                if not self.dlms_connection.hls_response_valid(hls_data):
-                    raise HLSError(
-                        f"Meter did not respond with correct challenge calculation"
-                    )
-        except (exceptions.DlmsClientException, HLSError):
-            self.io_interface.disconnect()
-            raise
         return response
 
     def should_send_hls_reply(self) -> bool:
@@ -305,8 +300,13 @@ class DlmsClient:
         rlrq = self.dlms_connection.get_rlrq()
         self.send(rlrq)
         rlre = self.next_event()
-        self.io_interface.disconnect()
         return rlre
+
+    def connect(self):
+        self.io_interface.connect()
+
+    def disconnect(self):
+        self.io_interface.disconnect()
 
     def send(self, *events):
         for event in events:
