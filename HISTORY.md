@@ -11,14 +11,26 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 ### Added
 
+* Better handling of TCP errors in `BlockingTcpTransport`
+
 
 ### Changed
+
+* It is now explicitly possible to connect and disconnect a transport in the
+  `DlmsClient` instead of it being done automatically in `.associate()` and
+  `.release_association()`. Context manager `.session()` works the same.
+
+* Client to server challenge of DlmsConnection is always created independent of auth
+  method. But only used if needed.
 
 
 ### Deprecated
 
 
 ### Removed
+
+* Removed conformance validation in DlmsConnection. It seems like meters don't always
+  follow it so better to leave it up to the client.
 
 
 ### Fixed

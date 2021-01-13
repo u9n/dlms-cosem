@@ -56,18 +56,10 @@ class XDlmsApduFactory:
         return apdu_class.from_bytes(apdu_bytes)
 
 
-def make_client_to_server_challenge(
-    auth_method: enums.AuthenticationMechanism, length: int = 8
-) -> Optional[bytes]:
+def make_client_to_server_challenge(length: int = 8) -> bytes:
     """
     Return a valid challenge depending on the authentocation method.
     """
-    if auth_method in [
-        enums.AuthenticationMechanism.NONE,
-        enums.AuthenticationMechanism.LLS,
-    ]:
-        return None
-
     if 8 <= length <= 64:
         return os.urandom(length)
     else:
@@ -144,12 +136,10 @@ class DlmsConnection:
 
     # client_to_meter_challenge is generated automatically with a random seed
     # depending on the HLS setup.
-    client_to_meter_challenge: Optional[bytes] = attr.ib(
+    client_to_meter_challenge: bytes = attr.ib(
         init=False,
         default=attr.Factory(
-            lambda self: make_client_to_server_challenge(
-                self.authentication_method, self.challenge_length
-            ),
+            lambda self: make_client_to_server_challenge(self.challenge_length),
             takes_self=True,
         ),
     )
@@ -271,7 +261,6 @@ class DlmsConnection:
                     f"pre-established "
                 )
 
-        self.validate_event_conformance(event)
         self.state.process_event(event)
         LOG.debug(f"Client wants to send {event}")
         if self.use_protection:
@@ -282,48 +271,6 @@ class DlmsConnection:
         #    # TODO: How to handle the subcase of sending blocks?
         LOG.info(f"Sending : {event}")
         return event.to_bytes()
-
-    def validate_event_conformance(self, event):
-        """
-        Will check for each APDU type that it corresponds to the correct parameters for
-        the connection.
-        """
-
-        if isinstance(event, acse.ApplicationAssociationRequestApdu):
-            if self.global_encryption_key and not event.ciphered:
-                raise exceptions.ConformanceError(
-                    "Connection is ciphered but AARQ does not indicate ciphering."
-                )
-            if self.global_encryption_key and not event.user_information:
-                raise exceptions.ConformanceError(
-                    "Connection is ciphered but AARQ does not "
-                    "contain a InitiateRequest."
-                )
-            if (
-                self.global_encryption_key
-                and not event.user_information.content.proposed_conformance.general_protection
-            ):
-                raise exceptions.ConformanceError(
-                    "Connection is ciphered but the conformance block in the "
-                    "InitiateRequest doesn't indicate support of general-protection"
-                )
-            if not self.global_encryption_key and event.ciphered:
-                raise exceptions.ConformanceError(
-                    "Connection is not ciphered, but the AARQ indicates ciphering"
-                )
-
-        elif isinstance(event, acse.ApplicationAssociationResponseApdu):
-            if self.global_encryption_key and not event.ciphered:
-                raise exceptions.ConformanceError(
-                    "Connection is ciphered but AARE does not indicate ciphering."
-                )
-
-        if isinstance(event, xdlms.GetRequestNormal):
-            if not self.conformance.get:
-                raise exceptions.ConformanceError(
-                    "Tried sending a get request during association that doesnt "
-                    "support the service."
-                )
 
     def receive_data(self, data: bytes):
         """
@@ -350,7 +297,6 @@ class DlmsConnection:
 
         self.update_negotiated_parameters(apdu)
 
-        self.validate_event_conformance(apdu)
         self.state.process_event(apdu)
         self.clear_buffer()
 
@@ -536,7 +482,6 @@ class DlmsConnection:
                 auth_key=self.global_authentication_key,
                 cipher_text=event.ciphered_text,
             )
-            print(plain_text)
             event = XDlmsApduFactory.apdu_from_bytes(plain_text)
 
         else:
