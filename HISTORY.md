@@ -11,9 +11,6 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 ### Added
 
-* Better handling of TCP errors in `BlockingTcpTransport`
-
-
 ### Changed
 
 ### Deprecated
@@ -21,6 +18,13 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 ### Removed
 
 ### Fixed
+
+* The standard DLMS way of dealing with timezones in datetime are via UTC offset. But
+  the offset is the deviation from normal time to UTC not deviation from UTC. This
+  results in -60 min deviation for UTC+01:00 for example. Previous solution assumed
+  60 min for UTC+01:00. Solved by negating all values for offset.
+  Note that some DLMS companion standards handles the offset the previous way and in
+  the future there will be need to handle both ways correctly.
 
 ### Security
 

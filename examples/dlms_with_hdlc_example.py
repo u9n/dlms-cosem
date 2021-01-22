@@ -40,6 +40,8 @@ c = Conformance(
 
 encryption_key = bytes.fromhex("990EB3136F283EDB44A79F15F0BFCC21")
 authentication_key = bytes.fromhex("EC29E2F4BD7D697394B190827CE3DD9A")
+
+
 auth = enumerations.AuthenticationMechanism.HLS_GMAC
 
 
@@ -96,7 +98,7 @@ with management_client(
 ).session() as client:
 
     profile = client.get(
-        CURRENT_ASSOCIATION_OBJECTS,
+        LOAD_PROFILE_BUFFER,
         # access_descriptor=RangeDescriptor(
         #    restricting_object=selective_access.CaptureObject(
         #        cosem_attribute=cosem.CosemAttribute(
@@ -136,10 +138,13 @@ with management_client(
         ],
         capture_period=60,
     )
-    # result = parser.parse_bytes(profile)
-    result = utils.parse_as_dlms_data(profile)
-    meter_objects_list = AssociationObjectListParser.parse_entries(result)
-    meter_objects_dict = {
-        obj.logical_name.dotted_repr(): obj for obj in meter_objects_list
-    }
-    pprint(meter_objects_dict)
+
+    result = parser.parse_bytes(profile)
+    # result = utils.parse_as_dlms_data(profile)
+    # meter_objects_list = AssociationObjectListParser.parse_entries(result)
+    # meter_objects_dict = {
+    #     obj.logical_name.dotted_repr(): obj for obj in meter_objects_list
+    # }
+    # pprint(meter_objects_dict)
+    pprint(result)
+    print(result[0][0].value.isoformat())
