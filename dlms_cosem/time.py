@@ -226,8 +226,23 @@ def time_from_bytes(source_bytes: bytes) -> time:
 
 
 def utc_offset_minutes(offset_minutes: Optional[int]) -> Optional[tzoffset]:
+    """
+    Big issue in DLMS about timezone.
+    The DLMS standard and IDIS standard use the "correct" way of defining the utc offset.
+    In the Blue Book 4.1.6.1 the timezone deviation is defined as minutes from local time to UTC.
+    NOT deviation from UTC.
+    In practice that means we need to negate the offset.
+    UTC+01:00 == -60 minutes since you need to subtract 60 minutes to get to UTC.
+    UTC-01:00 == +60 minutes since you need to add 60 minutes to get to UTC.
+
+    To make it harder some companion standard is not using the the standard way of
+    deviation from localtime but the deviation from UTC.
+
+    # TODO: We need a way to handle different ways of interpretating the timezone offset.
+
+    """
     if offset_minutes:
-        return tzoffset(name=None, offset=offset_minutes * 60)
+        return tzoffset(name=None, offset=-(offset_minutes * 60))
     else:
         return None
 
@@ -304,7 +319,8 @@ def datetime_to_bytes(dt: datetime, clock_status: Optional[ClockStatus] = None):
     if dt.tzinfo is None:
         timezone_bytes = b"\x80\x00"
     else:
-        timezone_bytes = int(dt.utcoffset().total_seconds() / 60).to_bytes(
+        # negating the offset to match dlms standard offset representation
+        timezone_bytes = int(-(dt.utcoffset().total_seconds() / 60)).to_bytes(
             2, "big", signed=True
         )
 

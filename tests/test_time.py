@@ -11,11 +11,11 @@ from dlms_cosem.time import datetime_from_bytes, datetime_to_bytes
     [
         (
             b"\x07\xe4\x01\x01\xff\x00\x03\x00\x00\xff\x88\x00",
-            dt_parse("2020-01-01T00:03:00-02:00"),
+            dt_parse("2020-01-01T00:03:00+02:00"),
         ),
         (
             b"\x07\xe4\x01\x06\xff\x00\x03\x00\x00\xff\xc4\x00",
-            dt_parse("2020-01-06T00:03:00-01:00"),
+            dt_parse("2020-01-06T00:03:00+01:00"),
         ),
         (
             b"\x07\xe2\x02\x0c\xff\x00\x00\x00\x00\x80\x00\x00",
