@@ -20,6 +20,7 @@ REQUIRED = [
     "cryptography==3.3.1",
     "asn1crypto==0.24.0",
     "python-dateutil==2.8.1",
+    "typing-extensions==3.7.4.3",
 ]
 
 DOC_PACKAGES = ["mkdocs", "mkdocs-material"]
