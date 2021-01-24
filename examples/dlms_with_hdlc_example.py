@@ -40,6 +40,8 @@ c = Conformance(
 
 encryption_key = bytes.fromhex("990EB3136F283EDB44A79F15F0BFCC21")
 authentication_key = bytes.fromhex("EC29E2F4BD7D697394B190827CE3DD9A")
+encryption_key = bytes.fromhex("FFBDED4154787C951BDA91411D4CCB26")
+authentication_key = bytes.fromhex("C7DDFC7EE8E0EF95B8D154C1CA09B450")
 
 
 auth = enumerations.AuthenticationMechanism.HLS_GMAC
@@ -93,12 +95,33 @@ CURRENT_ASSOCIATION_OBJECTS = cosem.CosemAttribute(
     attribute=2,
 )
 
+GSM_CONNECTION_INFO = cosem.CosemAttribute(
+    interface=enumerations.CosemInterface.GPRS_MODEM_SETUP,
+    instance=cosem.Obis(0, 0, 25, 4, 0),
+    attribute=2,
+)
+
+
+CLOCK_OBJECT = cosem.CosemAttribute(
+    interface=enumerations.CosemInterface.CLOCK,
+    instance=cosem.Obis(0, 0, 1, 0, 0, 255),
+    attribute=2,
+)
+
+
+LTE_SETTINGS = cosem.CosemAttribute(
+    interface=enumerations.CosemInterface.GSM_DIAGNOSTICS,
+    instance=cosem.Obis(0, 0, 25, 6, 0),
+    attribute=3,
+)
+
+
 with management_client(
     serial_port=port, client_initial_invocation_counter=invocation_counter + 1
 ).session() as client:
 
     profile = client.get(
-        LOAD_PROFILE_BUFFER,
+        CLOCK_OBJECT,
         # access_descriptor=RangeDescriptor(
         #    restricting_object=selective_access.CaptureObject(
         #        cosem_attribute=cosem.CosemAttribute(
@@ -139,12 +162,12 @@ with management_client(
         capture_period=60,
     )
 
-    result = parser.parse_bytes(profile)
-    # result = utils.parse_as_dlms_data(profile)
+    # result = parser.parse_bytes(profile)
+    result = utils.parse_as_dlms_data(profile)
     # meter_objects_list = AssociationObjectListParser.parse_entries(result)
     # meter_objects_dict = {
     #     obj.logical_name.dotted_repr(): obj for obj in meter_objects_list
     # }
     # pprint(meter_objects_dict)
     pprint(result)
-    print(result[0][0].value.isoformat())
+    # print(result[0][0].value.isoformat())

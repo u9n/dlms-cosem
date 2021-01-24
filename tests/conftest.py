@@ -176,6 +176,34 @@ def get_request() -> xdlms.GetRequestNormal:
 
 
 @pytest.fixture()
+def set_request() -> xdlms.SetRequestNormal:
+
+    # invocation counter
+    return xdlms.SetRequestNormal(
+        cosem_attribute=cosem.CosemAttribute(
+            interface=enumerations.CosemInterface.CLOCK,
+            instance=cosem.Obis(a=0, b=0, c=1, d=0, e=0, f=255),
+            attribute=2,
+        ),
+        data=b"\t\x0c\x07\xe5\x01\x18\xff\x0e09P\xff\xc4\x00",
+        access_selection=None,
+        invoke_id_and_priority=xdlms.InvokeIdAndPriority(
+            invoke_id=1, confirmed=True, high_priority=True
+        ),
+    )
+
+
+@pytest.fixture()
+def set_response() -> xdlms.SetResponseNormal:
+    return xdlms.SetResponseNormal(
+        result=enumerations.DataAccessResult.SUCCESS,
+        invoke_id_and_priority=xdlms.InvokeIdAndPriority(
+            invoke_id=1, confirmed=True, high_priority=True
+        ),
+    )
+
+
+@pytest.fixture()
 def exception_response() -> xdlms.ExceptionResponseApdu:
 
     return xdlms.ExceptionResponseApdu(
