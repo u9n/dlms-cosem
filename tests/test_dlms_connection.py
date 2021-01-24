@@ -98,6 +98,28 @@ def test_receive_get_response_sets_state_to_ready():
     assert c.state.current_state == state.READY
 
 
+def test_set_request_sets_state_in_waiting_for_set_response(
+    set_request: xdlms.SetRequestNormal,
+):
+    c = DlmsConnection(
+        state=state.DlmsConnectionState(current_state=state.READY),
+        client_system_title=b"12345678",
+    )
+
+    c.send(set_request)
+    assert c.state.current_state == state.AWAITING_SET_RESPONSE
+
+
+def test_set_response_sets_state_in_ready(set_response: xdlms.SetResponseNormal):
+    c = DlmsConnection(
+        state=state.DlmsConnectionState(current_state=state.AWAITING_SET_RESPONSE),
+        client_system_title=b"12345678",
+    )
+
+    c.send(set_response)
+    assert c.state.current_state == state.READY
+
+
 def test_receive_exception_response_sets_state_to_ready(
     exception_response: xdlms.ExceptionResponseApdu,
 ):

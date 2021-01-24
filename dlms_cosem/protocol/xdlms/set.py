@@ -82,7 +82,7 @@ class SetRequestNormal(AbstractXDlmsApdu):
 
         return cls(
             cosem_attribute=cosem_attribute,
-            data=data,
+            data=bytes(data),
             access_selection=access_selection,
             invoke_id_and_priority=invoke_id_and_priority,
         )
