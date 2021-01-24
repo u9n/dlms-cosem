@@ -11,6 +11,9 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 ### Added
 
+* Support for basic SET service. No support for WITH_LIST or service specific block
+  transfer
+
 ### Changed
 
 ### Deprecated
