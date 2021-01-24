@@ -104,21 +104,91 @@ class SetRequestNormal(AbstractXDlmsApdu):
 
 @attr.s(auto_attribs=True)
 class SetRequestWithFirstBlock:
+    """
+    Set-Request-With-First-Datablock ::= SEQUENCE
+    {
+    invoke-id-and-priority      Invoke-Id-And-Priority,
+    cosem-attribute-descriptor  Cosem-Attribute-Descriptor,
+    access-selection            [0] IMPLICIT Selective-Access-Descriptor OPTIONAL,
+    datablock                   DataBlock-SA
+    }
+
+    DataBlock-SA ::= SEQUENCE  -- SA == DataBlock for the SET-request, ACTION-request and ACTION-response
+    {
+    last-block      BOOLEAN,
+    block-number    Unsigned32,
+    raw-data        OCTET STRING
+    }
+    """
+
     ...
 
 
 @attr.s(auto_attribs=True)
 class SetRequestWithBlock:
+    """
+    Set-Request-With-Datablock ::= SEQUENCE
+    {
+    invoke-id-and-priority  Invoke-Id-And-Priority,
+    datablock               DataBlock-SA
+    }
+
+    DataBlock-SA ::= SEQUENCE  -- SA == DataBlock for the SET-request, ACTION-request and ACTION-response
+    {
+    last-block      BOOLEAN,
+    block-number    Unsigned32,
+    raw-data        OCTET STRING
+    }
+    """
+
     ...
 
 
 @attr.s(auto_attribs=True)
 class SetRequestWithList:
+    """
+    Set-Request-With-List ::= SEQUENCE
+    {
+    invoke-id-and-priority      Invoke-Id-And-Priority,
+    attribute-descriptor-list   SEQUENCE OF Cosem-Attribute-Descriptor-With-Selection,
+    value-list                  SEQUENCE OF Data
+    }
+
+    Cosem-Attribute-Descriptor-With-Selection ::= SEQUENCE
+    {
+    cosem-attribute-descriptor   Cosem-Attribute-Descriptor,
+    access-selection             Selective-Access-Descriptor OPTIONAL
+    }
+    """
+
     ...
 
 
 @attr.s(auto_attribs=True)
 class SetRequestWithListFirstBlock:
+    """
+    Set-Request-With-List-And-First-Datablock ::= SEQUENCE
+    {
+    invoke-id-and-priority  Invoke-Id-And-Priority,
+    attribute-descriptor-list  SEQUENCE OF Cosem-Attribute-Descriptor-With-Selection,
+    datablock DataBlock-SA
+    }
+
+    Cosem-Attribute-Descriptor-With-Selection ::= SEQUENCE
+    {
+    cosem-attribute-descriptor   Cosem-Attribute-Descriptor,
+    access-selection             Selective-Access-Descriptor OPTIONAL
+    }
+
+    DataBlock-SA ::= SEQUENCE  -- SA == DataBlock for the SET-request, ACTION-request and ACTION-response
+    {
+    last-block      BOOLEAN,
+    block-number    Unsigned32,
+    raw-data        OCTET STRING
+    }
+
+    """
+
     ...
 
 
@@ -201,21 +271,55 @@ class SetResponseNormal(AbstractXDlmsApdu):
 
 @attr.s(auto_attribs=True)
 class SetResponseWithBlock:
+    """
+    Set-Response-Datablock ::= SEQUENCE
+    {
+    invoke-id-and-priority  Invoke-Id-And-Priority,
+    block-number            Unsigned32
+    }
+    """
+
     ...
 
 
 @attr.s(auto_attribs=True)
 class SetResponseLastBlock:
+    """
+    Set-Response-Last-Datablock ::= SEQUENCE
+    {
+    invoke-id-and-priority  Invoke-Id-And-Priority,
+    result                  Data-Access-Result,
+    block-number            Unsigned32
+    }
+    """
+
     ...
 
 
 @attr.s(auto_attribs=True)
 class SetResponseLastBlockWithList:
+    """
+    Set-Response-Last-Datablock-With-List ::= SEQUENCE
+    {
+    invoke-id-and-priority  Invoke-Id-And-Priority,
+    result                  SEQUENCE OF Data-Access-Result,
+    block-number            Unsigned32
+    }
+    """
+
     ...
 
 
 @attr.s(auto_attribs=True)
 class SetResponseWithList:
+    """
+    Set-Response-With-List ::= SEQUENCE
+    {
+    invoke-id-and-priority  Invoke-Id-And-Priority,
+    result                  SEQUENCE OF Data-Access-Result,
+    }
+    """
+
     ...
 
 
