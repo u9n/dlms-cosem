@@ -217,8 +217,9 @@ class DlmsClient:
 
         return bytes(data)
 
-    def set(self):
-        pass
+    def set(self, cosem_attribute: cosem.CosemAttribute, data: bytes):
+        self.send(xdlms.SetRequestNormal(cosem_attribute=cosem_attribute, data=data))
+        return self.next_event()
 
     def action(self, method: cosem.CosemMethod, data: bytes):
         self.send(xdlms.ActionRequestNormal(cosem_method=method, data=data))

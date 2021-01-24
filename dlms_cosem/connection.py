@@ -40,8 +40,10 @@ class XDlmsApduFactory:
         98: acse.ReleaseRequestApdu,
         99: acse.ReleaseResponseApdu,
         192: xdlms.GetRequestFactory,
+        193: xdlms.SetRequestFactory,
         195: xdlms.ActionRequestFactory,
         196: xdlms.GetResponseFactory,
+        197: xdlms.SetResponseFactory,
         199: xdlms.ActionResponseFactory,
     }
 

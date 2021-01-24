@@ -33,6 +33,22 @@ class GetResponseType(IntEnum):
     WITH_LIST = 3
 
 
+class SetRequestType(IntEnum):
+    NORMAL = 1
+    WITH_FIRST_BLOCK = 2
+    WITH_BLOCK = 3
+    WITH_LIST = 4
+    FIRST_BLOCK_WITH_LIST = 5
+
+
+class SetResponseType(IntEnum):
+    NORMAL = 1
+    WITH_BLOCK = 2
+    WITH_LAST_BLOCK = 3
+    LAST_BLOCK_WITH_LIST = 4
+    WITH_LIST = 5
+
+
 class ActionType(IntEnum):
     NORMAL = 1
     NEXT_PBLOCK = 2
