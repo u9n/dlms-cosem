@@ -345,4 +345,4 @@ class SetResponseFactory:
             return SetResponseNormal.from_bytes(source_bytes)
 
         else:
-            raise NotImplementedError("Only SetRequestNormal implemented")
+            raise NotImplementedError("Only SetResponseNormal implemented")
