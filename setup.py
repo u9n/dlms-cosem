@@ -99,6 +99,7 @@ setup(
     python_requires=REQUIRES_PYTHON,
     description=DESCRIPTION,
     long_description=readme + "\n\n" + history,
+    long_description_content_type="text/markdown",
     author=AUTHOR,
     author_email=EMAIL,
     maintainer=AUTHOR,
