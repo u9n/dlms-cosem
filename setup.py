@@ -17,7 +17,7 @@ VERSION = "21.2.0"
 REQUIRED = [
     "attrs==20.3.0",
     "pyserial==3.5",
-    "cryptography==3.3.1",
+    "cryptography==3.3.2",
     "asn1crypto==0.24.0",
     "python-dateutil==2.8.1",
     "typing-extensions==3.7.4.3",
