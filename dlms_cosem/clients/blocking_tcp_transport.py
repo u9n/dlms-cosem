@@ -73,6 +73,7 @@ class BlockingTcpTransport:
                 self.tcp_socket.shutdown(socket.SHUT_RDWR)
                 self.tcp_socket.close()
             except (OSError, IOError, socket.timeout, socket.error) as e:
+                self.tcp_socket = None
                 raise exceptions.CommunicationError from e
             self.tcp_socket = None
             LOG.info(f"Connection to {self.address} is closed")
