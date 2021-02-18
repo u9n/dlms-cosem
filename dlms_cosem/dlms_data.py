@@ -29,7 +29,9 @@ class BaseDlmsData(AbstractDlmsData):
 
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
-        raise NotImplementedError()
+        raise NotImplementedError(
+            f"{cls.__name__} have not implemented byte conversion"
+        )
 
     def to_python(self) -> Any:
         return self.value

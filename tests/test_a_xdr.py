@@ -11,6 +11,7 @@ from dlms_cosem.a_xdr import (
 )
 from dlms_cosem.connection import XDlmsApduFactory
 from dlms_cosem.protocol.xdlms.get import GetResponseWithBlock
+from dlms_cosem.utils import parse_as_dlms_data
 
 get_data_access_result_from_bytes = partial(
     enums.DataAccessResult.from_bytes, byteorder="big"
@@ -67,6 +68,43 @@ class TestAxdrDecoder:
         assert isinstance(result[0][0], bytearray)
         assert isinstance(result[0][1], int)
         assert isinstance(result[0][2], int)
+
+
+def test_lte_monitoring_quality_of_service():
+    """
+    LTE Monitoring v0, attr 2.
+    {
+    T3402:   long-unsigned
+    T3412:   long-unsigned
+    RSRQ:   unsigned int
+    RSRP:   unsigned int
+    qRxlevMin: integer
+    }
+    """
+    data = b"\x02\x05\x12\x02\xd0\x12\x0c\xa8\x11\x12\x11\x1e\x0f\xc0"
+    result = parse_as_dlms_data(data)
+    assert 5 == len(result)
+
+
+def test_gsm_diagnistics_cell_info():
+    """
+    GSM Diagnoistivs v1, attr 6
+
+    {
+     cell_ID: double-long-unsigned,
+     location_ID: long-unsigned,
+     signal_quality: unsigned,
+     ber: unsigned,
+     mcc: long-unsigned,
+     mnc: long-unsigned,
+    }
+    """
+    data = b"\x02\x07\x06\x00\x00\x00\x00\x12\x00\x00\x11\x00\x11\x00\x12\x00\x00\x12\x00\x00\x12\x00\x00"
+    result = parse_as_dlms_data(data)
+
+    assert 7 == len(result)
+    assert result[0] == 0
+    assert result[1] == 0
 
 
 def test_get_axdr_length():
