@@ -8,10 +8,15 @@ from setuptools import Command, find_packages, setup
 NAME = "dlms-cosem"
 DESCRIPTION = "A Python library for DLMS/COSEM"
 URL = "https://github.com/pwitab/dlms-cosem"
+PROJECT_URLS = {
+    "Documentation": "https://www.dlms.dev/",
+    "Bug Tracker": "https://github.com/pwitab/dlms-cosem/issues",
+    "Source Code": "https://github.com/pwitab/dlms-cosem",
+}
 EMAIL = "henrik@pwit.se"
 AUTHOR = "Henrik Palmlund Wahlgren @ Palmlund Wahlgren Innovative Technology AB"
 REQUIRES_PYTHON = "~=3.6"
-VERSION = "21.2.1rc1"
+VERSION = "21.2.1"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
@@ -105,6 +110,7 @@ setup(
     maintainer=AUTHOR,
     maintainer_email=EMAIL,
     url=URL,
+    project_urls=PROJECT_URLS,
     packages=find_packages(exclude=("tests",)),
     entry_points={},
     install_requires=REQUIRED,

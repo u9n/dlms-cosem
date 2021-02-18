@@ -19,6 +19,13 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 ### Fixed
 
+### Security
+
+
+## [21.2.1] - 2021-02-18
+
+### Fixed
+
 * Fixed [#23](https://github.com/pwitab/dlms-cosem/issues/23). Typo in A-XDR Parser.
   Just referenced the function and did not call it. Now DLMS data is interpreted
   correctly.
@@ -26,8 +33,6 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 * Fixed [#20](https://github.com/pwitab/dlms-cosem/issues/20). It was possible that not
   calling the .shutdown() on socket before disconnecting made remote modems on meters,
   that have an embedded TCP/IP stack, keep the socket open and blocking subsequent calls.
-
-### Security
 
 ## [21.2.0] - 2021-01-28
 
