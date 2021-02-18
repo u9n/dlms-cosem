@@ -19,6 +19,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 ### Fixed
 
+* Fixed [#23](https://github.com/pwitab/dlms-cosem/issues/23). Typo in A-XDR Parser.
+  Just referenced the function and did not call it. Now DLMS data is interpreted
+  correctly.
+
 ### Security
 
 ## [21.2.0] - 2021-01-28

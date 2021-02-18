@@ -121,7 +121,11 @@ with management_client(
 ).session() as client:
 
     profile = client.get(
-        CLOCK_OBJECT,
+        cosem.CosemAttribute(
+            interface=enumerations.CosemInterface.GSM_DIAGNOSTICS,
+            instance=cosem.Obis(0, 2, 25, 6, 0),
+            attribute=6,
+        ),
         # access_descriptor=RangeDescriptor(
         #    restricting_object=selective_access.CaptureObject(
         #        cosem_attribute=cosem.CosemAttribute(
@@ -169,5 +173,7 @@ with management_client(
     #     obj.logical_name.dotted_repr(): obj for obj in meter_objects_list
     # }
     # pprint(meter_objects_dict)
+    pprint(profile)
     pprint(result)
+    print(client.dlms_connection.meter_system_title.hex())
     # print(result[0][0].value.isoformat())

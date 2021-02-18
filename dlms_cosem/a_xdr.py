@@ -216,7 +216,8 @@ class AXdrDecoder:
 
     def decode_fixed_length_attribute(self, encoding: Attribute, data) -> Any:
         """
-        When we know the encoding of a fixed length value we can just feed the data to the instance_creator
+        When we know the encoding of a fixed length value we can just feed the data to
+        the instance_creator
         """
         return encoding.create_instance(data)
 
@@ -235,7 +236,7 @@ class AXdrDecoder:
                 continue
 
             if data_class == dlms_data.DataStructure:
-                parsed_data.append(self.decode_structure)
+                parsed_data.append(self.decode_structure())
                 continue
 
             if data_class.LENGTH != VARIABLE_LENGTH:
