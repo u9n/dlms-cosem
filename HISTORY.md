@@ -23,6 +23,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
   Just referenced the function and did not call it. Now DLMS data is interpreted
   correctly.
 
+* Fixed [#20](https://github.com/pwitab/dlms-cosem/issues/20). It was possible that not
+  calling the .shutdown() on socket before disconnecting made remote modems on meters,
+  that have an embedded TCP/IP stack, keep the socket open and blocking subsequent calls.
+
 ### Security
 
 ## [21.2.0] - 2021-01-28
