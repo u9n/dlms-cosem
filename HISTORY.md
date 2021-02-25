@@ -19,6 +19,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 ### Fixed
 
+* Fixed missing state management for general ACTION usage
+
 ### Security
 
 
