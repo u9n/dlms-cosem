@@ -1,6 +1,6 @@
 import pytest
 
-from dlms_cosem import enumerations, exceptions, security, state
+from dlms_cosem import dlms_data, enumerations, exceptions, security, state
 from dlms_cosem.connection import (
     DlmsConnection,
     XDlmsApduFactory,
@@ -116,7 +116,77 @@ def test_set_response_sets_state_in_ready(set_response: xdlms.SetResponseNormal)
         client_system_title=b"12345678",
     )
 
-    c.send(set_response)
+    c.receive_data(set_response.to_bytes())
+    c.next_event()
+    assert c.state.current_state == state.READY
+
+
+def test_can_send_action_request_in_ready(action_request: xdlms.ActionRequestNormal):
+    c = DlmsConnection(
+        state=state.DlmsConnectionState(current_state=state.READY),
+        client_system_title=b"12345678",
+    )
+
+    c.send(action_request)
+    assert c.state.current_state == state.AWAITING_ACTION_RESPONSE
+
+
+def test_action_response_normal_sets_ready_when_awaiting_action_resoponse():
+
+    c = DlmsConnection(
+        state=state.DlmsConnectionState(current_state=state.AWAITING_ACTION_RESPONSE),
+        client_system_title=b"12345678",
+    )
+
+    c.receive_data(
+        xdlms.ActionResponseNormal(
+            status=enumerations.ActionResultStatus.SUCCESS,
+            invoke_id_and_priority=xdlms.InvokeIdAndPriority(
+                invoke_id=1, confirmed=True, high_priority=True
+            ),
+        ).to_bytes()
+    )
+    c.next_event()
+    assert c.state.current_state == state.READY
+
+
+def test_action_response_normal_with_error_sets_ready_when_awaiting_action_resoponse():
+
+    c = DlmsConnection(
+        state=state.DlmsConnectionState(current_state=state.AWAITING_ACTION_RESPONSE),
+        client_system_title=b"12345678",
+    )
+
+    c.receive_data(
+        xdlms.ActionResponseNormalWithError(
+            status=enumerations.ActionResultStatus.SUCCESS,
+            error=enumerations.DataAccessResult.OTHER_REASON,
+            invoke_id_and_priority=xdlms.InvokeIdAndPriority(
+                invoke_id=1, confirmed=True, high_priority=True
+            ),
+        ).to_bytes()
+    )
+    c.next_event()
+    assert c.state.current_state == state.READY
+
+
+def test_action_response_normal_with_data_sets_ready_when_awaiting_action_resoponse():
+
+    c = DlmsConnection(
+        state=state.DlmsConnectionState(current_state=state.AWAITING_ACTION_RESPONSE),
+        client_system_title=b"12345678",
+    )
+
+    c.receive_data(
+        xdlms.ActionResponseNormalWithData(
+            status=enumerations.ActionResultStatus.SUCCESS,
+            data=b"\x12\x00\x00",
+            invoke_id_and_priority=xdlms.InvokeIdAndPriority(
+                invoke_id=1, confirmed=True, high_priority=True
+            ),
+        ).to_bytes()
+    )
+    c.next_event()
     assert c.state.current_state == state.READY
 
 

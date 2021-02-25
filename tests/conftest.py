@@ -1,6 +1,6 @@
 import pytest
 
-from dlms_cosem import cosem, enumerations
+from dlms_cosem import cosem, dlms_data, enumerations
 from dlms_cosem.connection import DlmsConnection
 from dlms_cosem.protocol import acse, xdlms
 
@@ -197,6 +197,21 @@ def set_request() -> xdlms.SetRequestNormal:
 def set_response() -> xdlms.SetResponseNormal:
     return xdlms.SetResponseNormal(
         result=enumerations.DataAccessResult.SUCCESS,
+        invoke_id_and_priority=xdlms.InvokeIdAndPriority(
+            invoke_id=1, confirmed=True, high_priority=True
+        ),
+    )
+
+
+@pytest.fixture()
+def action_request() -> xdlms.ActionRequestNormal:
+    return xdlms.ActionRequestNormal(
+        cosem_method=cosem.CosemMethod(
+            interface=enumerations.CosemInterface.DISCONNECT_CONTROL,
+            instance=cosem.Obis.from_dotted("0.0.96.3.10.255"),
+            method=1,
+        ),
+        data=dlms_data.UnsignedLongData(0).to_bytes(),
         invoke_id_and_priority=xdlms.InvokeIdAndPriority(
             invoke_id=1, confirmed=True, high_priority=True
         ),
