@@ -62,6 +62,7 @@ AWAITING_ASSOCIATION_RESPONSE = make_sentinel("AWAITING_ASSOCIATION_RESPONSE")
 READY = make_sentinel("READY")
 
 AWAITING_RELEASE_RESPONSE = make_sentinel("AWAITING_RELEASE_RESPONSE")
+AWAITING_ACTION_RESPONSE = make_sentinel("AWAITING_ACTION_RESPONSE")
 AWAITING_GET_RESPONSE = make_sentinel("AWAITING_GET_RESPONSE")
 AWAITING_GET_BLOCK_RESPONSE = make_sentinel("AWAITING_GET_BLOCK_RESPONSE")
 SHOULD_ACK_LAST_GET_BLOCK = make_sentinel("SHOULD_ACK_LAST_GET_BLOCK")
@@ -93,6 +94,7 @@ DLMS_STATE_TRANSITIONS = {
         xdlms.SetRequestNormal: AWAITING_SET_RESPONSE,
         HlsStart: SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT,
         RejectAssociation: NO_ASSOCIATION,
+        xdlms.ActionRequestNormal: AWAITING_ACTION_RESPONSE,
     },
     SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT: {
         xdlms.ActionRequestNormal: AWAITING_HLS_CLIENT_CHALLENGE_RESULT
@@ -109,13 +111,18 @@ DLMS_STATE_TRANSITIONS = {
         xdlms.GetResponseNormalWithError: READY,
         xdlms.ExceptionResponseApdu: READY,
     },
-    AWAITING_SET_RESPONSE: {xdlms.SetResponseNormal: READY},
     AWAITING_GET_BLOCK_RESPONSE: {
         xdlms.GetResponseWithBlock: SHOULD_ACK_LAST_GET_BLOCK,
         xdlms.GetResponseNormalWithError: READY,
         xdlms.ExceptionResponseApdu: READY,
         xdlms.GetResponseLastBlockWithError: READY,
         xdlms.GetResponseLastBlock: READY,
+    },
+    AWAITING_SET_RESPONSE: {xdlms.SetResponseNormal: READY},
+    AWAITING_ACTION_RESPONSE: {
+        xdlms.ActionResponseNormal: READY,
+        xdlms.ActionResponseNormalWithData: READY,
+        xdlms.ActionResponseNormalWithError: READY,
     },
     SHOULD_ACK_LAST_GET_BLOCK: {xdlms.GetRequestNext: AWAITING_GET_BLOCK_RESPONSE},
     AWAITING_RELEASE_RESPONSE: {

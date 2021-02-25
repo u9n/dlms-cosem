@@ -20,6 +20,10 @@ class DataResultError(Exception):
     """ Error retrieveing data"""
 
 
+class ActionError(Exception):
+    """Error performing an action"""
+
+
 class HLSError(Exception):
     """error in HLS procedure"""
 
@@ -223,7 +227,18 @@ class DlmsClient:
 
     def action(self, method: cosem.CosemMethod, data: bytes):
         self.send(xdlms.ActionRequestNormal(cosem_method=method, data=data))
-        return self.next_event()
+        response = self.next_event()
+
+        if isinstance(response, xdlms.ActionResponseNormalWithError):
+            raise ActionError(response.error.name)
+        elif isinstance(response, xdlms.ActionResponseNormalWithData):
+            if response.status != enumerations.ActionResultStatus.SUCCESS:
+                raise ActionError(f"Unsuccessful ActionRequest: {response.status.name}")
+            return response.data
+        else:
+            if response.status != enumerations.ActionResultStatus.SUCCESS:
+                raise ActionError(f"Unsuccessful ActionRequest: {response.status.name}")
+        return
 
     def associate(
         self,
@@ -260,17 +275,14 @@ class DlmsClient:
             )
 
         if self.should_send_hls_reply():
-            hls_response = self.send_hls_reply()
+            try:
+                hls_response = self.send_hls_reply()
+            except ActionError as e:
+                raise HLSError from e
 
-            hls_data = utils.parse_as_dlms_data(hls_response.data)
-
-            if not isinstance(hls_response, xdlms.ActionResponseNormalWithData):
-                raise exceptions.LocalDlmsProtocolError(
-                    "Received an incorrect ActionResponse to HLS"
-                )
-
-            if hls_response.status != enumerations.ActionResultStatus.SUCCESS:
-                raise HLSError(f"HLS authentication failed: {hls_response.status!r}")
+            hls_data = utils.parse_as_dlms_data(hls_response)
+            if not hls_response:
+                raise HLSError("Did not receive any HLS response data")
 
             if not self.dlms_connection.hls_response_valid(hls_data):
                 raise HLSError(
@@ -285,7 +297,7 @@ class DlmsClient:
             == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
         )
 
-    def send_hls_reply(self) -> xdlms.ActionRequestNormal:
+    def send_hls_reply(self) -> Optional[bytes]:
         return self.action(
             method=cosem.CosemMethod(
                 enumerations.CosemInterface.ASSOCIATION_LN,
