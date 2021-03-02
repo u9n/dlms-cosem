@@ -19,10 +19,14 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 ### Fixed
 
-* Fixed missing state management for general ACTION usage
-
 ### Security
 
+
+## [21.2.2] - 2021-03-02
+
+### Fixed
+
+* Fixed missing state management for general ACTION usage
 
 ## [21.2.1] - 2021-02-18
 
