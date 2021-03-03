@@ -7,7 +7,7 @@ class TestInitiateRequest:
     def test_parse_simple(self):
         data = bytes.fromhex("01000000065F1F0400007E1F04B0")
 
-        ir = xdlms.InitiateRequestApdu(
+        ir = xdlms.InitiateRequest(
             proposed_conformance=xdlms.Conformance(
                 general_protection=False,
                 general_block_transfer=False,
@@ -34,12 +34,12 @@ class TestInitiateRequest:
             dedicated_key=None,
         )
 
-        assert xdlms.InitiateRequestApdu.from_bytes(data) == ir
+        assert xdlms.InitiateRequest.from_bytes(data) == ir
 
     def test_encode_simple(self):
         data = bytes.fromhex("01000000065F1F0400007E1F04B0")
 
-        ir = xdlms.InitiateRequestApdu(
+        ir = xdlms.InitiateRequest(
             proposed_conformance=xdlms.Conformance(
                 general_protection=False,
                 general_block_transfer=False,
@@ -73,7 +73,7 @@ class TestInitiateRequest:
             "01011000112233445566778899AABBCCDDEEFF0000065F1F0400007E1F04B0"
         )
 
-        apdu = xdlms.InitiateRequestApdu(
+        apdu = xdlms.InitiateRequest(
             proposed_conformance=xdlms.Conformance(
                 general_protection=False,
                 general_block_transfer=False,
@@ -100,14 +100,14 @@ class TestInitiateRequest:
             dedicated_key=b'\x00\x11"3DUfw\x88\x99\xaa\xbb\xcc\xdd\xee\xff',
         )
 
-        assert xdlms.InitiateRequestApdu.from_bytes(data) == apdu
+        assert xdlms.InitiateRequest.from_bytes(data) == apdu
 
     def test_encode_with_dedicated_key(self):
         data = bytes.fromhex(
             "01011000112233445566778899AABBCCDDEEFF0000065F1F0400007E1F04B0"
         )
 
-        apdu = xdlms.InitiateRequestApdu(
+        apdu = xdlms.InitiateRequest(
             proposed_conformance=xdlms.Conformance(
                 general_protection=False,
                 general_block_transfer=False,
@@ -142,7 +142,7 @@ class TestInitiateRequest:
 class TestInitiateResponse:
     def test_parse_simple(self):
         data = bytes.fromhex("0800065F1F040000501F01F40007")
-        ir = xdlms.InitiateResponseApdu(
+        ir = xdlms.InitiateResponse(
             negotiated_conformance=xdlms.Conformance(
                 general_protection=False,
                 general_block_transfer=False,
@@ -166,11 +166,11 @@ class TestInitiateResponse:
             negotiated_dlms_version_number=6,
             negotiated_quality_of_service=0,
         )
-        assert xdlms.InitiateResponseApdu.from_bytes(data) == ir
+        assert xdlms.InitiateResponse.from_bytes(data) == ir
 
     def test_encode_simple(self):
         data = bytes.fromhex("0800065F1F040000501F01F40007")
-        ir = xdlms.InitiateResponseApdu(
+        ir = xdlms.InitiateResponse(
             negotiated_conformance=xdlms.Conformance(
                 general_protection=False,
                 general_block_transfer=False,
@@ -198,7 +198,7 @@ class TestInitiateResponse:
 
     def test_decode_with_non_default_quality(self):
         data = b"\x08\x01\x00\x06_\x1f\x04\x00\x00\x1e\x1d\x04\xc8\x00\x07"
-        ir = xdlms.InitiateResponseApdu.from_bytes(data)
+        ir = xdlms.InitiateResponse.from_bytes(data)
         assert ir.negotiated_quality_of_service == 0
 
 
@@ -256,10 +256,10 @@ class TestGlobalCipherInitiateRequest:
 
         unciphered_apdu = XDlmsApduFactory.apdu_from_bytes(plain_text)
         print(unciphered_apdu)
-        assert isinstance(unciphered_apdu, xdlms.InitiateRequestApdu)
+        assert isinstance(unciphered_apdu, xdlms.InitiateRequest)
 
     def test_encrypt(self):
-        apdu = xdlms.InitiateRequestApdu(
+        apdu = xdlms.InitiateRequest(
             proposed_conformance=xdlms.Conformance(
                 general_protection=False,
                 general_block_transfer=False,

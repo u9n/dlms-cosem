@@ -1,13 +1,13 @@
 import pytest
 
 from dlms_cosem import enumerations
-from dlms_cosem.protocol.acse import ReleaseRequestApdu
+from dlms_cosem.protocol.acse import ReleaseRequest
 
 
 class TestDecodeRLRQ:
     def test_simple(self):
         data = bytes.fromhex("6203800100")  # Normal no user-information
-        rlrq = ReleaseRequestApdu.from_bytes(data)
+        rlrq = ReleaseRequest.from_bytes(data)
         assert rlrq.reason == enumerations.ReleaseRequestReason.NORMAL
         assert rlrq.user_information is None
         assert data == rlrq.to_bytes()
@@ -18,5 +18,5 @@ class TestDecodeRLRQ:
         )
         # No support for ciphnered adpus yet
 
-        rlrq = ReleaseRequestApdu.from_bytes(data)
+        rlrq = ReleaseRequest.from_bytes(data)
         assert rlrq.reason == enumerations.ReleaseRequestReason.NORMAL

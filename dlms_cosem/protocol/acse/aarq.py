@@ -13,7 +13,7 @@ def user_information_holds_initiate_request(
     instance, attribute, value: UserInformation
 ):
     if not isinstance(
-        value.content, (xdlms.InitiateRequestApdu, xdlms.GlobalCipherInitiateRequest)
+        value.content, (xdlms.InitiateRequest, xdlms.GlobalCipherInitiateRequest)
     ):
         raise ValueError(
             f"ApplicationAssociationRequestApdu.user_information should "
@@ -42,7 +42,7 @@ def aarq_should_set_authenticated(
 
 
 @attr.s(auto_attribs=True)
-class ApplicationAssociationRequestApdu:
+class ApplicationAssociationRequest:
     """
     Application Association Request ( AARQ ) is used for starting an Application
     Association with a DLMS server (meter).
@@ -229,9 +229,7 @@ class ApplicationAssociationRequestApdu:
         while True:
             # TODO: this does not take into account when defining objects in dict and not using them.
             object_tag = aarq_data.pop(0)
-            object_desc = ApplicationAssociationRequestApdu.PARSE_TAGS.get(
-                object_tag, None
-            )
+            object_desc = ApplicationAssociationRequest.PARSE_TAGS.get(object_tag, None)
             if object_desc is None:
                 raise ValueError(
                     f"Could not find object with tag {object_tag} "

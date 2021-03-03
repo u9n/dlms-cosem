@@ -40,11 +40,11 @@ class UserInformation:
             )
 
         if data[0] == 1:
-            return cls(content=xdlms.InitiateRequestApdu.from_bytes(data))
+            return cls(content=xdlms.InitiateRequest.from_bytes(data))
         elif data[0] == 8:
-            return cls(content=xdlms.InitiateResponseApdu.from_bytes(data))
+            return cls(content=xdlms.InitiateResponse.from_bytes(data))
         elif data[0] == 14:
-            return cls(content=xdlms.ConfirmedServiceErrorApdu.from_bytes(data))
+            return cls(content=xdlms.ConfirmedServiceError.from_bytes(data))
         elif data[0] == 33:
             return cls(content=xdlms.GlobalCipherInitiateRequest.from_bytes(data))
         elif data[0] == 40:

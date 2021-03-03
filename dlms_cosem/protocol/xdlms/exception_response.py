@@ -7,7 +7,7 @@ from dlms_cosem import enumerations
 
 
 @attr.s(auto_attribs=True)
-class ExceptionResponseApdu:
+class ExceptionResponse:
     TAG: ClassVar[int] = 216
 
     state_error: enumerations.StateException
