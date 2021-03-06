@@ -5,8 +5,8 @@ from dlms_cosem.protocol import acse
 
 # Example encodings from DLMS Green book v10 page:
 from dlms_cosem.protocol.acse import UserInformation
-from dlms_cosem.protocol.xdlms import Conformance, InitiateResponseApdu
-from dlms_cosem.protocol.xdlms.confirmed_service_error import ConfirmedServiceErrorApdu
+from dlms_cosem.protocol.xdlms import Conformance, InitiateResponse
+from dlms_cosem.protocol.xdlms.confirmed_service_error import ConfirmedServiceError
 
 
 class TestDecodeAARE:
@@ -14,7 +14,7 @@ class TestDecodeAARE:
         data = bytes.fromhex(
             "6129A109060760857405080101A203020100A305A103020100BE10040E0800065F1F040000501F01F40007"
         )
-        aare = acse.ApplicationAssociationResponseApdu.from_bytes(data)
+        aare = acse.ApplicationAssociationResponse.from_bytes(data)
         assert not aare.ciphered
         assert aare.result == enumerations.AssociationResult.ACCEPTED
         assert (
@@ -27,20 +27,20 @@ class TestDecodeAARE:
         data = bytes.fromhex(
             "6129A109060760857405080101A203020101A305A103020102BE10040E0800065F1F040000501F01F40007"
         )
-        aare = acse.ApplicationAssociationResponseApdu.from_bytes(data)
+        aare = acse.ApplicationAssociationResponse.from_bytes(data)
         assert not aare.ciphered
         assert aare.result == enumerations.AssociationResult.REJECTED_PERMANENT
         assert (
             aare.result_source_diagnostics
             == enumerations.AcseServiceUserDiagnostics.APPLICATION_CONTEXT_NAME_NOT_SUPPORTED
         )
-        assert isinstance(aare.user_information.content, InitiateResponseApdu)
+        assert isinstance(aare.user_information.content, InitiateResponse)
 
     def test_no_cipher_no_security_incorrect_dlms_version(self):
         data = bytes.fromhex(
             "611FA109060760857405080101A203020101A305A103020101BE0604040E010601"
         )
-        aare = acse.ApplicationAssociationResponseApdu.from_bytes(data)
+        aare = acse.ApplicationAssociationResponse.from_bytes(data)
         assert not aare.ciphered
         assert aare.result == enumerations.AssociationResult.REJECTED_PERMANENT
         assert (
@@ -58,7 +58,7 @@ class TestDecodeAARE:
         data = bytes.fromhex(
             "6142A109060760857405080101A203020100A305A10302010E88020780890760857405080205AA0A8008503677524A323146BE10040E0800065F1F040000501F01F40007"
         )
-        aare = acse.ApplicationAssociationResponseApdu.from_bytes(data)
+        aare = acse.ApplicationAssociationResponse.from_bytes(data)
         assert not aare.ciphered
         assert aare.result == enumerations.AssociationResult.ACCEPTED
         assert (
@@ -67,14 +67,14 @@ class TestDecodeAARE:
         )
         assert aare.authentication_value is not None
         assert aare.authentication == enumerations.AuthenticationMechanism.HLS_GMAC
-        assert isinstance(aare.user_information.content, InitiateResponseApdu)
+        assert isinstance(aare.user_information.content, InitiateResponse)
 
     def test_no_cipher_no_auth_conformance(self):
         data = bytes.fromhex(
             "6129a109060760857405080101a203020100a305a103020100be10040e0800065f1f0400001e1d04c80007"
         )
 
-        aare = acse.ApplicationAssociationResponseApdu.from_bytes(data)
+        aare = acse.ApplicationAssociationResponse.from_bytes(data)
 
         assert aare.result == enumerations.AssociationResult.ACCEPTED
         assert (
@@ -86,7 +86,7 @@ class TestDecodeAARE:
         assert aare.system_title is None
         assert aare.authentication_value is None
         assert aare.public_cert is None
-        assert isinstance(aare.user_information.content, InitiateResponseApdu)
+        assert isinstance(aare.user_information.content, InitiateResponse)
         assert aare.user_information.content.negotiated_conformance == Conformance(
             general_protection=False,
             general_block_transfer=False,
@@ -113,7 +113,7 @@ class TestEncodeAARE:
         data = bytes.fromhex(
             "6129A109060760857405080101A203020100A305A103020100BE10040E0800065F1F040000501F01F40007"
         )
-        aare = acse.ApplicationAssociationResponseApdu(
+        aare = acse.ApplicationAssociationResponse(
             result=enumerations.AssociationResult.ACCEPTED,
             result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.NULL,
             ciphered=False,
@@ -122,7 +122,7 @@ class TestEncodeAARE:
             public_cert=None,
             authentication_value=None,
             user_information=acse.UserInformation(
-                content=InitiateResponseApdu(
+                content=InitiateResponse(
                     negotiated_conformance=Conformance(
                         general_protection=False,
                         general_block_transfer=False,
@@ -158,7 +158,7 @@ class TestEncodeAARE:
         data = bytes.fromhex(
             "6129A109060760857405080101A203020101A305A103020102BE10040E0800065F1F040000501F01F40007"
         )
-        aare = acse.ApplicationAssociationResponseApdu(
+        aare = acse.ApplicationAssociationResponse(
             result=enumerations.AssociationResult.REJECTED_PERMANENT,
             result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.APPLICATION_CONTEXT_NAME_NOT_SUPPORTED,
             ciphered=False,
@@ -167,7 +167,7 @@ class TestEncodeAARE:
             public_cert=None,
             authentication_value=None,
             user_information=acse.UserInformation(
-                content=InitiateResponseApdu(
+                content=InitiateResponse(
                     negotiated_conformance=Conformance(
                         general_protection=False,
                         general_block_transfer=False,
@@ -204,7 +204,7 @@ class TestEncodeAARE:
             "611FA109060760857405080101A203020101A305A103020101BE0604040E010601"
         )
 
-        aare = acse.ApplicationAssociationResponseApdu(
+        aare = acse.ApplicationAssociationResponse(
             result=enumerations.AssociationResult.REJECTED_PERMANENT,
             result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.NO_REASON_GIVEN,
             ciphered=False,
@@ -213,7 +213,7 @@ class TestEncodeAARE:
             public_cert=None,
             authentication_value=None,
             user_information=acse.UserInformation(
-                content=ConfirmedServiceErrorApdu(
+                content=ConfirmedServiceError(
                     error=enumerations.InitiateError.DLMS_VERSION_TOO_LOW
                 )
             ),
@@ -229,7 +229,7 @@ class TestEncodeAARE:
             "6142A109060760857405080101A203020100A305A10302010E88020780890760857405080205AA0A8008503677524A323146BE10040E0800065F1F040000501F01F40007"
         )
 
-        aare = acse.ApplicationAssociationResponseApdu(
+        aare = acse.ApplicationAssociationResponse(
             result=enumerations.AssociationResult.ACCEPTED,
             result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.AUTHENTICATION_REQUIRED,
             ciphered=False,
@@ -238,7 +238,7 @@ class TestEncodeAARE:
             system_title=None,
             authentication_value=b"P6wRJ21F",
             user_information=UserInformation(
-                content=InitiateResponseApdu(
+                content=InitiateResponse(
                     negotiated_conformance=Conformance(
                         general_protection=False,
                         general_block_transfer=False,

@@ -12,7 +12,7 @@ int_from_bytes = partial(int.from_bytes, byteorder="big")
 
 
 @attr.s(auto_attribs=True)
-class InitiateRequestApdu(AbstractXDlmsApdu):
+class InitiateRequest(AbstractXDlmsApdu):
     """
     InitiateRequest ::= SEQUENCE {
     dedicated-key: OCTET STRING OPTIONAL

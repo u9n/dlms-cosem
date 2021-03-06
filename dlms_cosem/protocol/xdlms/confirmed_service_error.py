@@ -38,7 +38,7 @@ def make_error(source_bytes: bytes):
 
 
 @attr.s(auto_attribs=True)
-class ConfirmedServiceErrorApdu(AbstractXDlmsApdu):
+class ConfirmedServiceError(AbstractXDlmsApdu):
 
     TAG: ClassVar[int] = 14
 

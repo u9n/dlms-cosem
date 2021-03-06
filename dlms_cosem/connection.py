@@ -26,19 +26,19 @@ class XDlmsApduFactory:
     """
 
     APDU_MAP = {
-        1: xdlms.InitiateRequestApdu,
-        8: xdlms.InitiateResponseApdu,
-        14: xdlms.ConfirmedServiceErrorApdu,
-        15: xdlms.DataNotificationApdu,
+        1: xdlms.InitiateRequest,
+        8: xdlms.InitiateResponse,
+        14: xdlms.ConfirmedServiceError,
+        15: xdlms.DataNotification,
         33: xdlms.GlobalCipherInitiateRequest,
         40: xdlms.GlobalCipherInitiateResponse,
-        216: xdlms.ExceptionResponseApdu,
-        219: xdlms.GeneralGlobalCipherApdu,
+        216: xdlms.ExceptionResponse,
+        219: xdlms.GeneralGlobalCipher,
         # ACSE APDUs:
-        96: acse.ApplicationAssociationRequestApdu,
-        97: acse.ApplicationAssociationResponseApdu,
-        98: acse.ReleaseRequestApdu,
-        99: acse.ReleaseResponseApdu,
+        96: acse.ApplicationAssociationRequest,
+        97: acse.ApplicationAssociationResponse,
+        98: acse.ReleaseRequest,
+        99: acse.ReleaseResponse,
         192: xdlms.GetRequestFactory,
         193: xdlms.SetRequestFactory,
         195: xdlms.ActionRequestFactory,
@@ -196,7 +196,9 @@ class DlmsConnection:
         conformance: Conformance,
         max_pdu_size: int = 65535,
         global_encryption_key: Optional[bytes] = None,
-        use_dedicated_ciphering: bool = False,
+        global_authentication_key: Optional[bytes] = None,
+        client_invocation_counter: Optional[int] = None,
+        meter_invocation_counter: Optional[int] = None,
         client_system_title: Optional[bytes] = None,
     ):
         """
@@ -206,12 +208,14 @@ class DlmsConnection:
         return cls(
             client_system_title=client_system_title,
             global_encryption_key=global_encryption_key,
+            global_authentication_key=global_authentication_key,
+            meter_invocation_counter=meter_invocation_counter,
+            client_invocation_counter=client_invocation_counter,
             # Moves the state into ready.
             state=dlms_state.DlmsConnectionState(current_state=dlms_state.READY),
             is_pre_established=True,
             conformance=conformance,
             max_pdu_size=max_pdu_size,
-            use_dedicated_ciphering=use_dedicated_ciphering,
         )
 
     @property
@@ -257,7 +261,9 @@ class DlmsConnection:
             # When we are in a pre established association state starts as READY.
             # Only invalid state change is to send the ReleaseRequestApdu. But it is not
             # possible to close a pre-established association.
-            if isinstance(event, acse.ReleaseRequestApdu):
+            if isinstance(
+                event, (acse.ReleaseRequest, acse.ApplicationAssociationRequest)
+            ):
                 raise exceptions.PreEstablishedAssociationError(
                     f"You cannot send a {type(event)} when the association is"
                     f"pre-established "
@@ -299,10 +305,20 @@ class DlmsConnection:
 
         self.update_negotiated_parameters(apdu)
 
+        if self.is_pre_established:
+            if isinstance(
+                apdu,
+                (acse.ApplicationAssociationResponse, acse.ReleaseResponse),
+            ):
+                raise exceptions.PreEstablishedAssociationError(
+                    f"Received a {apdu.__class__.__name__}. In a pre-established "
+                    f"association it is not possible to handle ACSE services."
+                )
+
         self.state.process_event(apdu)
         self.clear_buffer()
 
-        if isinstance(apdu, acse.ApplicationAssociationResponseApdu):
+        if isinstance(apdu, acse.ApplicationAssociationResponse):
             if apdu.result in [
                 enums.AssociationResult.REJECTED_PERMANENT,
                 enums.AssociationResult.REJECTED_TRANSIENT,
@@ -357,9 +373,7 @@ class DlmsConnection:
         Will apply the correct protection to apdus depending on the security context
         """
         # ASCE have different rules about protection
-        if isinstance(
-            event, (acse.ApplicationAssociationRequestApdu, acse.ReleaseRequestApdu)
-        ):
+        if isinstance(event, (acse.ApplicationAssociationRequest, acse.ReleaseRequest)):
             # TODO: Not sure if it is needed to encrypt the IniateRequest when
             #   you are not sending a dedicated_key.
             if event.user_information:
@@ -381,7 +395,7 @@ class DlmsConnection:
             ciphered_text = self.encrypt(event.to_bytes())
             LOG.info(f"Protecting a {type(event)} with GlobalCiphering")
 
-            event = xdlms.GeneralGlobalCipherApdu(
+            event = xdlms.GeneralGlobalCipher(
                 system_title=self.client_system_title,
                 security_control=self.security_control,
                 invocation_counter=self.client_invocation_counter,
@@ -448,7 +462,7 @@ class DlmsConnection:
         Removes protection from APDUs and return a new the unprotected version
         """
         if isinstance(
-            event, (acse.ApplicationAssociationResponseApdu, acse.ReleaseResponseApdu)
+            event, (acse.ApplicationAssociationResponse, acse.ReleaseResponse)
         ):
             if event.user_information:
                 if isinstance(
@@ -469,11 +483,11 @@ class DlmsConnection:
                         auth_key=self.global_authentication_key,
                         cipher_text=event.user_information.content.ciphered_text,
                     )
-                    event.user_information.content = (
-                        xdlms.InitiateResponseApdu.from_bytes(plain_text)
+                    event.user_information.content = xdlms.InitiateResponse.from_bytes(
+                        plain_text
                     )
 
-        elif isinstance(event, xdlms.GeneralGlobalCipherApdu):
+        elif isinstance(event, xdlms.GeneralGlobalCipher):
             self.validate_received_invocation_counter(event.invocation_counter)
             self.meter_invocation_counter = event.invocation_counter
             plain_text = security.decrypt(
@@ -488,7 +502,6 @@ class DlmsConnection:
 
         else:
             raise RuntimeError(f"Unable to handle decryption/unprotection of {event}")
-
         return event
 
     @property
@@ -504,7 +517,7 @@ class DlmsConnection:
         """
         return event
 
-    def get_aarq(self) -> acse.ApplicationAssociationRequestApdu:
+    def get_aarq(self) -> acse.ApplicationAssociationRequest:
         """
         Returns an AARQ with the appropriate information for setting up the
         connection.
@@ -514,12 +527,12 @@ class DlmsConnection:
         else:
             ciphered_apdus = False
 
-        initiate_request = xdlms.InitiateRequestApdu(
+        initiate_request = xdlms.InitiateRequest(
             proposed_conformance=self.conformance,
             client_max_receive_pdu_size=self.max_pdu_size,
         )
 
-        return acse.ApplicationAssociationRequestApdu(
+        return acse.ApplicationAssociationRequest(
             ciphered=ciphered_apdus,
             system_title=self.client_system_title,
             authentication=self.authentication_method,
@@ -527,16 +540,16 @@ class DlmsConnection:
             user_information=acse.UserInformation(content=initiate_request),
         )
 
-    def get_rlrq(self) -> acse.ReleaseRequestApdu:
+    def get_rlrq(self) -> acse.ReleaseRequest:
         """
         Returns a ReleaseRequestApdu to release the current association.
         """
-        initiate_request = xdlms.InitiateRequestApdu(
+        initiate_request = xdlms.InitiateRequest(
             proposed_conformance=self.conformance,
             client_max_receive_pdu_size=self.max_pdu_size,
         )
 
-        return acse.ReleaseRequestApdu(
+        return acse.ReleaseRequest(
             reason=enums.ReleaseRequestReason.NORMAL,
             user_information=acse.UserInformation(content=initiate_request),
         )
@@ -548,11 +561,11 @@ class DlmsConnection:
         """
         if (
             self.state.current_state == dlms_state.AWAITING_ASSOCIATION_RESPONSE
-            and isinstance(event, acse.ApplicationAssociationResponseApdu)
+            and isinstance(event, acse.ApplicationAssociationResponse)
         ):
             if event.user_information:
                 assert isinstance(
-                    event.user_information.content, xdlms.InitiateResponseApdu
+                    event.user_information.content, xdlms.InitiateResponse
                 )
 
                 self.conformance = event.user_information.content.negotiated_conformance

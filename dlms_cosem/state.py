@@ -81,20 +81,19 @@ NEED_DATA = make_sentinel("NEED_DATA")
 # TODO: block handling is not working with this state layout.
 
 DLMS_STATE_TRANSITIONS = {
-    NO_ASSOCIATION: {
-        acse.ApplicationAssociationRequestApdu: AWAITING_ASSOCIATION_RESPONSE
-    },
+    NO_ASSOCIATION: {acse.ApplicationAssociationRequest: AWAITING_ASSOCIATION_RESPONSE},
     AWAITING_ASSOCIATION_RESPONSE: {
-        acse.ApplicationAssociationResponseApdu: READY,
-        xdlms.ExceptionResponseApdu: NO_ASSOCIATION,
+        acse.ApplicationAssociationResponse: READY,
+        xdlms.ExceptionResponse: NO_ASSOCIATION,
     },
     READY: {
-        acse.ReleaseRequestApdu: AWAITING_RELEASE_RESPONSE,
+        acse.ReleaseRequest: AWAITING_RELEASE_RESPONSE,
         xdlms.GetRequestNormal: AWAITING_GET_RESPONSE,
         xdlms.SetRequestNormal: AWAITING_SET_RESPONSE,
         HlsStart: SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT,
         RejectAssociation: NO_ASSOCIATION,
         xdlms.ActionRequestNormal: AWAITING_ACTION_RESPONSE,
+        xdlms.DataNotification: READY,
     },
     SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT: {
         xdlms.ActionRequestNormal: AWAITING_HLS_CLIENT_CHALLENGE_RESULT
@@ -109,12 +108,12 @@ DLMS_STATE_TRANSITIONS = {
         xdlms.GetResponseNormal: READY,
         xdlms.GetResponseWithBlock: SHOULD_ACK_LAST_GET_BLOCK,
         xdlms.GetResponseNormalWithError: READY,
-        xdlms.ExceptionResponseApdu: READY,
+        xdlms.ExceptionResponse: READY,
     },
     AWAITING_GET_BLOCK_RESPONSE: {
         xdlms.GetResponseWithBlock: SHOULD_ACK_LAST_GET_BLOCK,
         xdlms.GetResponseNormalWithError: READY,
-        xdlms.ExceptionResponseApdu: READY,
+        xdlms.ExceptionResponse: READY,
         xdlms.GetResponseLastBlockWithError: READY,
         xdlms.GetResponseLastBlock: READY,
     },
@@ -126,8 +125,8 @@ DLMS_STATE_TRANSITIONS = {
     },
     SHOULD_ACK_LAST_GET_BLOCK: {xdlms.GetRequestNext: AWAITING_GET_BLOCK_RESPONSE},
     AWAITING_RELEASE_RESPONSE: {
-        acse.ReleaseResponseApdu: NO_ASSOCIATION,
-        xdlms.ExceptionResponseApdu: READY,
+        acse.ReleaseResponse: NO_ASSOCIATION,
+        xdlms.ExceptionResponse: READY,
     },
 }
 

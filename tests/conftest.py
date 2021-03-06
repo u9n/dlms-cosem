@@ -53,14 +53,14 @@ def master_key() -> bytes:
 @pytest.fixture()
 def aarq():
 
-    return acse.ApplicationAssociationRequestApdu(
+    return acse.ApplicationAssociationRequest(
         ciphered=False,
         system_title=None,
         public_cert=None,
         authentication=None,
         authentication_value=None,
         user_information=acse.UserInformation(
-            content=xdlms.InitiateRequestApdu(
+            content=xdlms.InitiateRequest(
                 proposed_conformance=xdlms.Conformance(
                     general_protection=False,
                     general_block_transfer=False,
@@ -94,9 +94,9 @@ def aarq():
 def aare():
     from dlms_cosem import enumerations
     from dlms_cosem.protocol import acse
-    from dlms_cosem.protocol.xdlms import Conformance, InitiateResponseApdu
+    from dlms_cosem.protocol.xdlms import Conformance, InitiateResponse
 
-    return acse.ApplicationAssociationResponseApdu(
+    return acse.ApplicationAssociationResponse(
         result=enumerations.AssociationResult.ACCEPTED,
         result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.NULL,
         ciphered=False,
@@ -105,7 +105,7 @@ def aare():
         public_cert=None,
         authentication_value=None,
         user_information=acse.UserInformation(
-            content=InitiateResponseApdu(
+            content=InitiateResponse(
                 negotiated_conformance=Conformance(
                     general_protection=False,
                     general_block_transfer=False,
@@ -138,8 +138,8 @@ def aare():
 
 @pytest.fixture()
 def ciphered_hls_aare(
-    aare: acse.ApplicationAssociationResponseApdu, meter_system_title: bytes
-) -> acse.ApplicationAssociationResponseApdu:
+    aare: acse.ApplicationAssociationResponse, meter_system_title: bytes
+) -> acse.ApplicationAssociationResponse:
     aare.ciphered = True
     aare.system_title = meter_system_title
     aare.authentication = enumerations.AuthenticationMechanism.HLS_GMAC
@@ -147,18 +147,18 @@ def ciphered_hls_aare(
 
 
 @pytest.fixture()
-def rlrq() -> acse.ReleaseRequestApdu:
+def rlrq() -> acse.ReleaseRequest:
 
     data = bytes.fromhex("6203800100")  # Normal no user-information
-    rlrq = acse.ReleaseRequestApdu.from_bytes(data)
+    rlrq = acse.ReleaseRequest.from_bytes(data)
     return rlrq
 
 
 @pytest.fixture()
-def rlre() -> acse.ReleaseResponseApdu:
+def rlre() -> acse.ReleaseResponse:
 
     data = b"c\x03\x80\x01\x00"
-    rlre = acse.ReleaseResponseApdu.from_bytes(data)
+    rlre = acse.ReleaseResponse.from_bytes(data)
     return rlre
 
 
@@ -219,9 +219,9 @@ def action_request() -> xdlms.ActionRequestNormal:
 
 
 @pytest.fixture()
-def exception_response() -> xdlms.ExceptionResponseApdu:
+def exception_response() -> xdlms.ExceptionResponse:
 
-    return xdlms.ExceptionResponseApdu(
+    return xdlms.ExceptionResponse(
         state_error=enumerations.StateException.SERVICE_NOT_ALLOWED,
         service_error=enumerations.ServiceException.OPERATION_NOT_POSSIBLE,
     )

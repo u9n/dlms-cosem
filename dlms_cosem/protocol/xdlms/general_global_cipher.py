@@ -11,7 +11,7 @@ int_from_bytes = partial(int.from_bytes, "big")
 
 
 @attr.s(auto_attribs=True)
-class GeneralGlobalCipherApdu(AbstractXDlmsApdu):
+class GeneralGlobalCipher(AbstractXDlmsApdu):
     """
     The general-global-cipher APDU can be used to cipher other APDUs with
     either the global key or the dedicated key.

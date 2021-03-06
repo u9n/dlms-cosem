@@ -17,7 +17,7 @@ release_reason_from_bytes = partial(
 
 
 @attr.s(auto_attribs=True)
-class ReleaseRequestApdu(AbstractAcseApdu):
+class ReleaseRequest(AbstractAcseApdu):
     """
     When closing down an Application Association a ReleaseRequest is sent.
 
@@ -64,7 +64,7 @@ class ReleaseRequestApdu(AbstractAcseApdu):
         # use the data in tags to go through the bytes and create objects.
         while True:
             object_tag = rlrq_data.pop(0)
-            object_desc = ReleaseRequestApdu.PARSE_TAGS.get(object_tag, None)
+            object_desc = ReleaseRequest.PARSE_TAGS.get(object_tag, None)
             if object_desc is None:
                 raise ValueError(
                     f"Could not find object with tag {object_tag} "
