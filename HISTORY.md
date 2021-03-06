@@ -11,6 +11,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 ### Added
 
+* Added HDLC UnnumberedInformationFrame.
+
 ### Changed
 
 * Renamed classes to exclude `Apdu` in class names. To have it consistent over the
