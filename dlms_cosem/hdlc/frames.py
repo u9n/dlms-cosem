@@ -437,3 +437,75 @@ class DisconnectFrame(BaseHdlcFrame):
             raise hdlc_exceptions.HdlcParsingError("FCS is not correct")
 
         return frame
+
+
+@attr.s(auto_attribs=True)
+class UnnumberedInformationFrame(BaseHdlcFrame):
+
+    fixed_length_bytes = 7
+
+    @property
+    def information(self) -> bytes:
+        """"""
+        out_data: List[bytes] = list()
+        if self.payload:
+            out_data.append(self.payload)
+
+        return b"".join(out_data)
+
+    def get_control_field(self):
+        return fields.UnnumberedInformationControlField(self.final)
+
+    @classmethod
+    def from_bytes(cls, frame_bytes: bytes):
+
+        if not frame_is_enclosed_by_hdlc_flags(frame_bytes):
+            raise hdlc_exceptions.MissingHdlcFlags()
+
+        frame_format = BaseHdlcFrame.extract_format_field_from_bytes(frame_bytes)
+
+        if not frame_has_correct_length(frame_format.length, frame_bytes):
+            raise hdlc_exceptions.HdlcParsingError(
+                f"Frame data is not of length specified in frame format field. "
+                f"Should be {frame_format.length} but is {len(frame_bytes)}"
+            )
+
+        destination_address = address.HdlcAddress.destination_from_bytes(
+            frame_bytes, "client"
+        )
+        source_address = address.HdlcAddress.source_from_bytes(frame_bytes, "server")
+
+        information_control_byte_position = (
+            1 + 2 + destination_address.length + source_address.length
+        )
+        information_control_byte = frame_bytes[
+            information_control_byte_position : information_control_byte_position + 1
+        ]
+        information_control = fields.UnnumberedInformationControlField.from_bytes(
+            information_control_byte
+        )
+
+        hcs_position = 1 + 2 + destination_address.length + source_address.length + 1
+        hcs = frame_bytes[hcs_position : hcs_position + 2]
+        fcs = frame_bytes[-3:-1]
+        information = frame_bytes[hcs_position + 2 : -3]
+
+        frame = cls(
+            destination_address,
+            source_address,
+            information,
+            segmented=frame_format.segmented,
+            final=information_control.final,
+        )
+
+        if hcs != frame.hcs:
+            raise hdlc_exceptions.HdlcParsingError(
+                f"HCS is not correct Calculated: {frame.hcs!r}, in data: {hcs!r}"
+            )
+
+        if fcs != frame.fcs:
+            raise hdlc_exceptions.HdlcParsingError(
+                f"FCS is not correct, Calculated: {frame.fcs!r}, in data: {fcs!r}"
+            )
+
+        return frame

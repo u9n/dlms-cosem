@@ -201,6 +201,40 @@ class InformationControlField(_AbstractHdlcControlField):
         return cls(ssn, rsn, final)
 
 
+@attr.s(auto_attribs=True)
+class UnnumberedInformationControlField(_AbstractHdlcControlField):
+    """
+    Used for UnnumberedInformationFrames.
+    """
+
+    final: bool = attr.ib(default=True)
+
+    @property
+    def is_final(self):
+        return self.final
+
+    def to_bytes(self) -> bytes:
+        out = 0b00000011
+        if self.is_final:
+            out |= 0b00010000
+        return out.to_bytes(1, "big")
+
+    @classmethod
+    def from_bytes(cls, in_byte: bytes):
+        if len(in_byte) != 1:
+            raise ValueError(
+                f"InformationControlField can only be 1 bytes. Got {len(in_byte)}"
+            )
+        value = int.from_bytes(in_byte, "big")
+        is_unnumbered_info_frame = bool(value & 0b00000011)
+        if not is_unnumbered_info_frame:
+            raise ValueError(
+                "Byte is not representing a UnnumberedInformationControlField."
+            )
+        final = bool(value & 0b00010000)
+        return cls(final)
+
+
 def validate_frame_length(instance, attribute, value):
     if value > 0b11111111111:
         raise ValueError("frame length is to long")
