@@ -28,11 +28,11 @@ def test_negotiated_conformance_is_updated():
     c = DlmsConnection(client_system_title=b"12345678")
     c.send(c.get_aarq())
     c.receive_data(
-        acse.ApplicationAssociationResponseApdu(
+        acse.ApplicationAssociationResponse(
             result=enumerations.AssociationResult.ACCEPTED,
             result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.NULL,
             user_information=acse.UserInformation(
-                content=xdlms.InitiateResponseApdu(
+                content=xdlms.InitiateResponse(
                     negotiated_conformance=Conformance(
                         general_protection=True, general_block_transfer=True
                     ),
@@ -48,7 +48,7 @@ def test_negotiated_conformance_is_updated():
     assert c.state.current_state == state.READY
 
 
-def test_cannot_re_associate(aarq: acse.ApplicationAssociationRequestApdu):
+def test_cannot_re_associate(aarq: acse.ApplicationAssociationRequest):
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.READY),
         client_system_title=b"12345678",
@@ -58,7 +58,7 @@ def test_cannot_re_associate(aarq: acse.ApplicationAssociationRequestApdu):
         c.send(aarq)
 
 
-def test_can_release_in_ready_state(rlrq: acse.ReleaseRequestApdu):
+def test_can_release_in_ready_state(rlrq: acse.ReleaseRequest):
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.READY),
         client_system_title=b"12345678",
@@ -68,7 +68,7 @@ def test_can_release_in_ready_state(rlrq: acse.ReleaseRequestApdu):
     assert c.state.current_state == state.AWAITING_RELEASE_RESPONSE
 
 
-def test_receive_rlre_terminates_association(rlre: acse.ReleaseResponseApdu):
+def test_receive_rlre_terminates_association(rlre: acse.ReleaseResponse):
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.AWAITING_RELEASE_RESPONSE),
         client_system_title=b"12345678",
@@ -191,7 +191,7 @@ def test_action_response_normal_with_data_sets_ready_when_awaiting_action_resopo
 
 
 def test_receive_exception_response_sets_state_to_ready(
-    exception_response: xdlms.ExceptionResponseApdu,
+    exception_response: xdlms.ExceptionResponse,
 ):
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.AWAITING_GET_RESPONSE),
@@ -204,7 +204,7 @@ def test_receive_exception_response_sets_state_to_ready(
 
 def test_hls_is_started_automatically(
     connection_with_hls: DlmsConnection,
-    ciphered_hls_aare: acse.ApplicationAssociationResponseApdu,
+    ciphered_hls_aare: acse.ApplicationAssociationResponse,
 ):
     # Force state into awaiting response
     connection_with_hls.state.current_state = state.AWAITING_ASSOCIATION_RESPONSE
@@ -232,7 +232,7 @@ def test_hls_fails(connection_with_hls: DlmsConnection):
         invocation_counter=2,
         plain_text=failing_action_response.to_bytes(),
     )
-    ciphered_action_response = xdlms.GeneralGlobalCipherApdu(
+    ciphered_action_response = xdlms.GeneralGlobalCipher(
         security_control=connection_with_hls.security_control,
         system_title=connection_with_hls.meter_system_title,
         invocation_counter=2,
@@ -245,7 +245,7 @@ def test_hls_fails(connection_with_hls: DlmsConnection):
 
 def test_rejection_resets_connection_state(
     connection_with_hls: DlmsConnection,
-    ciphered_hls_aare: acse.ApplicationAssociationResponseApdu,
+    ciphered_hls_aare: acse.ApplicationAssociationResponse,
 ):
     connection_with_hls.state.current_state = state.AWAITING_ASSOCIATION_RESPONSE
     ciphered_hls_aare.result = enumerations.AssociationResult.REJECTED_PERMANENT
@@ -280,13 +280,13 @@ class TestPreEstablishedAssociation:
 
         assert c.state.current_state == state.READY
 
-    def test_not_able_to_send_aarq(self, aarq: acse.ApplicationAssociationRequestApdu):
+    def test_not_able_to_send_aarq(self, aarq: acse.ApplicationAssociationRequest):
         c = DlmsConnection.with_pre_established_association(conformance=Conformance())
 
-        with pytest.raises(LocalDlmsProtocolError):
+        with pytest.raises(exceptions.PreEstablishedAssociationError):
             c.send(aarq)
 
-    def test_not_able_to_send_rlrq(self, rlrq: acse.ReleaseRequestApdu):
+    def test_not_able_to_send_rlrq(self, rlrq: acse.ReleaseRequest):
         c = DlmsConnection.with_pre_established_association(conformance=Conformance())
 
         with pytest.raises(exceptions.PreEstablishedAssociationError):

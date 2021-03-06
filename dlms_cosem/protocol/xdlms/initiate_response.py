@@ -8,7 +8,7 @@ from dlms_cosem.protocol.xdlms.conformance import Conformance
 
 
 @attr.s(auto_attribs=True)
-class InitiateResponseApdu(AbstractXDlmsApdu):
+class InitiateResponse(AbstractXDlmsApdu):
     """
     InitiateResponse ::= SEQUENCE {
         negotiated-quality-of-service [0] IMPLICIT Integer8 OPTIONAL,

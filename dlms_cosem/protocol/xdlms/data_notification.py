@@ -1,15 +1,9 @@
+import datetime
 from typing import *
 
 import attr
 
-from dlms_cosem.a_xdr import (
-    Attribute,
-    AXdrDecoder,
-    DlmsDataToPythonConverter,
-    EncodingConf,
-    Sequence,
-)
-from dlms_cosem.dlms_data import BaseDlmsData, DateTimeData
+import dlms_cosem.time as dlmstime
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 
 
@@ -47,8 +41,8 @@ class LongInvokeIdAndPriority:
                 f" received: {len(bytes_data)}"
             )
 
-        long_invoke_id = int.from_bytes(bytes_data[0:3], "big")
-        status_byte = bytes_data[3]
+        long_invoke_id = int.from_bytes(bytes_data[1:], "big")
+        status_byte = bytes_data[0]
         prioritized = bool(status_byte & 0b10000000)
         confirmed = bool(status_byte & 0b01000000)
         break_on_error = bool(status_byte & 0b00100000)
@@ -62,37 +56,21 @@ class LongInvokeIdAndPriority:
             self_descriptive=self_descriptive,
         )
 
-
-@attr.s(auto_attribs=True)
-class NotificationBody:
-    """
-    Sequence of DLMSData
-    """
-
-    ENCODING_CONF = EncodingConf(attributes=[Sequence(attribute_name="encoding_conf")])
-
-    data: List[BaseDlmsData] = attr.ib(default=None)
-    encoding_conf: EncodingConf = attr.ib(
-        default=None
-    )  # To store the data structure to be able to encode it again after initial decode.
-
-    @classmethod
-    def from_bytes(cls, bytes_data):
-        decoder = AXdrDecoder(encoding_conf=cls.ENCODING_CONF)
-        in_dict = decoder.decode(bytes_data)
-        in_dict.update(
-            {
-                "data": DlmsDataToPythonConverter(
-                    encoding_conf=in_dict["encoding_conf"]
-                ).to_python()
-            }
-        )
-
-        return cls(**in_dict)
+    def to_bytes(self) -> bytes:
+        status = 0
+        if self.prioritized:
+            status = status | 0b10000000
+        if self.confirmed:
+            status = status | 0b01000000
+        if self.break_on_error:
+            status = status | 0b00100000
+        if self.self_descriptive:
+            status = status | 0b00010000
+        return status.to_bytes(1, "big") + self.long_invoke_id.to_bytes(3, "big")
 
 
 @attr.s(auto_attribs=True)
-class DataNotificationApdu(AbstractXDlmsApdu):
+class DataNotification(AbstractXDlmsApdu):
     """
     The DataNotification APDU is used by the DataNotification service.
     It is used to push data from a server (meter) to the client (amr-system).
@@ -106,49 +84,47 @@ class DataNotificationApdu(AbstractXDlmsApdu):
         break_on_error and prioritized are not used for Datanotifications.
     :param datetime.datetime date_time: Indicates the time the DataNotification
         was sent. Is optional.
-    :param `NotificationBody` notification_body: Push data.
+    :param `bytes` body: Push data.
     """
 
     TAG = 15
-    NAME = "data-notification"
-
-    ENCODING_CONF = EncodingConf(
-        attributes=[
-            Attribute(
-                attribute_name="long_invoke_id_and_priority",
-                create_instance=LongInvokeIdAndPriority.from_bytes,
-                length=4,
-            ),
-            Attribute(
-                attribute_name="date_time",
-                create_instance=DateTimeData.from_bytes,
-                optional=True,
-                length=12,
-            ),
-            Sequence(
-                attribute_name="notification_body",
-                # create_instance=NotificationBody.from_bytes,
-                # wrap_end=True,
-            ),
-        ]
-    )
-
-    # TODO: Verify if datetime has a length argument when sent. There is not
-    #  set a specific length in the ASN.1 definition.
-    #  so might be 0x01{length}{data}
 
     long_invoke_id_and_priority: LongInvokeIdAndPriority
-    date_time: DateTimeData
-    notification_body: NotificationBody
+    date_time: Optional[datetime.datetime]
+    body: bytes
 
     @classmethod
-    def from_bytes(cls, bytes_data: bytes):
-        tag = bytes_data[0]
+    def from_bytes(cls, source_bytes: bytes):
+        data = bytearray(source_bytes)
+        tag = data.pop(0)
         if tag != cls.TAG:
-            raise ValueError(f"Tag error. Expected tag {cls.TAG} but got {tag}")
-        decoder = AXdrDecoder(encoding_conf=cls.ENCODING_CONF)
-        in_dict = decoder.decode(bytes_data[1:])
-        return cls(**in_dict)
+            raise ValueError(
+                f"Data is not a DataNotification APDU. Expected tag={cls.TAG} but got {tag}"
+            )
+        long_invoke_id_data = data[:4]
+        long_invoke_id = LongInvokeIdAndPriority.from_bytes(bytes(long_invoke_id_data))
+        data = data[4:]
+        has_datetime = bool(data.pop(0))
+        if has_datetime:
+            dn_datetime_data = data[:12]
+            data = data[12:]
+            dn_datetime, _ = dlmstime.datetime_from_bytes(dn_datetime_data)
+        else:
+            dn_datetime = None
+        return cls(
+            long_invoke_id_and_priority=long_invoke_id,
+            date_time=dn_datetime,
+            body=bytes(data),
+        )
 
     def to_bytes(self) -> bytes:
-        raise NotImplementedError()
+        out = bytearray()
+        out.append(self.TAG)
+        out.extend(self.long_invoke_id_and_priority.to_bytes())
+        if self.date_time:
+            out.extend(b"\x01")
+            out.extend(dlmstime.datetime_to_bytes(self.date_time))
+        else:
+            out.extend(b"\x00")
+        out.extend(self.body)
+        return bytes(out)

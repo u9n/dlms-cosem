@@ -1,5 +1,5 @@
 from dlms_cosem.connection import XDlmsApduFactory
-from dlms_cosem.protocol.xdlms import DataNotificationApdu, GeneralGlobalCipherApdu
+from dlms_cosem.protocol.xdlms import DataNotification, GeneralGlobalCipher
 
 
 def test_gen_glo_cipher_load():
@@ -9,7 +9,7 @@ def test_gen_glo_cipher_load():
 
     apdu = XDlmsApduFactory.apdu_from_bytes(apdu_bytes=dlms_data)
 
-    assert isinstance(apdu, GeneralGlobalCipherApdu)
+    assert isinstance(apdu, GeneralGlobalCipher)
 
     assert apdu.system_title == system_title
 
@@ -21,7 +21,7 @@ def test_gen_glo_cipher_to_apdu():
 
     apdu = XDlmsApduFactory.apdu_from_bytes(apdu_bytes=dlms_data)
 
-    assert isinstance(apdu, GeneralGlobalCipherApdu)
+    assert isinstance(apdu, GeneralGlobalCipher)
 
     assert apdu.system_title == system_title
 
@@ -32,7 +32,7 @@ def test_gen_glo_cipher_to_apdu():
         apdu_bytes=unportected_apdu_data
     )
 
-    assert isinstance(unportected_apdu, DataNotificationApdu)
+    assert isinstance(unportected_apdu, DataNotification)
 
 
 def test_gen_glo_cipher_to_bytes():
@@ -48,6 +48,6 @@ def test_data_notification_apdu():
 
     apdu = XDlmsApduFactory.apdu_from_bytes(apdu_bytes=dlms_data)
 
-    assert isinstance(apdu, DataNotificationApdu)
+    assert isinstance(apdu, DataNotification)
 
     print(apdu)

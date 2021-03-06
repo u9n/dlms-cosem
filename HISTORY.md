@@ -13,6 +13,11 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 ### Changed
 
+* Renamed classes to exclude `Apdu` in class names. To have it consistent over the
+  project.
+* Simplified DataNotification
+* Improved handling of pre-established associations
+
 ### Deprecated
 
 ### Removed

@@ -17,7 +17,7 @@ release_reason_from_bytes = partial(
 
 
 @attr.s(auto_attribs=True)
-class ReleaseResponseApdu(AbstractAcseApdu):
+class ReleaseResponse(AbstractAcseApdu):
     """
     When closing down an Application Association a ReleaseResponse is sent from the
     server (meter) after a ReleaseRequest.
@@ -64,7 +64,7 @@ class ReleaseResponseApdu(AbstractAcseApdu):
         while True:
             # TODO: this does not take into account when defining objects in dict and not using them.
             object_tag = data.pop(0)
-            object_desc = ReleaseResponseApdu.PARSE_TAGS.get(object_tag, None)
+            object_desc = ReleaseResponse.PARSE_TAGS.get(object_tag, None)
             if object_desc is None:
                 raise ValueError(
                     f"Could not find object with tag {object_tag} "

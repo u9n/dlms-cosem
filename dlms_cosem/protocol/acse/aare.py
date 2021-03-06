@@ -48,7 +48,7 @@ class ResultSourceDiagnostics(Choice):
 
 
 @attr.s(auto_attribs=True)
-class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
+class ApplicationAssociationResponse(acse_base.AbstractAcseApdu):
     """
     AARE-apdu ::= [APPLICATION 1] IMPLICIT SEQUENCE
         APPLICATION 1 = 0x61 = 97
@@ -208,7 +208,7 @@ class ApplicationAssociationResponseApdu(acse_base.AbstractAcseApdu):
         while True:
             # TODO: this does not take into account when defining objects in dict and not using them.
             object_tag = aare_data.pop(0)
-            object_desc = ApplicationAssociationResponseApdu.PARSE_TAGS.get(
+            object_desc = ApplicationAssociationResponse.PARSE_TAGS.get(
                 object_tag, None
             )
             if object_desc is None:

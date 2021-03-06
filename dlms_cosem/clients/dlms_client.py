@@ -10,7 +10,7 @@ from dlms_cosem.clients.blocking_tcp_transport import BlockingTcpTransport
 from dlms_cosem.clients.hdlc_transport import SerialHdlcTransport
 from dlms_cosem.connection import DlmsConnection
 from dlms_cosem.protocol import acse, xdlms
-from dlms_cosem.protocol.xdlms import ConfirmedServiceErrorApdu
+from dlms_cosem.protocol.xdlms import ConfirmedServiceError
 from dlms_cosem.protocol.xdlms.selective_access import RangeDescriptor
 
 LOG = logging.getLogger(__name__)
@@ -242,8 +242,8 @@ class DlmsClient:
 
     def associate(
         self,
-        association_request: Optional[acse.ApplicationAssociationRequestApdu] = None,
-    ) -> acse.ApplicationAssociationResponseApdu:
+        association_request: Optional[acse.ApplicationAssociationRequest] = None,
+    ) -> acse.ApplicationAssociationResponse:
 
         # the aarq can be overridden or the standard one from the connection is used.
         aarq = association_request or self.dlms_connection.get_aarq()
@@ -251,18 +251,18 @@ class DlmsClient:
         self.send(aarq)
         response = self.next_event()
         # we could have received an exception from the meter.
-        if isinstance(response, xdlms.ExceptionResponseApdu):
+        if isinstance(response, xdlms.ExceptionResponse):
             raise exceptions.DlmsClientException(
                 f"DLMS Exception: {response.state_error!r}:{response.service_error!r}"
             )
         # the association might not be accepted by the meter
-        if isinstance(response, acse.ApplicationAssociationResponseApdu):
+        if isinstance(response, acse.ApplicationAssociationResponse):
             if response.result is not enumerations.AssociationResult.ACCEPTED:
                 # there could be an error suppled with the reject.
                 extra_error = None
                 if response.user_information:
                     if isinstance(
-                        response.user_information.content, ConfirmedServiceErrorApdu
+                        response.user_information.content, ConfirmedServiceError
                     ):
                         extra_error = response.user_information.content.error
                 raise exceptions.DlmsClientException(
@@ -309,7 +309,7 @@ class DlmsClient:
             ).to_bytes(),
         )
 
-    def release_association(self) -> acse.ReleaseResponseApdu:
+    def release_association(self) -> acse.ReleaseResponse:
         rlrq = self.dlms_connection.get_rlrq()
         self.send(rlrq)
         rlre = self.next_event()
