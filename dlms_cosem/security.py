@@ -1,8 +1,9 @@
 import attr
+from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.keywrap import aes_key_unwrap, aes_key_wrap
 
-from dlms_cosem.exceptions import CipheringError
+from dlms_cosem.exceptions import CipheringError, DecryptionError
 
 """
 Security Suites in DLMS/COSEM define what cryptographic algorithms that are
@@ -166,21 +167,27 @@ def decrypt(
     # extract the tag from the end of the cipher_text
     tag = cipher_text[-12:]
     ciphertext = cipher_text[:-12]
+    try:
+        # Construct a Cipher object, with the key, iv, and additionally the
+        # GCM tag used for authenticating the message.
+        decryptor = Cipher(
+            algorithms.AES(key), modes.GCM(iv, tag, min_tag_length=12)
+        ).decryptor()
 
-    # Construct a Cipher object, with the key, iv, and additionally the
-    # GCM tag used for authenticating the message.
-    decryptor = Cipher(
-        algorithms.AES(key), modes.GCM(iv, tag, min_tag_length=12)
-    ).decryptor()
+        # We put associated_data back in or the tag will fail to verify
+        # when we finalize the decryptor.
+        associated_data = security_control.to_bytes() + auth_key
+        decryptor.authenticate_additional_data(associated_data)
 
-    # We put associated_data back in or the tag will fail to verify
-    # when we finalize the decryptor.
-    associated_data = security_control.to_bytes() + auth_key
-    decryptor.authenticate_additional_data(associated_data)
-
-    # Decryption gets us the authenticated plaintext.
-    # If the tag does not match an InvalidTag exception will be raised.
-    return decryptor.update(ciphertext) + decryptor.finalize()
+        # Decryption gets us the authenticated plaintext.
+        # If the tag does not match an InvalidTag exception will be raised.
+        return decryptor.update(ciphertext) + decryptor.finalize()
+    except InvalidTag:
+        raise DecryptionError(
+            "Unable to decrypt ciphertext. Authentication tag is not valid. Ciphered "
+            "text might have been tampered with or key, auth key, security control or "
+            "invocation counter is wrong"
+        )
 
 
 def gmac(
