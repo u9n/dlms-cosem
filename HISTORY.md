@@ -19,6 +19,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
   project.
 * Simplified DataNotification
 * Improved handling of pre-established associations
+* Using the wrong data to decrypt now raises `DecryptionError` instead of InvalidTag
 
 ### Deprecated
 
