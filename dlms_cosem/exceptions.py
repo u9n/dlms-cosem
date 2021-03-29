@@ -24,3 +24,15 @@ class DlmsClientException(Exception):
 
 class CommunicationError(Exception):
     """Something went wrong in the communication with a meter"""
+
+
+class CryptographyError(Exception):
+    """Something went wrong then applying a cryptographic function"""
+
+
+class DecryptionError(CryptographyError):
+    """
+    Unable to decrypt an APDU. It can be due to mismatch in authentication tag
+    because the ciphertext has changed or that the key, nonce or associated data is
+    wrong
+    """
