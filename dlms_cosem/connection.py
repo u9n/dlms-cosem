@@ -201,6 +201,7 @@ class DlmsConnection:
         client_invocation_counter: Optional[int] = None,
         meter_invocation_counter: Optional[int] = None,
         client_system_title: Optional[bytes] = None,
+        meter_system_title: Optional[bytes] = None,
     ):
         """
         A pre-established association does not need the ACSE APDUs. It is
@@ -208,6 +209,7 @@ class DlmsConnection:
         """
         return cls(
             client_system_title=client_system_title,
+            meter_system_title=meter_system_title,
             global_encryption_key=global_encryption_key,
             global_authentication_key=global_authentication_key,
             meter_invocation_counter=meter_invocation_counter,
