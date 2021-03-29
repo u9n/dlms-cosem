@@ -16,7 +16,7 @@ PROJECT_URLS = {
 EMAIL = "henrik@pwit.se"
 AUTHOR = "Henrik Palmlund Wahlgren @ Palmlund Wahlgren Innovative Technology AB"
 REQUIRES_PYTHON = "~=3.6"
-VERSION = "21.2.3rc1"
+VERSION = "21.2.3rc2"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
