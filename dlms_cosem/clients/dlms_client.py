@@ -61,6 +61,7 @@ class DlmsClient:
     client_system_title: Optional[bytes] = attr.ib(default=None)
     client_initial_invocation_counter: int = attr.ib(default=0)
     meter_initial_invocation_counter: int = attr.ib(default=0)
+    timeout: int = attr.ib(default=10)
 
     dlms_connection: DlmsConnection = attr.ib(
         default=attr.Factory(
@@ -101,6 +102,7 @@ class DlmsClient:
         client_system_title: Optional[bytes] = None,
         client_initial_invocation_counter: int = 0,
         meter_initial_invocation_counter: int = 0,
+        timeout: int = 10,
     ):
         serial_client = SerialHdlcTransport(
             client_logical_address=client_logical_address,
@@ -109,6 +111,7 @@ class DlmsClient:
             server_physical_address=server_physical_address,
             serial_port=serial_port,
             serial_baud_rate=baud_rate,
+            timeout=timeout,
         )
         return cls(
             client_logical_address=client_logical_address,
@@ -145,12 +148,14 @@ class DlmsClient:
         client_system_title: Optional[bytes] = None,
         client_initial_invocation_counter: int = 0,
         meter_initial_invocation_counter: int = 0,
+        timeout: int = 10,
     ):
         tcp_transport = BlockingTcpTransport(
             host=host,
             port=port,
             client_logical_address=client_logical_address,
             server_logical_address=server_logical_address,
+            timeout=timeout,
         )
         return cls(
             client_logical_address=client_logical_address,

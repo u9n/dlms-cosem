@@ -20,7 +20,7 @@ class BlockingTcpTransport:
     port: int
     client_logical_address: int
     server_logical_address: int
-    timeout: int = attr.ib(default=5)
+    timeout: int = attr.ib(default=10)
     tcp_socket: Optional[socket.socket] = attr.ib(init=False, default=None)
 
     @property

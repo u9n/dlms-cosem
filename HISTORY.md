@@ -12,6 +12,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 ### Added
 
 * Added HDLC UnnumberedInformationFrame.
+* Ability to set timeout of transport layer at client level.
 
 ### Changed
 
