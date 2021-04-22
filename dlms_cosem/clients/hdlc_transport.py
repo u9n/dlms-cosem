@@ -28,6 +28,7 @@ class SerialHdlcTransport:
     serial_baud_rate: int = attr.ib(default=9600)
     server_physical_address: Optional[int] = attr.ib(default=None)
     client_physical_address: Optional[int] = attr.ib(default=None)
+    timeout: int = attr.ib(default=10)
     hdlc_connection: connection.HdlcConnection = attr.ib(
         default=attr.Factory(
             lambda self: connection.HdlcConnection(
@@ -39,7 +40,9 @@ class SerialHdlcTransport:
     _serial: serial.Serial = attr.ib(
         default=attr.Factory(
             lambda self: serial.Serial(
-                port=self.serial_port, baudrate=self.serial_baud_rate, timeout=2
+                port=self.serial_port,
+                baudrate=self.serial_baud_rate,
+                timeout=self.timeout,
             ),
             takes_self=True,
         )
