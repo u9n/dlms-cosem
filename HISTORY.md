@@ -36,6 +36,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 ### Fixed
 
+* Some DLMS over TCP implementations will return partial data. The
+  `BlockingTcpTransport` now keeps on trying to read the data until all data is
+  received. Fixes [#35](https://github.com/pwitab/dlms-cosem/issues/35).
+
 ### Security
 
 
