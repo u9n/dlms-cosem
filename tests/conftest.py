@@ -208,7 +208,7 @@ def action_request() -> xdlms.ActionRequestNormal:
     return xdlms.ActionRequestNormal(
         cosem_method=cosem.CosemMethod(
             interface=enumerations.CosemInterface.DISCONNECT_CONTROL,
-            instance=cosem.Obis.from_dotted("0.0.96.3.10.255"),
+            instance=cosem.Obis.from_string("0.0.96.3.10.255"),
             method=1,
         ),
         data=dlms_data.UnsignedLongData(0).to_bytes(),

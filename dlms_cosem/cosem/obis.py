@@ -1,6 +1,12 @@
+import re
 from typing import *
 
 import attr
+
+six_part = re.compile(
+    "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$"
+)
+five_part = re.compile("^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$")
 
 
 def allowed_range_for_obis_code(instance, attribute, value: int):
@@ -13,7 +19,8 @@ def allowed_range_for_obis_code(instance, attribute, value: int):
 class Obis:
 
     """
-    As of now we ignore the special separators and focus on just dotted.
+    OBject Identification System defines codes for identification of commonly used
+    data items in metering equipment.
     """
 
     a: int = attr.ib(
@@ -46,24 +53,42 @@ class Obis:
         return cls(data[0], data[1], data[2], data[3], data[4], data[5])
 
     @classmethod
-    def from_dotted(cls, dotted: str):
-        numbers = dotted.split(".")
-        if len(numbers) != 6:
-            raise ValueError("dotted obis representation does not contain 6 elements")
-        return cls(
-            a=int(numbers[0]),
-            b=int(numbers[1]),
-            c=int(numbers[2]),
-            d=int(numbers[3]),
-            e=int(numbers[4]),
-            f=int(numbers[5]),
-        )
+    def from_string(cls, obis_string: str) -> "Obis":
+        """
+        Parses a string as an OBIS code. Will accept with both the optinal 255 at the
+        and and not. Any separator is allowed.
+        """
+        six_match = re.match(six_part, obis_string)
+        if six_match:
+            parts = six_match.groups()
+            return cls(
+                a=int(parts[0]),
+                b=int(parts[1]),
+                c=int(parts[2]),
+                d=int(parts[3]),
+                e=int(parts[4]),
+            )
+        five_match = re.match(five_part, obis_string)
+        if five_match:
+            parts = five_match.groups()
+            return cls(
+                a=int(parts[0]),
+                b=int(parts[1]),
+                c=int(parts[2]),
+                d=int(parts[3]),
+                e=int(parts[4]),
+            )
 
-    def dotted_repr(self) -> str:
-        return f"{self.a}.{self.b}.{self.c}.{self.d}.{self.e}.{self.f}"
+        raise ValueError(f"{obis_string} is not a parsable OBIS string")
 
-    def verbose_repr(self) -> str:
-        return f"{self.a}-{self.b}:{self.c}.{self.d}.{self.e}*{self.f}"
+    def to_string(self, separator: Optional[str] = None) -> str:
+        if separator:
+            return (
+                f"{self.a}{separator}{self.b}{separator}{self.c}{separator}{self.d}"
+                f"{separator}{self.e}{separator}{self.f}"
+            )
+        else:
+            return f"{self.a}-{self.b}:{self.c}.{self.d}.{self.e}.{self.f}"
 
     def to_bytes(self) -> bytes:
         return bytes(bytearray([self.a, self.b, self.c, self.d, self.e, self.f]))

@@ -36,5 +36,5 @@ def test_parse_buffer():
     assert len(result[0]) == 4
     assert result[0][0].attribute.attribute == 2
     assert result[0][0].attribute.interface == enumerations.CosemInterface.CLOCK
-    assert result[0][0].attribute.instance.dotted_repr() == "0.0.1.0.0.255"
+    assert result[0][0].attribute.instance.to_string() == "0-0:1.0.0.255"
     assert (result[1][0].value - result[0][0].value).total_seconds() == 60 * 60
