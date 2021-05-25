@@ -96,11 +96,23 @@ class BlockingTcpTransport:
         """
         Receives a whole DLMS APDU. Gets the total length from the DLMS IP Wrapper.
         """
-        if not self.tcp_socket:
-            raise RuntimeError("TCP transport not connected.")
         try:
-            header = WrapperHeader.from_bytes(self.tcp_socket.recv(8))
-            data = self.tcp_socket.recv(header.length)
+            header = WrapperHeader.from_bytes(self._recv_bytes(8))
+            data = self._recv_bytes(header.length)
         except (OSError, IOError, socket.timeout, socket.error) as e:
             raise exceptions.CommunicationError("Could not receive data") from e
+        return data
+
+    def _recv_bytes(self, amount: int):
+        """
+        Some implementations will return partial data and we need to keep on trying
+        to read the bytes until we have them all.
+        """
+        if not self.tcp_socket:
+            raise RuntimeError("TCP transport not connected.")
+
+        data = b""
+        while len(data) < amount:
+            data += self.tcp_socket.recv(amount - len(data))
+
         return data
