@@ -19,7 +19,8 @@ def allowed_range_for_obis_code(instance, attribute, value: int):
 class Obis:
 
     """
-    As of now we ignore the special separators and focus on just dotted.
+    OBject Identification System defines codes for identification of commonly used
+    data items in metering equipment.
     """
 
     a: int = attr.ib(
