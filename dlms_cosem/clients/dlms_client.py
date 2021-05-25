@@ -3,11 +3,11 @@ import logging
 from typing import *
 
 import attr
-from typing_extensions import Protocol  # type: ignore
 
 from dlms_cosem import cosem, dlms_data, enumerations, exceptions, state, utils
 from dlms_cosem.clients.blocking_tcp_transport import BlockingTcpTransport
 from dlms_cosem.clients.hdlc_transport import SerialHdlcTransport
+from dlms_cosem.clients.io_proto import DlmsIOInterface
 from dlms_cosem.connection import DlmsConnection
 from dlms_cosem.protocol import acse, xdlms
 from dlms_cosem.protocol.xdlms import ConfirmedServiceError
@@ -26,21 +26,6 @@ class ActionError(Exception):
 
 class HLSError(Exception):
     """error in HLS procedure"""
-
-
-class DlmsIOInterface(Protocol):
-    """
-    Protocol for a class that should be used for transport.
-    """
-
-    def connect(self) -> None:
-        ...
-
-    def disconnect(self) -> None:
-        ...
-
-    def send(self, bytes_to_send: bytes) -> bytes:
-        ...
 
 
 @attr.s(auto_attribs=True)
@@ -285,7 +270,11 @@ class DlmsClient:
             except ActionError as e:
                 raise HLSError from e
 
+            if not hls_response:
+                raise HLSError("No HLS data in response")
+
             hls_data = utils.parse_as_dlms_data(hls_response)
+
             if not hls_response:
                 raise HLSError("Did not receive any HLS response data")
 
@@ -337,3 +326,47 @@ class DlmsClient:
         event = self.dlms_connection.next_event()
         LOG.info(f"Received {event}")
         return event
+
+    @property
+    def client_invocation_counter(self) -> int:
+        return self.dlms_connection.client_invocation_counter
+
+    @client_invocation_counter.setter
+    def client_invocation_counter(self, ic: int):
+        self.dlms_connection.client_invocation_counter = ic
+
+    def switch_client_type(
+        self,
+        client_logical_address: Optional[int] = None,
+        authentication_method: Optional[enumerations.AuthenticationMechanism] = None,
+        encryption_key: Optional[bytes] = None,
+        authentication_key: Optional[bytes] = None,
+    ):
+        """
+        A convenience method to switch a client into another client type. For example
+        going from a public client to a management client.
+        """
+        if self.dlms_connection.state.current_state != state.NO_ASSOCIATION:
+            raise exceptions.DlmsClientException(
+                "Unable to switch to another client type while there is still an "
+                "active association."
+            )
+        if client_logical_address:
+            self.client_logical_address = client_logical_address
+            self.io_interface.client_logical_address = client_logical_address
+
+        if authentication_method:
+            self.authentication_method = authentication_method
+            self.dlms_connection.authentication_method = authentication_method
+
+        if encryption_key or authentication_key:
+            if not (encryption_key and authentication_key):
+                raise exceptions.DlmsClientException(
+                    "When switching the client to an encrypted context you need to "
+                    "specify both an encryption key and an authentication key."
+                )
+
+            self.encryption_key = encryption_key
+            self.dlms_connection.global_encryption_key = encryption_key
+            self.authentication_key = authentication_key
+            self.dlms_connection.global_authentication_key = authentication_key
