@@ -5,6 +5,7 @@ from typing import *
 import attr
 
 from dlms_cosem import exceptions
+from dlms_cosem.clients.io_proto import DlmsIOInterface
 from dlms_cosem.protocol.wrappers import WrapperHeader, WrapperProtocolDataUnit
 
 LOG = logging.getLogger(__name__)
