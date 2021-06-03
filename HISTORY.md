@@ -16,6 +16,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 * A simpler way to change client address and invocation counter of a `DlmsClient` to
   that reuseing a connection goes smoother
 * Added `from_string` on `Obis`that can parse any viable string as OBIS.
+* Added GET.WITH_LIST service.
 
 ### Changed
 
@@ -39,6 +40,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 * Some DLMS over TCP implementations will return partial data. The
   `BlockingTcpTransport` now keeps on trying to read the data until all data is
   received. Fixes [#35](https://github.com/pwitab/dlms-cosem/issues/35).
+* Fixed a bug in the HDLC layer that prevented correct sending of segmented information
+  frames.
+
+
 
 ### Security
 
