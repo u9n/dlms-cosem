@@ -2,7 +2,9 @@ from typing import *
 
 import attr
 
-from dlms_cosem.cosem import CosemAttribute, selective_access
+from dlms_cosem.cosem import selective_access
+
+from .base import CosemAttribute
 
 
 @attr.s(auto_attribs=True)
