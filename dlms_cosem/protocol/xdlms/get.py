@@ -567,7 +567,6 @@ class GetResponseWithList(AbstractXDlmsApdu):
 
     @classmethod
     def from_bytes(cls, source_bytes: bytes):
-        print(source_bytes)
         data = bytearray(source_bytes)
         tag = data.pop(0)
         if tag != cls.TAG:

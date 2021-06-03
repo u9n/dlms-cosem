@@ -273,7 +273,6 @@ class DlmsConnection:
         self.state.process_event(event)
         LOG.debug(f"Preparing to send: {event}")
 
-        print(f" >>> unprotected bytes: {event.to_bytes()!r}")
         if self.use_protection:
             event = self.protect(event)
 

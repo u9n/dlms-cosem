@@ -48,7 +48,6 @@ class CosemMethod:
 
     @classmethod
     def from_bytes(cls, source_bytes: bytes):
-        print("in cosem")
         if len(source_bytes) != cls.LENGTH:
             raise ValueError(
                 f"Data is not of correct length. Should be {cls.LENGTH} but is "

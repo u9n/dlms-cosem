@@ -220,7 +220,6 @@ class DlmsClient:
         out = xdlms.GetRequestWithList(
             cosem_attributes_with_selection=cosem_attributes_with_selection
         )
-        print(f">>>>>>>>> {out.to_bytes()!r}")
         self.send(out)
         response = self.next_event()
         if isinstance(response, xdlms.ExceptionResponse):

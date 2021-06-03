@@ -22,8 +22,7 @@ class CaptureObject:
         """
         It should be a structure of 4 elements-
         """
-        data = utils.parse_as_dlms_data(source_bytes)
-        print(data)
+        # data = utils.parse_as_dlms_data(source_bytes)
         raise NotImplementedError()
 
     def to_bytes(self) -> bytes:
