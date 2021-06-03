@@ -6,7 +6,7 @@ import attr
 from dlms_cosem import cosem
 from dlms_cosem import enumerations as enums
 from dlms_cosem import parsers
-from dlms_cosem.protocol.xdlms.selective_access import CaptureObject, RangeDescriptor
+from dlms_cosem.cosem.selective_access import CaptureObject, RangeDescriptor
 
 
 class SortMethod(IntEnum):

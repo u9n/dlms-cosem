@@ -3,7 +3,7 @@ from typing import *
 
 import attr
 
-from dlms_cosem import cosem, dlms_data, time
+from dlms_cosem import cosem, dlms_data, enumerations, time, utils
 
 
 @attr.s(auto_attribs=True)
@@ -19,7 +19,12 @@ class CaptureObject:
     data_index: int = attr.ib(default=0)
 
     @classmethod
-    def from_bytes(cls, source_bytes):
+    def from_bytes(cls, source_bytes) -> "CaptureObject":
+        """
+        It should be a structure of 4 elements-
+        """
+        data = utils.parse_as_dlms_data(source_bytes)
+        print(data)
         raise NotImplementedError()
 
     def to_bytes(self) -> bytes:
@@ -55,11 +60,46 @@ class RangeDescriptor:
     )
     from_value: datetime = attr.ib(validator=attr.validators.instance_of(datetime))
     to_value: datetime = attr.ib(validator=attr.validators.instance_of(datetime))
-    # selected_values: List[CaptureObject] = attr.ib(factory=list)
+    selected_values: Optional[List[CaptureObject]] = attr.ib(default=None)
 
     @classmethod
-    def from_bytes(cls, source_bytes: bytes):
-        raise NotImplementedError()
+    def from_bytes(cls, source_bytes: bytes) -> "RangeDescriptor":
+        data = bytearray(source_bytes)
+        access_descriptor = data.pop(0)
+        if access_descriptor is not cls.ACCESS_DESCRIPTOR:
+            raise ValueError(
+                f"Access descriptor {access_descriptor} is not valid for "
+                f"RangeDescriptor. It should be {cls.ACCESS_DESCRIPTOR}"
+            )
+        parsed_data = utils.parse_as_dlms_data(data)
+
+        restricting_object_data = parsed_data[0]
+        from_value_data = parsed_data[1]
+        to_value_data = parsed_data[2]
+        selected_values_data = parsed_data[3]
+
+        restricting_cosem_attribute = cosem.CosemAttribute(
+            interface=enumerations.CosemInterface(restricting_object_data[0]),
+            instance=cosem.Obis.from_bytes(restricting_object_data[1]),
+            attribute=restricting_object_data[2],
+        )
+        restricting_object = CaptureObject(
+            cosem_attribute=restricting_cosem_attribute,
+            data_index=restricting_object_data[3],
+        )
+        from_dt, clock_status = time.datetime_from_bytes(from_value_data)
+        to_dt, clock_status = time.datetime_from_bytes(to_value_data)
+        if selected_values_data:
+            raise NotImplementedError()
+        else:
+            selected_values = None
+
+        return cls(
+            restricting_object=restricting_object,
+            from_value=from_dt,
+            to_value=to_dt,
+            selected_values=selected_values,
+        )
 
     def to_bytes(self) -> bytes:
         out = bytearray()
@@ -74,8 +114,12 @@ class RangeDescriptor:
         out.extend(
             dlms_data.OctetStringData(time.datetime_to_bytes(self.to_value)).to_bytes()
         )
-        out.extend(b"\x01\x00")  # empty array for selected values means all columns
-        # TODO: implement selected values
+        if not self.selected_values:
+            out.extend(b"\x01\x00")  # empty array for selected values means all columns
+        else:
+            raise NotImplementedError()
+            # TODO: implement selected values
+
         return bytes(out)
 
 
@@ -124,8 +168,28 @@ class EntryDescriptor:
     )
 
     @classmethod
-    def from_bytes(cls, source_bytes):
-        pass
+    def from_bytes(cls, source_bytes) -> "EntryDescriptor":
+        raise NotImplementedError()
 
     def to_bytes(self) -> bytes:
         raise NotImplementedError()
+
+
+@attr.s(auto_attribs=True)
+class AccessDescriptorFactory:
+
+    """
+    Handles the selection of parsing the first byte to find what kind of access
+    descriptor it is and returns the object.
+    """
+
+    @staticmethod
+    def from_bytes(source_bytes: bytes) -> Union[RangeDescriptor, EntryDescriptor]:
+
+        access_descriptor = source_bytes[0]
+        if access_descriptor == 1:
+            return RangeDescriptor.from_bytes(source_bytes)
+        elif access_descriptor == 2:
+            return EntryDescriptor.from_bytes(source_bytes)
+        else:
+            raise ValueError(f"{access_descriptor} is not a valid access descriptor")

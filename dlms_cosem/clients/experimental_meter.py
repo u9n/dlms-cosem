@@ -8,7 +8,7 @@ from dlms_cosem import cosem, utils
 from dlms_cosem.clients.dlms_client import DlmsClient
 from dlms_cosem.cosem import Obis
 from dlms_cosem.cosem.profile_generic import Data, ProfileGeneric
-from dlms_cosem.protocol.xdlms.selective_access import RangeDescriptor
+from dlms_cosem.cosem.selective_access import RangeDescriptor
 
 
 def force_obis(maybe_obis: Union[str, Obis]):

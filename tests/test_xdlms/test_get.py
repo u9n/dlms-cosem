@@ -1,17 +1,19 @@
 import pytest
 
-from dlms_cosem import enumerations
+from dlms_cosem import cosem, enumerations
 from dlms_cosem.cosem import CosemAttribute, Obis
-from dlms_cosem.dlms_data import DoubleLongUnsignedData
+from dlms_cosem.dlms_data import DoubleLongUnsignedData, OctetStringData
 from dlms_cosem.protocol.xdlms import GetRequestNormal, GetResponseNormal
 from dlms_cosem.protocol.xdlms.get import (
     GetRequestFactory,
     GetRequestNext,
+    GetRequestWithList,
     GetResponseFactory,
     GetResponseLastBlock,
     GetResponseLastBlockWithError,
     GetResponseNormalWithError,
     GetResponseWithBlock,
+    GetResponseWithList,
     InvokeIdAndPriority,
 )
 
@@ -82,6 +84,48 @@ class TestGetRequestNext:
         assert get_next.to_bytes() == b"\xc0\x02\xc1\x00\x00\x00\x03"
 
 
+class TestGetRequestWithList:
+    def test_transform_bytes(self):
+
+        data = b"\xc0\x03\xc1\x02\x00\x01\x00\x00*\x00\x00\xff\x02\x00\x00\x08\x00\x00\x01\x00\x00\xff\x02\x00"
+        get_next = GetRequestWithList(
+            cosem_attributes_with_selection=[
+                cosem.CosemAttributeWithSelection(
+                    attribute=cosem.CosemAttribute(
+                        interface=enumerations.CosemInterface.DATA,
+                        instance=cosem.Obis(a=0, b=0, c=42, d=0, e=0, f=255),
+                        attribute=2,
+                    ),
+                    access_selection=None,
+                ),
+                cosem.CosemAttributeWithSelection(
+                    attribute=cosem.CosemAttribute(
+                        interface=enumerations.CosemInterface.CLOCK,
+                        instance=cosem.Obis(a=0, b=0, c=1, d=0, e=0, f=255),
+                        attribute=2,
+                    ),
+                    access_selection=None,
+                ),
+            ],
+            invoke_id_and_priority=InvokeIdAndPriority(
+                invoke_id=1, confirmed=True, high_priority=True
+            ),
+        )
+
+        assert get_next.to_bytes() == data
+        assert GetRequestWithList.from_bytes(data) == get_next
+
+    def test_wrong_tag_raises_valueerror(self):
+        data = b"\xc1\x02\xc1\x00\x00\x00\x01"  # Wrong tag
+        with pytest.raises(ValueError):
+            GetRequestWithList.from_bytes(data)
+
+    def test_wrong_type_raises_valueerror(self):
+        data = b"\xc0\x01\xc1\x00\x00\x00\x01"  # Wrong request type
+        with pytest.raises(ValueError):
+            GetRequestWithList.from_bytes(data)
+
+
 class TestGetRequestFactory:
     def test_get_request_normal(self):
         data = b"\xc0\x01\xc1\x00\x01\x00\x00+\x01\x00\xff\x02\x00"
@@ -98,10 +142,10 @@ class TestGetRequestFactory:
         with pytest.raises(ValueError):
             GetRequestFactory.from_bytes(data)
 
-    def test_with_list_raises_notimplemented(self):
+    def test_get_with_list(self):
         data = b"\xc0\x03\xc1\x00\x00\x00\x01"  # With list type
-        with pytest.raises(NotImplementedError):
-            GetRequestFactory.from_bytes(data)
+        apdu = GetRequestFactory.from_bytes(data)
+        assert isinstance(apdu, GetRequestWithList)
 
     def test_invalid_type_raises_valueerror(self):
         data = b"\xc0\x04\xc1\x00\x00\x00\x01"  # 0x04 type not possible
@@ -343,6 +387,36 @@ class TestGetResponseLastBlockWithError:
             GetResponseLastBlockWithError.from_bytes(data)
 
 
+class TestGetResponseWithList:
+    def test_transform_bytes(self):
+        data = b"\xc4\x03\xc1\x02\x00\t\x10ISK1030777764366\x00\t\x0c\x07\xe5\x06\x03\x04\x0e\t\x17\x00\xff\xc4\x00"
+
+        apdu = GetResponseWithList(
+            response_data=[
+                OctetStringData(value=b"ISK1030777764366"),
+                OctetStringData(
+                    value=b"\x07\xe5\x06\x03\x04\x0e\t\x17\x00\xff\xc4\x00"
+                ),
+            ],
+            invoke_id_and_priority=InvokeIdAndPriority(
+                invoke_id=1, confirmed=True, high_priority=True
+            ),
+        )
+        assert data == apdu.to_bytes()
+        assert GetResponseWithList.from_bytes(data) == apdu
+
+    def test_wrong_tag_raises_valueerror(self):
+        data = b"\xc5\x02\xc1\x01\x00\x00\x00\x13\x01\x01"
+        with pytest.raises(ValueError):
+            GetResponseWithList.from_bytes(data)
+
+    def test_wrong_type_raises_valueerror(self):
+        data = b"\xc4\x02\xc1\x01\x00\x00\x00\x13\x01\x01"
+
+        with pytest.raises(ValueError):
+            GetResponseWithList.from_bytes(data)
+
+
 class TestGetResponseFactory:
     def test_get_response_normal(self):
 
@@ -382,7 +456,7 @@ class TestGetResponseFactory:
         with pytest.raises(ValueError):
             GetResponseFactory.from_bytes(data)
 
-    def test_get_response_with_list_raises_notimplementederror(self):
+    def test_get_response_with_list(self):
         data = b"\xc4\x03\xc1\x01\x00\x00\x00\x13\x01\x01"
-        with pytest.raises(NotImplementedError):
-            GetResponseFactory.from_bytes(data)
+        apdu = GetResponseWithList.from_bytes(data)
+        assert isinstance(apdu, GetResponseWithList)

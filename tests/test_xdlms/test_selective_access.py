@@ -1,8 +1,9 @@
 from dateutil import parser
 
 from dlms_cosem import cosem, enumerations
-from dlms_cosem.protocol.xdlms import GetRequestFactory, selective_access
-from dlms_cosem.protocol.xdlms.selective_access import RangeDescriptor
+from dlms_cosem.cosem import selective_access
+from dlms_cosem.cosem.selective_access import RangeDescriptor
+from dlms_cosem.protocol.xdlms import GetRequestFactory
 
 
 def test_capture_object_definition():
@@ -78,7 +79,7 @@ def test_range_descriptor_to_bytes():
     assert rd.to_bytes() == data
 
 
-def test_range_descriptor_is_not_parsed():
+def test_parse_range_descriptor():
 
     """
     Profile: 1 (15 minutes profile)
@@ -104,4 +105,12 @@ def test_range_descriptor_is_not_parsed():
         b"\x01\x00"  # selected_values empty array.
     )
     assert access
-    assert g.access_selection == b"\x02"
+
+    access_selection = g.access_selection
+
+    assert isinstance(access_selection, RangeDescriptor)
+    assert access_selection.selected_values is None
+    assert (
+        access_selection.restricting_object.cosem_attribute.instance.to_string()
+        == "0-0:1.0.0.255"
+    )

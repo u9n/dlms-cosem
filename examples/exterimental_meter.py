@@ -1,17 +1,12 @@
 import logging
 from functools import partial
-from pprint import pprint
 
-from dateutil import parser as dateparser
-
-from dlms_cosem import a_xdr, cosem, enumerations, utils
+from dlms_cosem import cosem, enumerations
 from dlms_cosem.clients.dlms_client import DlmsClient
 from dlms_cosem.clients.experimental_meter import Meter
 from dlms_cosem.cosem.profile_generic import Data, ProfileGeneric
-from dlms_cosem.parsers import AssociationObjectListParser, ProfileGenericBufferParser
-from dlms_cosem.protocol.xdlms import selective_access
+from dlms_cosem.cosem.selective_access import CaptureObject
 from dlms_cosem.protocol.xdlms.conformance import Conformance
-from dlms_cosem.protocol.xdlms.selective_access import CaptureObject, RangeDescriptor
 
 # set up logging so you get a bit nicer printout of what is happening.
 logging.basicConfig(

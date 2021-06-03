@@ -41,6 +41,8 @@ NOT_CONNECTED = make_sentinel("NOT_CONNECTED")
 IDLE = make_sentinel("IDLE")
 
 AWAITING_RESPONSE = make_sentinel("AWAITING_RESPONSE")
+SHOULD_SEND_NEXT = make_sentinel("SHOULD_SEND_NEXT")
+
 
 AWAITING_CONNECTION = make_sentinel("AWAITING_CONNECTION")
 
