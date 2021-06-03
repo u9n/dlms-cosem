@@ -5,8 +5,9 @@ import attr
 
 from dlms_cosem import a_xdr, cosem
 from dlms_cosem import enumerations as enums
-from dlms_cosem.a_xdr import Attribute, AXdrDecoder, EncodingConf
-from dlms_cosem.protocol.xdlms import selective_access
+from dlms_cosem.a_xdr import decode_variable_integer, encode_variable_integer
+from dlms_cosem.cosem import selective_access
+from dlms_cosem.dlms_data import VARIABLE_LENGTH, AbstractDlmsData, DlmsDataFactory
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
 
@@ -43,24 +44,6 @@ class GetRequestNormal(AbstractXDlmsApdu):
 
     TAG: ClassVar[int] = 192
     REQUEST_TYPE: ClassVar[enums.GetRequestType] = enums.GetRequestType.NORMAL
-    # TODO: try this out
-    ENCODING_CONF: ClassVar[EncodingConf] = EncodingConf(
-        attributes=[
-            Attribute(
-                attribute_name="invoke_id_and_priority",
-                create_instance=InvokeIdAndPriority.from_bytes,
-                length=1,
-            ),
-            Attribute(
-                attribute_name="cosem_attribute",
-                create_instance=cosem.CosemAttribute.from_bytes,
-                length=9,
-            ),
-            Attribute(
-                attribute_name="access_selection", create_instance=bytes, default=False
-            ),
-        ]
-    )
 
     cosem_attribute: cosem.CosemAttribute = attr.ib(
         validator=attr.validators.instance_of(cosem.CosemAttribute)
@@ -69,9 +52,9 @@ class GetRequestNormal(AbstractXDlmsApdu):
         factory=InvokeIdAndPriority,
         validator=attr.validators.instance_of(InvokeIdAndPriority),
     )
-    access_selection: Optional[selective_access.EntryDescriptor] = attr.ib(
-        default=None, converter=if_falsy_set_none
-    )
+    access_selection: Optional[
+        Union[selective_access.RangeDescriptor, selective_access.EntryDescriptor]
+    ] = attr.ib(default=None, converter=if_falsy_set_none)
 
     @classmethod
     def from_bytes(cls, source_bytes: bytes):
@@ -87,9 +70,25 @@ class GetRequestNormal(AbstractXDlmsApdu):
             raise ValueError(
                 "The data for the GetRequest is not for a GetRequestNormal"
             )
-        decoder = AXdrDecoder(encoding_conf=cls.ENCODING_CONF)
-        out_dict = decoder.decode(data)
-        return cls(**out_dict)
+
+        invoke_id_and_priority = InvokeIdAndPriority.from_bytes(
+            data.pop(0).to_bytes(1, "big")
+        )
+
+        cosem_attribute_data = data[:9]
+        cosem_attribute = cosem.CosemAttribute.from_bytes(cosem_attribute_data)
+        data = data[9:]
+        has_access_selection = bool(data.pop(0))
+        if has_access_selection:
+            access_selection = selective_access.AccessDescriptorFactory.from_bytes(data)
+        else:
+            access_selection = None
+
+        return cls(
+            cosem_attribute=cosem_attribute,
+            invoke_id_and_priority=invoke_id_and_priority,
+            access_selection=access_selection,
+        )
 
     def to_bytes(self):
         # automatically adding the choice for GetRequestNormal.
@@ -147,8 +146,60 @@ class GetRequestNext(AbstractXDlmsApdu):
         return bytes(out)
 
 
+@attr.s(auto_attribs=True)
 class GetRequestWithList(AbstractXDlmsApdu):
-    pass
+
+    TAG: ClassVar[int] = 192
+    REQUEST_TYPE: ClassVar[enums.GetRequestType] = enums.GetRequestType.WITH_LIST
+
+    cosem_attributes_with_selection: List[cosem.CosemAttributeWithSelection]
+    invoke_id_and_priority: InvokeIdAndPriority = attr.ib(
+        factory=InvokeIdAndPriority,
+        validator=attr.validators.instance_of(InvokeIdAndPriority),
+    )
+
+    @classmethod
+    def from_bytes(cls, source_bytes: bytes):
+        data = bytearray(source_bytes)
+        tag = data.pop(0)
+        if tag != cls.TAG:
+            raise ValueError(
+                f"Tag for GET request is not correct. Got {tag}, should be {cls.TAG}"
+            )
+
+        type_choice = enums.GetRequestType(data.pop(0))
+        if type_choice is not enums.GetRequestType.WITH_LIST:
+            raise ValueError(
+                "The data for the GetRequest is not for a GetRequestWithList"
+            )
+        invoke_id_and_priority = InvokeIdAndPriority.from_bytes(
+            data.pop(0).to_bytes(1, "big")
+        )
+
+        number_of_items = data.pop(0)
+        cosem_atts = list()
+        for i in range(0, number_of_items):
+            # Not really happy with the format of this but it works fine.
+            c = cosem.CosemAttributeWithSelection.from_bytes(data)
+            cosem_atts.append(c)
+            data = data[len(c.to_bytes()) :]
+
+        return cls(
+            cosem_attributes_with_selection=cosem_atts,
+            invoke_id_and_priority=invoke_id_and_priority,
+        )
+
+    def to_bytes(self) -> bytes:
+        out = bytearray()
+        out.append(self.TAG)
+        out.append(self.REQUEST_TYPE)
+        out.extend(self.invoke_id_and_priority.to_bytes())
+        out.extend(
+            encode_variable_integer(len(self.cosem_attributes_with_selection))
+        )  # number of items
+        for item in self.cosem_attributes_with_selection:
+            out.extend(item.to_bytes())
+        return bytes(out)
 
 
 @attr.s(auto_attribs=True)
@@ -175,7 +226,7 @@ class GetRequestFactory:
         elif request_type == enums.GetRequestType.NEXT:
             return GetRequestNext.from_bytes(source_bytes)
         elif request_type == enums.GetRequestType.WITH_LIST:
-            raise NotImplementedError("GetRequestWithList not implemented")
+            return GetRequestWithList.from_bytes(source_bytes)
         else:
             raise ValueError(
                 f"Received an enum request type that is not valid for "
@@ -452,7 +503,108 @@ class GetResponseLastBlockWithError(AbstractXDlmsApdu):
 
 @attr.s(auto_attribs=True)
 class GetResponseWithList(AbstractXDlmsApdu):
-    pass
+
+    TAG: ClassVar[int] = 196
+    RESPONSE_TYPE: ClassVar[enums.GetResponseType] = enums.GetResponseType.WITH_LIST
+
+    response_data: List[Union[AbstractDlmsData, enums.DataAccessResult]] = attr.ib(
+        factory=list
+    )
+    invoke_id_and_priority: InvokeIdAndPriority = attr.ib(
+        factory=InvokeIdAndPriority,
+        validator=attr.validators.instance_of(InvokeIdAndPriority),
+    )
+
+    @staticmethod
+    def extract_one_dlms_data(source_bytes: bytes) -> Tuple[AbstractDlmsData, bytes]:
+        """
+        A bytestring of get responses. First choice parameter is taken away
+        Return the first dlms data in the bytesstring.
+        """
+        data = bytearray(source_bytes)
+        data_tag = data.pop(0)
+        klass = DlmsDataFactory.get_data_class(data_tag)
+        if klass.LENGTH == VARIABLE_LENGTH:
+            length, rest = decode_variable_integer(data)
+            data = rest
+        else:
+            length = klass.LENGTH
+
+        return klass.from_bytes(data[:length]), data[length:]
+
+    @staticmethod
+    def parse_list_response(source_bytes: bytes, amount: int):
+        data = bytearray(source_bytes)
+        dlms_data = list()
+        for index in range(0, amount):
+            answer_selection = data.pop(0)
+            if answer_selection == 0:
+                # DLMS data
+                obj, rest = GetResponseWithList.extract_one_dlms_data(data)
+                dlms_data.append(obj)
+                data = rest
+            elif answer_selection == 1:
+                # Data Access Result
+                dlms_data.append(enums.DataAccessResult(data.pop(0)))
+            else:
+                raise ValueError("Not a valid answer selection byte")
+
+        return dlms_data
+
+    @property
+    def result(self) -> List[Any]:
+        """
+        Converts the response data to python objects if possible
+        """
+        out = list()
+        for item in self.response_data:
+            if isinstance(item, AbstractDlmsData):
+                out.append(item.to_python())
+            else:
+                out.append(item)
+
+        return out
+
+    @classmethod
+    def from_bytes(cls, source_bytes: bytes):
+        data = bytearray(source_bytes)
+        tag = data.pop(0)
+        if tag != cls.TAG:
+            raise ValueError("Not a GetResponse APDU")
+        response_type = data.pop(0)
+        if response_type != cls.RESPONSE_TYPE:
+            raise ValueError("Not a GetResponseWithList Apdu")
+
+        invoke_id_and_priority = InvokeIdAndPriority.from_bytes(
+            data.pop(0).to_bytes(1, "big")
+        )
+
+        # List of Get-Data-Response.
+        list_length = data.pop(0)
+        dlms_data = cls.parse_list_response(data, list_length)
+
+        return cls(
+            invoke_id_and_priority=invoke_id_and_priority, response_data=dlms_data
+        )
+
+    def to_bytes(self) -> bytes:
+        out = bytearray()
+        out.append(self.TAG)
+        out.append(self.RESPONSE_TYPE)
+        out.extend(self.invoke_id_and_priority.to_bytes())
+        out.extend(encode_variable_integer(len(self.response_data)))
+        for item in self.response_data:
+            if isinstance(item, AbstractDlmsData):
+                out.append(0)
+                out.extend(item.to_bytes())
+            elif isinstance(item, enums.DataAccessResult):
+                out.append(1)
+                out.append(item.value)
+
+            else:
+                raise ValueError("unknown data in response for GetResponseWithList")
+
+        return bytes(out)
 
 
 @attr.s(auto_attribs=True)
@@ -520,4 +672,7 @@ class GetResponseFactory:
                     )
 
         elif response_type == enums.GetResponseType.WITH_LIST:
-            raise NotImplementedError("GetResponseWithList is not implemented.")
+            return GetResponseWithList.from_bytes(bytes(source_bytes))
+
+        else:
+            raise ValueError("Response type is not a valid GetResponse type")

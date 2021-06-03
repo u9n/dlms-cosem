@@ -1,12 +1,9 @@
-from functools import partial
 from typing import *
 
 import attr
 
-from dlms_cosem import a_xdr, cosem
+from dlms_cosem import cosem
 from dlms_cosem import enumerations as enums
-from dlms_cosem.a_xdr import Attribute, AXdrDecoder, EncodingConf
-from dlms_cosem.protocol.xdlms import selective_access
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
 

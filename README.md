@@ -35,7 +35,7 @@ this is a use-case you need, consider sponsoring the development and contact us.
 # Supported features
 
 * AssociationRequest  and AssociationRelease
-* GET, GET.WITH_BLOCK
+* GET, GET.WITH_BLOCK, GET.WITH_LIST
 * SET
 * ACTION
 * DataNotification

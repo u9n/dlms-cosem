@@ -19,6 +19,10 @@ class AbstractDlmsData(abc.ABC):
     def to_python(self) -> Any:
         pass
 
+    @abc.abstractmethod
+    def to_bytes(self) -> bytes:
+        pass
+
 
 @attr.s(auto_attribs=True)
 class BaseDlmsData(AbstractDlmsData):

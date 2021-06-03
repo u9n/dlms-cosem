@@ -83,10 +83,10 @@ def make_conformance(encryption_key: Optional[bytes], use_block_transfer: bool):
         attribute_0_supported_with_set=False,
         priority_management_supported=True,
         attribute_0_supported_with_get=False,
-        block_transfer_with_get_or_read=False,
+        block_transfer_with_get_or_read=True,
         block_transfer_with_set_or_write=False,
         block_transfer_with_action=False,
-        multiple_references=False,
+        multiple_references=True,
         data_notification=False,
         access=True,
         get=True,
@@ -272,14 +272,24 @@ class DlmsConnection:
 
         self.state.process_event(event)
         LOG.debug(f"Preparing to send: {event}")
+
         if self.use_protection:
             event = self.protect(event)
 
         # if self.use_blocks:
         #    blocks = self.make_blocks(event)
         #    # TODO: How to handle the subcase of sending blocks?
+
         LOG.info(f"Sending : {event}")
-        return event.to_bytes()
+
+        out = event.to_bytes()
+
+        if len(out) > self.max_pdu_size:
+            raise exceptions.LocalDlmsProtocolError(
+                f"PDU size too big. Max PDU size for association is {self.max_pdu_size} "
+                f"bytes. PDU to be sent is {len(out)}"
+            )
+        return out
 
     def receive_data(self, data: bytes):
         """
@@ -504,10 +514,8 @@ class DlmsConnection:
         elif isinstance(event, xdlms.GeneralGlobalCipher):
             self.update_meter_invocation_counter(event.invocation_counter)
             plain_text = self.decrypt(event.ciphered_text)
-            event = XDlmsApduFactory.apdu_from_bytes(plain_text)
+            return XDlmsApduFactory.apdu_from_bytes(plain_text)
 
-        else:
-            raise RuntimeError(f"Unable to handle decryption/unprotection of {event}")
         return event
 
     @property

@@ -15,35 +15,6 @@ from dlms_cosem.hdlc.state import (
 LOG = logging.getLogger(__name__)
 
 
-class HdlcFrameFactory:
-    @staticmethod
-    def read_ua_frame(frame_data: bytes):
-        try:
-            return frames.UnNumberedAcknowledgmentFrame.from_bytes(frame_data)
-        except exceptions.HdlcParsingError as e:
-            LOG.exception(e)
-            return None
-
-    @staticmethod
-    def read_information_frame(frame_data: bytes):
-        try:
-            return frames.InformationFrame.from_bytes(frame_data)
-        except exceptions.HdlcParsingError:
-            # LOG.debug(
-            #    f"Unable to load and information frame from frame_data: {frame_data!r}."
-            #    f"Information carried in frame might have contained the HDLC flag and "
-            #    f"we have not recieved the full frame yet."
-            # )
-            return None
-
-
-PARSE_METHODS = {
-    AWAITING_CONNECTION: HdlcFrameFactory.read_ua_frame,
-    AWAITING_RESPONSE: HdlcFrameFactory.read_information_frame,
-    AWAITING_DISCONNECT: HdlcFrameFactory.read_ua_frame,
-}
-
-
 @attr.s(auto_attribs=True)
 class HdlcConnection:
     """
@@ -136,10 +107,32 @@ class HdlcConnection:
         if frame_bytes is None:
             return NEED_DATA
 
-        # get the state variable parser method.
-        parse_method = PARSE_METHODS[self.state.current_state]
+        if (
+            self.state.current_state == AWAITING_CONNECTION
+            or self.state.current_state == AWAITING_DISCONNECT
+        ):
 
-        frame = parse_method(frame_bytes)
+            try:
+                frame = frames.UnNumberedAcknowledgmentFrame.from_bytes(frame_bytes)
+            except (exceptions.HdlcParsingError, ValueError):
+                frame = None
+
+        elif self.state.current_state == AWAITING_RESPONSE:
+            # It can be a InformationFrame or a ReceiveReadyFrame in case we have sent
+            # a segmented frame.
+            try:
+                frame = frames.InformationFrame.from_bytes(frame_bytes)
+            except (exceptions.HdlcParsingError, ValueError):
+                # Not an information frame. Should be a receive ready frame
+                frame = None
+
+            if frame is None:
+                try:
+                    frame = frames.ReceiveReadyFrame.from_bytes(frame_bytes)
+                except (exceptions.HdlcParsingError, ValueError):
+                    frame = None
+        else:
+            frame = None
 
         if frame is None:
             LOG.debug("HDLC frame could not be parsed. Need more data")

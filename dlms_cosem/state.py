@@ -89,6 +89,7 @@ DLMS_STATE_TRANSITIONS = {
     READY: {
         acse.ReleaseRequest: AWAITING_RELEASE_RESPONSE,
         xdlms.GetRequestNormal: AWAITING_GET_RESPONSE,
+        xdlms.GetRequestWithList: AWAITING_GET_RESPONSE,
         xdlms.SetRequestNormal: AWAITING_SET_RESPONSE,
         HlsStart: SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT,
         RejectAssociation: NO_ASSOCIATION,
@@ -106,6 +107,7 @@ DLMS_STATE_TRANSITIONS = {
     HLS_DONE: {HlsSuccess: READY, HlsFailed: NO_ASSOCIATION},
     AWAITING_GET_RESPONSE: {
         xdlms.GetResponseNormal: READY,
+        xdlms.GetResponseWithList: READY,
         xdlms.GetResponseWithBlock: SHOULD_ACK_LAST_GET_BLOCK,
         xdlms.GetResponseNormalWithError: READY,
         xdlms.ExceptionResponse: READY,

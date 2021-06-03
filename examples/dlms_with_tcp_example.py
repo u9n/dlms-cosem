@@ -7,10 +7,10 @@ from dateutil import parser as dateparser
 
 from dlms_cosem import a_xdr, cosem, enumerations
 from dlms_cosem.clients.dlms_client import DlmsClient
+from dlms_cosem.cosem import selective_access
+from dlms_cosem.cosem.selective_access import RangeDescriptor
 from dlms_cosem.parsers import ProfileGenericBufferParser
-from dlms_cosem.protocol.xdlms import selective_access
 from dlms_cosem.protocol.xdlms.conformance import Conformance
-from dlms_cosem.protocol.xdlms.selective_access import RangeDescriptor
 
 # set up logging so you get a bit nicer printout of what is happening.
 logging.basicConfig(

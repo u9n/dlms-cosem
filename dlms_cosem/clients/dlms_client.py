@@ -9,9 +9,9 @@ from dlms_cosem.clients.blocking_tcp_transport import BlockingTcpTransport
 from dlms_cosem.clients.hdlc_transport import SerialHdlcTransport
 from dlms_cosem.clients.io_proto import DlmsIOInterface
 from dlms_cosem.connection import DlmsConnection
+from dlms_cosem.cosem.selective_access import RangeDescriptor
 from dlms_cosem.protocol import acse, xdlms
 from dlms_cosem.protocol.xdlms import ConfirmedServiceError
-from dlms_cosem.protocol.xdlms.selective_access import RangeDescriptor
 
 LOG = logging.getLogger(__name__)
 
@@ -210,6 +210,25 @@ class DlmsClient:
                 )
 
         return bytes(data)
+
+    def get_many(
+        self, cosem_attributes_with_selection: List[cosem.CosemAttributeWithSelection]
+    ):
+        """
+        Make a GET.WITH_LIST call. Get many items in one request.
+        """
+        out = xdlms.GetRequestWithList(
+            cosem_attributes_with_selection=cosem_attributes_with_selection
+        )
+        self.send(out)
+        response = self.next_event()
+        if isinstance(response, xdlms.ExceptionResponse):
+            raise exceptions.DlmsClientException(
+                f"Received an Exception response with state error: "
+                f"{response.state_error.name} and service error: "
+                f"{response.service_error.name}"
+            )
+        return response
 
     def set(self, cosem_attribute: cosem.CosemAttribute, data: bytes):
         self.send(xdlms.SetRequestNormal(cosem_attribute=cosem_attribute, data=data))

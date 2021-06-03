@@ -6,10 +6,10 @@ from dateutil import parser as dateparser
 
 from dlms_cosem import a_xdr, cosem, enumerations, utils
 from dlms_cosem.clients.dlms_client import DlmsClient
-from dlms_cosem.parsers import AssociationObjectListParser, ProfileGenericBufferParser
-from dlms_cosem.protocol.xdlms import selective_access
+from dlms_cosem.cosem import selective_access
+from dlms_cosem.cosem.selective_access import RangeDescriptor
+from dlms_cosem.parsers import ProfileGenericBufferParser
 from dlms_cosem.protocol.xdlms.conformance import Conformance
-from dlms_cosem.protocol.xdlms.selective_access import RangeDescriptor
 
 # set up logging so you get a bit nicer printout of what is happening.
 logging.basicConfig(
@@ -121,23 +121,19 @@ with management_client(
 ).session() as client:
 
     profile = client.get(
-        cosem.CosemAttribute(
-            interface=enumerations.CosemInterface.GSM_DIAGNOSTICS,
-            instance=cosem.Obis(0, 2, 25, 6, 0),
-            attribute=6,
+        LOAD_PROFILE_BUFFER,
+        access_descriptor=RangeDescriptor(
+            restricting_object=selective_access.CaptureObject(
+                cosem_attribute=cosem.CosemAttribute(
+                    interface=enumerations.CosemInterface.CLOCK,
+                    instance=cosem.Obis.from_string("0.0.1.0.0.255"),
+                    attribute=2,
+                ),
+                data_index=0,
+            ),
+            from_value=dateparser.parse("2020-01-01T00:00:00-02:00"),
+            to_value=dateparser.parse("2020-01-01T02:00:00-01:00"),
         ),
-        # access_descriptor=RangeDescriptor(
-        #    restricting_object=selective_access.CaptureObject(
-        #        cosem_attribute=cosem.CosemAttribute(
-        #            interface=enumerations.CosemInterface.CLOCK,
-        #            instance=cosem.Obis.from_dotted("0.0.1.0.0.255"),
-        #            attribute=2,
-        #        ),
-        #        data_index=0,
-        #    ),
-        #    from_value=dateparser.parse("2020-01-01T00:00:00-02:00"),
-        #    to_value=dateparser.parse("2020-01-01T02:00:00-01:00"),
-        # ),
     )
 
     parser = ProfileGenericBufferParser(
