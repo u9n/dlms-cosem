@@ -11,6 +11,22 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+
+## [21.3.0] - 2021-06-08
+
+
+### Added
+
 * Added HDLC UnnumberedInformationFrame.
 * Ability to set timeout of transport layer at client level.
 * A simpler way to change client address and invocation counter of a `DlmsClient` to
@@ -28,8 +44,6 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 * The `to_string` method on `Obis` now returns in the format `1-8:1.8.0.255` with a
   possible override of the separator.
 
-### Deprecated
-
 ### Removed
 
 * Removed the `from_dotted`, `dotted_repr` and `verbose_repr` from `Obis`
@@ -42,10 +56,6 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
   received. Fixes [#35](https://github.com/pwitab/dlms-cosem/issues/35).
 * Fixed a bug in the HDLC layer that prevented correct sending of segmented information
   frames.
-
-
-
-### Security
 
 
 ## [21.2.2] - 2021-03-02
