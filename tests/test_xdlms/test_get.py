@@ -1,6 +1,6 @@
 import pytest
 
-from dlms_cosem import cosem, enumerations
+from dlms_cosem import cosem, dlms_data, enumerations
 from dlms_cosem.cosem import CosemAttribute, Obis
 from dlms_cosem.dlms_data import DoubleLongUnsignedData, OctetStringData
 from dlms_cosem.protocol.xdlms import GetRequestNormal, GetResponseNormal
@@ -415,6 +415,65 @@ class TestGetResponseWithList:
 
         with pytest.raises(ValueError):
             GetResponseWithList.from_bytes(data)
+
+    def test_compound_objects_parsed_correctly(self):
+        """
+        When an object with a datastructure or array is included in the response it
+        needs to be parsed correctly
+        """
+        data = b"\xc4\x03\xc1\t\x00\x12\x002\x00\x12\x00\x00\x00\x12\x00\x00\x00\x12\x00\x00\x00\x12\x00\x00\x00\x12\x00\x00\x00\x12\x08\xfe\x00\x02\x07\x06\x01\x90V\x0b\x12\x03&\x11\x11\x11\x02\x12\x00\xf0\x12\x00\x01\x12\x00\x00\x00\x02\x05\x12\x02\xd0\x12\x0c\xa8\x11\x18\x11 \x0f\xc0"
+        response = GetResponseWithList.from_bytes(data)
+
+        assert isinstance(response, GetResponseWithList)
+        assert response.response_data == [
+            dlms_data.UnsignedLongData(value=50),
+            dlms_data.UnsignedLongData(value=0),
+            dlms_data.UnsignedLongData(value=0),
+            dlms_data.UnsignedLongData(value=0),
+            dlms_data.UnsignedLongData(value=0),
+            dlms_data.UnsignedLongData(value=0),
+            dlms_data.UnsignedLongData(value=2302),
+            dlms_data.DataStructure(
+                value=[
+                    dlms_data.DoubleLongUnsignedData(value=26236427),
+                    dlms_data.UnsignedLongData(value=806),
+                    dlms_data.UnsignedIntegerData(value=17),
+                    dlms_data.UnsignedIntegerData(value=2),
+                    dlms_data.UnsignedLongData(value=240),
+                    dlms_data.UnsignedLongData(value=1),
+                    dlms_data.UnsignedLongData(value=0),
+                ]
+            ),
+            dlms_data.DataStructure(
+                value=[
+                    dlms_data.UnsignedLongData(value=720),
+                    dlms_data.UnsignedLongData(value=3240),
+                    dlms_data.UnsignedIntegerData(value=24),
+                    dlms_data.UnsignedIntegerData(value=32),
+                    dlms_data.IntegerData(value=-64),
+                ]
+            ),
+        ]
+
+        assert response.result == [
+            50,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2302,
+            [26236427, 806, 17, 2, 240, 1, 0],
+            [720, 3240, 24, 32, -64],
+        ]
+
+    def test_compound_objects_converted_back_properly(self):
+        """
+        Make sure the output is correct when we have compound objects
+        """
+        data = b"\xc4\x03\xc1\t\x00\x12\x002\x00\x12\x00\x00\x00\x12\x00\x00\x00\x12\x00\x00\x00\x12\x00\x00\x00\x12\x00\x00\x00\x12\x08\xfe\x00\x02\x07\x06\x01\x90V\x0b\x12\x03&\x11\x11\x11\x02\x12\x00\xf0\x12\x00\x01\x12\x00\x00\x00\x02\x05\x12\x02\xd0\x12\x0c\xa8\x11\x18\x11 \x0f\xc0"
+        response = GetResponseWithList.from_bytes(data)
+        assert response.to_bytes() == data
 
 
 class TestGetResponseFactory:

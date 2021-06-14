@@ -514,6 +514,7 @@ class DlmsConnection:
         elif isinstance(event, xdlms.GeneralGlobalCipher):
             self.update_meter_invocation_counter(event.invocation_counter)
             plain_text = self.decrypt(event.ciphered_text)
+            LOG.warning(f"apdu_bytes: {plain_text!r}")
             return XDlmsApduFactory.apdu_from_bytes(plain_text)
 
         return event

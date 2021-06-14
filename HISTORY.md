@@ -11,6 +11,11 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 ### Added
 
+* To handle the more complicated parsing problem of GET.WITH_LIST with compound data
+  elements a new parser, DlmsDataParser, was added that focuses on only A-XDR DLMS data.
+  Hopefully this can be be used instead of the A-XDR Parser when the parsing of ACSE
+  services APDUs is built away
+
 ### Changed
 
 ### Deprecated

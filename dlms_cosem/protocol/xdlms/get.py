@@ -3,11 +3,17 @@ from typing import *
 
 import attr
 
-from dlms_cosem import a_xdr, cosem
+import dlms_cosem.utils
+from dlms_cosem import a_xdr, cosem, dlms_data
 from dlms_cosem import enumerations as enums
-from dlms_cosem.a_xdr import decode_variable_integer, encode_variable_integer
 from dlms_cosem.cosem import selective_access
-from dlms_cosem.dlms_data import VARIABLE_LENGTH, AbstractDlmsData, DlmsDataFactory
+from dlms_cosem.dlms_data import (
+    VARIABLE_LENGTH,
+    AbstractDlmsData,
+    DlmsDataFactory,
+    decode_variable_integer,
+    encode_variable_integer,
+)
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
 
@@ -366,7 +372,7 @@ class GetResponseWithBlock(AbstractXDlmsApdu):
         if choice != 0:
             raise ValueError(f"The data choice is not 0 to indicate data but: {choice}")
 
-        data_length, data = a_xdr.decode_variable_integer(data)
+        data_length, data = dlms_cosem.dlms_data.decode_variable_integer(data)
         if data_length != len(data):
             raise ValueError(
                 "The octet string in block data is not of the correct length"
@@ -382,7 +388,9 @@ class GetResponseWithBlock(AbstractXDlmsApdu):
         out.append(0)  # last block == False
         out.extend(self.block_number.to_bytes(4, "big"))
         out.append(0)  # data choice = data
-        out.extend(a_xdr.encode_variable_integer(len(self.data)))  # octet string length
+        out.extend(
+            dlms_cosem.dlms_data.encode_variable_integer(len(self.data))
+        )  # octet string length
         out.extend(self.data)
 
         return bytes(out)
@@ -424,7 +432,7 @@ class GetResponseLastBlock(AbstractXDlmsApdu):
         if choice != 0:
             raise ValueError(f"The data choice is not 0 to indicate data but: {choice}")
 
-        data_length, data = a_xdr.decode_variable_integer(data)
+        data_length, data = dlms_cosem.dlms_data.decode_variable_integer(data)
         if data_length != len(data):
             raise ValueError(
                 "The octet string in block data is not of the correct length"
@@ -440,7 +448,9 @@ class GetResponseLastBlock(AbstractXDlmsApdu):
         out.append(1)  # last block == True
         out.extend(self.block_number.to_bytes(4, "big"))
         out.append(0)  # data choice = data
-        out.extend(a_xdr.encode_variable_integer(len(self.data)))  # octet string length
+        out.extend(
+            dlms_cosem.dlms_data.encode_variable_integer(len(self.data))
+        )  # octet string length
         out.extend(self.data)
         return bytes(out)
 
@@ -516,40 +526,25 @@ class GetResponseWithList(AbstractXDlmsApdu):
     )
 
     @staticmethod
-    def extract_one_dlms_data(source_bytes: bytes) -> Tuple[AbstractDlmsData, bytes]:
-        """
-        A bytestring of get responses. First choice parameter is taken away
-        Return the first dlms data in the bytesstring.
-        """
-        data = bytearray(source_bytes)
-        data_tag = data.pop(0)
-        klass = DlmsDataFactory.get_data_class(data_tag)
-        if klass.LENGTH == VARIABLE_LENGTH:
-            length, rest = decode_variable_integer(data)
-            data = rest
-        else:
-            length = klass.LENGTH
-
-        return klass.from_bytes(data[:length]), data[length:]
-
-    @staticmethod
     def parse_list_response(source_bytes: bytes, amount: int):
         data = bytearray(source_bytes)
-        dlms_data = list()
+        dlms_data_items = list()
         for index in range(0, amount):
             answer_selection = data.pop(0)
             if answer_selection == 0:
                 # DLMS data
-                obj, rest = GetResponseWithList.extract_one_dlms_data(data)
-                dlms_data.append(obj)
+                parser = dlms_data.DlmsDataParser()
+                obj = parser.parse(data, limit=1)
+                rest = parser.get_buffer_tail()
+                dlms_data_items.append(obj[0])
                 data = rest
             elif answer_selection == 1:
                 # Data Access Result
-                dlms_data.append(enums.DataAccessResult(data.pop(0)))
+                dlms_data_items.append(enums.DataAccessResult(data.pop(0)))
             else:
                 raise ValueError("Not a valid answer selection byte")
 
-        return dlms_data
+        return dlms_data_items
 
     @property
     def result(self) -> List[Any]:
@@ -558,10 +553,10 @@ class GetResponseWithList(AbstractXDlmsApdu):
         """
         out = list()
         for item in self.response_data:
-            if isinstance(item, AbstractDlmsData):
-                out.append(item.to_python())
-            else:
+            if isinstance(item, enums.DataAccessResult):
                 out.append(item)
+            else:
+                out.append(item.to_python())
 
         return out
 
@@ -602,7 +597,9 @@ class GetResponseWithList(AbstractXDlmsApdu):
                 out.append(item.value)
 
             else:
-                raise ValueError("unknown data in response for GetResponseWithList")
+                raise ValueError(
+                    f"unknown data in response for GetResponseWithList: {item}"
+                )
 
         return bytes(out)
 
@@ -643,7 +640,7 @@ class GetResponseFactory:
             data = data[4:]
             choice = data.pop(0)
             if choice == 0:
-                data_length, data = a_xdr.decode_variable_integer(data)
+                data_length, data = dlms_cosem.dlms_data.decode_variable_integer(data)
                 if data_length != len(data):
                     raise ValueError(
                         "The octet string in block data is not of the correct length"

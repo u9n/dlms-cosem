@@ -1,3 +1,4 @@
+import pprint
 from functools import partial
 
 from dlms_cosem import enumerations as enums
@@ -10,6 +11,7 @@ from dlms_cosem.a_xdr import (
     get_axdr_length,
 )
 from dlms_cosem.connection import XDlmsApduFactory
+from dlms_cosem.dlms_data import DataStructure, DlmsDataParser
 from dlms_cosem.protocol.xdlms.get import GetResponseWithBlock
 from dlms_cosem.utils import parse_as_dlms_data
 
@@ -68,6 +70,52 @@ class TestAxdrDecoder:
         assert isinstance(result[0][0], bytearray)
         assert isinstance(result[0][1], int)
         assert isinstance(result[0][2], int)
+
+
+class TestDlmsDataDecoder:
+    def test_decode_array_and_structure(self):
+        # Data from a get response on a load profile request. preped C40100 to get whole
+        # APDU.
+
+        # Contains 24 hourly reading with 3 values inside it (datetime, status, value)
+        # An array of 24 structures of 3 elements.
+
+        data = bytes.fromhex(
+            "01180203090C07E2020C0500000000800000110006000186A00203090C07E2020C050"
+            "1000000800000110006000188400203090C07E2020C0502000000800000110006000189E00203"
+            "090C07E2020C050300000080000011000600018B800203090C07E2020C0504000000800000110"
+            "00600018D200203090C07E2020C050500000080000011000600018EC00203090C07E2020C0506"
+            "000000800000110006000190600203090C07E2020C05070000008000001100060001920002030"
+            "90C07E2020C0508000000800000110006000193A00203090C07E2020C05090000008000001100"
+            "06000195400203090C07E2020C050A000000800000110006000196E00203090C07E2020C050B0"
+            "00000800000110006000198800203090C07E2020C050C00000080000011000600019A20020309"
+            "0C07E2020C050D00000080000011000600019BC00203090C07E2020C050E00000080000011000"
+            "600019D600203090C07E2020C050F00000080000011000600019F000203090C07E2020C051000"
+            "00008000001100060001A0A00203090C07E2020C05110000008000001100060001A2400203090"
+            "C07E2020C05120000008000001100060001A3E00203090C07E2020C0513000000800000110006"
+            "0001A5800203090C07E2020C05140000008000001100060001A7200203090C07E2020C0515000"
+            "0008000001100060001A8C00203090C07E2020C05160000008000001100060001AA600203090C"
+            "07E2020C05170000008000001100060001AC00"
+        )
+        # assert len(data) == 555
+
+        parser = DlmsDataParser()
+
+        result = parser.parse(data)
+
+        pprint.pprint(result)
+        assert len(result) == 1
+        assert len(result[0].value) == 24
+        assert len(result[0].value[0].value) == 3
+
+    def test_decode_array_and_structure_with_limit(self):
+        data = b"\x02\x07\x06\x01\x90V\x0b\x12\x03&\x11\x0f\x11\x04\x12\x00\xf0\x12\x00\x01\x12\x00\x00\x00\x02\x05\x12\x02\xd0\x12\x0c\xa8\x11\x11\x11\x1e\x0f\xc0"
+        result = DlmsDataParser().parse(data, limit=1)
+
+        assert len(result) == 1
+        assert isinstance(result[0], DataStructure)
+        assert len(result[0].value) == 7
+        assert result[0].value[0].value == 26236427
 
 
 def test_lte_monitoring_quality_of_service():
