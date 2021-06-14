@@ -65,50 +65,6 @@ def get_axdr_length(data: bytearray):
     return int.from_bytes(length_data, "big")
 
 
-def decode_variable_integer(bytes_input: bytes):
-    """
-    If the length is fitting in 7 bits it can be encoded in 1 bytes.
-    If it is larger then 7 bybitstes the last bit of the first byte indicates
-    that the length of the lenght is encoded in the first byte and the length
-    is encoded in the following bytes.
-    Ex. 0b00000010 -> Length = 2
-    Ex 0b100000010, 0b000001111, 0b11111111 -> Lenght = 4095
-    :param bytes_input: Input where the variable integer is at the beginning of
-    the bytes
-    :return: First variable integer the function finds. and the residual bytes
-    """
-
-    # is the length encoded in single byte or mutliple?
-    is_mutliple_bytes = bool(bytes_input[0] & 0b10000000)
-    if is_mutliple_bytes:
-        length_length = int(bytes_input[0] & 0b01111111)
-        length_data = bytes_input[1 : (length_length + 1)]
-        length = int.from_bytes(length_data, "big")
-        return length, bytes_input[length_length + 1 :]
-
-    else:
-        length = int(bytes_input[0] & 0b01111111)
-        return length, bytes_input[1:]
-
-
-def encode_variable_integer(length: int):
-    if length > 0b01111111:
-        encoded_length = 1
-        while True:
-            try:
-                length.to_bytes(encoded_length, "big")
-            except OverflowError:
-                encoded_length += 1
-                continue
-            break
-
-        length_byte = (0b10000000 + encoded_length).to_bytes(1, "big")
-        return length_byte + length.to_bytes(encoded_length, "big")
-
-    else:
-        return length.to_bytes(1, "big")
-
-
 @attr.s
 class DataSequenceEncoding:
     attribute_name: str = attr.ib()
