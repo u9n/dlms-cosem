@@ -113,21 +113,21 @@ class AssociationObjectListParser:
     def parse_access_right(access_right: int) -> List[AccessRight]:
         parsed_access_rights = list()
         if bool(access_right & 0b00000001):
-            parsed_access_rights.append(AccessRight.READ_ACCESS)
+            parsed_access_rights.append(AccessRight.READ_ACCESS.value)
         if bool(access_right & 0b00000010):
-            parsed_access_rights.append(AccessRight.WRITE_ACCESS)
+            parsed_access_rights.append(AccessRight.WRITE_ACCESS.value)
         if bool(access_right & 0b00000100):
-            parsed_access_rights.append(AccessRight.AUTHENTICATED_REQUEST)
+            parsed_access_rights.append(AccessRight.AUTHENTICATED_REQUEST.value)
         if bool(access_right & 0b00001000):
-            parsed_access_rights.append(AccessRight.ENCRYPTED_REQUEST)
+            parsed_access_rights.append(AccessRight.ENCRYPTED_REQUEST.value)
         if bool(access_right & 0b00010000):
-            parsed_access_rights.append(AccessRight.DIGITALLY_SIGNED_REQUEST)
+            parsed_access_rights.append(AccessRight.DIGITALLY_SIGNED_REQUEST.value)
         if bool(access_right & 0b00100000):
-            parsed_access_rights.append(AccessRight.AUTHENTICATED_RESPONSE)
+            parsed_access_rights.append(AccessRight.AUTHENTICATED_RESPONSE.value)
         if bool(access_right & 0b01000000):
-            parsed_access_rights.append(AccessRight.ENCRYPTED_RESPONSE)
+            parsed_access_rights.append(AccessRight.ENCRYPTED_RESPONSE.value)
         if bool(access_right & 0b10000000):
-            parsed_access_rights.append(AccessRight.DIGITALLY_SIGNED_RESPONSE)
+            parsed_access_rights.append(AccessRight.DIGITALLY_SIGNED_RESPONSE.value)
 
         return parsed_access_rights
 
@@ -169,7 +169,7 @@ class AssociationObjectListParser:
     def parse_entries(object_list):
         parsed_objects = list()
         for obj in object_list:
-            interface = enumerations.CosemInterface(obj[0])
+            interface = enumerations.CosemInterface(obj[0]).value
             version = obj[1]
             logical_name = cosem.Obis.from_bytes(obj[2])
             access_rights = obj[3]

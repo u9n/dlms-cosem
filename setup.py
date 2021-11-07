@@ -20,12 +20,12 @@ VERSION = "21.3.1"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    "attrs==20.3.0",
-    "pyserial==3.5",
-    "cryptography==3.3.2",
-    "asn1crypto==0.24.0",
-    "python-dateutil==2.8.1",
-    "typing-extensions==3.7.4.3",
+    "attrs>=20.3.0",
+    "pyserial>=3.5",
+    "cryptography>=35.0.0",
+    "asn1crypto>=1.4.0",
+    "python-dateutil>=2.8.1",
+    "typing-extensions>=3.10",
 ]
 
 DOC_PACKAGES = ["mkdocs", "mkdocs-material"]
