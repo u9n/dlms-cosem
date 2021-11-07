@@ -22,6 +22,13 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 ### Security
 
 
+## [21.3.2] - 2021-11-07
+
+## Changed
+
+Updated dependencies and made it a bit more lenient so installing in other environments
+will allow for more versions.
+
 ## [21.3.1] - 2021-06-14
 
 ### Added
