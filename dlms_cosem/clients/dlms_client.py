@@ -7,6 +7,7 @@ import attr
 from dlms_cosem import cosem, dlms_data, enumerations, exceptions, state, utils
 from dlms_cosem.clients.blocking_tcp_transport import BlockingTcpTransport
 from dlms_cosem.clients.hdlc_transport import SerialHdlcTransport
+from dlms_cosem.clients.tcp_hdlc_transport import TcpHdlcTransport
 from dlms_cosem.clients.io_proto import DlmsIOInterface
 from dlms_cosem.connection import DlmsConnection
 from dlms_cosem.cosem.selective_access import RangeDescriptor
@@ -113,6 +114,50 @@ class DlmsClient:
             client_initial_invocation_counter=client_initial_invocation_counter,
             meter_initial_invocation_counter=meter_initial_invocation_counter,
             io_interface=serial_client,
+        )
+
+    @classmethod
+    def with_tcp_hdlc_transport(
+        cls,
+        host: str,
+        port: int,
+        client_logical_address: int,
+        server_logical_address: int,
+        authentication_method: Optional[enumerations.AuthenticationMechanism] = None,
+        password: Optional[bytes] = None,
+        encryption_key: Optional[bytes] = None,
+        authentication_key: Optional[bytes] = None,
+        security_suite: Optional[int] = 0,
+        dedicated_ciphering: bool = False,
+        block_transfer: bool = False,
+        max_pdu_size: int = 65535,
+        client_system_title: Optional[bytes] = None,
+        client_initial_invocation_counter: int = 0,
+        meter_initial_invocation_counter: int = 0,
+        timeout: int = 10,
+    ):
+        tcp_transport = TcpHdlcTransport(
+            client_logical_address=client_logical_address,
+            server_logical_address=server_logical_address,
+            host=host,
+            port=port,
+            timeout=timeout,
+        )
+        return cls(
+            client_logical_address=client_logical_address,
+            server_logical_address=server_logical_address,
+            authentication_method=authentication_method,
+            password=password,
+            encryption_key=encryption_key,
+            authentication_key=authentication_key,
+            security_suite=security_suite,
+            dedicated_ciphering=dedicated_ciphering,
+            block_transfer=block_transfer,
+            max_pdu_size=max_pdu_size,
+            client_system_title=client_system_title,
+            client_initial_invocation_counter=client_initial_invocation_counter,
+            meter_initial_invocation_counter=meter_initial_invocation_counter,
+            io_interface=tcp_transport,
         )
 
     @classmethod
