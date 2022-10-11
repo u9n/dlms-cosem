@@ -8,7 +8,7 @@ from dlms_cosem import enumerations as enums
 from dlms_cosem import exceptions, security
 from dlms_cosem import state as dlms_state
 from dlms_cosem import utils
-from dlms_cosem.authentication import AuthenticationManager
+from dlms_cosem.authentication import AuthenticationManager, NoAuthentication
 from dlms_cosem.exceptions import DecryptionError
 from dlms_cosem.protocol import acse, xdlms
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
@@ -223,6 +223,7 @@ class DlmsConnection:
             is_pre_established=True,
             conformance=conformance,
             max_pdu_size=max_pdu_size,
+            authentication=NoAuthentication(),
         )
 
     @property
@@ -346,7 +347,9 @@ class DlmsConnection:
             if isinstance(apdu, xdlms.ActionResponseNormalWithData):
                 if apdu.status != enums.ActionResultStatus.SUCCESS:
                     self.state.process_event(dlms_state.HlsFailed())
-                if self.hls_response_valid(utils.parse_as_dlms_data(apdu.data)):
+                if self.authentication.hls_meter_data_is_valid(
+                    utils.parse_as_dlms_data(apdu.data), self
+                ):
                     self.state.process_event(dlms_state.HlsSuccess())
                 else:
                     self.state.process_event(dlms_state.HlsFailed())
@@ -577,95 +580,6 @@ class DlmsConnection:
                 self.max_pdu_size = (
                     aare.user_information.content.server_max_receive_pdu_size
                 )
-
-    def get_hls_reply(self) -> bytes:
-        """
-        When the meter has enterted the HLS procedure the client firsts sends a reply
-        to the server (meter) challenge. It is done with an ActionRequest to the
-        current LN Association object in the meter. Method 2, Reply_to_HLS.
-
-        Depending on the HLS type the data looks a bit different
-
-        HLS_GMAC:
-            SC + IC + GMAC(SC + AK + Challenge)
-        """
-        if not self.meter_to_client_challenge:
-            raise exceptions.LocalDlmsProtocolError("Meter has not send challenge")
-        if not self.global_encryption_key:
-            raise ProtectionError(
-                "Unable to create GMAC. Missing global_encryption_key"
-            )
-        if not self.global_authentication_key:
-            raise ProtectionError(
-                "Unable to create GMAC. Missing global_authentication_key"
-            )
-        if self.authentication_method == enums.AuthenticationMechanism.HLS_GMAC:
-            only_auth_security_control = security.SecurityControlField(
-                security_suite=self.security_suite, authenticated=True, encrypted=False
-            )
-
-            gmac_result = security.gmac(
-                security_control=only_auth_security_control,
-                system_title=self.client_system_title,
-                invocation_counter=self.client_invocation_counter,
-                key=self.global_encryption_key,
-                auth_key=self.global_authentication_key,
-                challenge=self.meter_to_client_challenge,
-            )
-            return (
-                only_auth_security_control.to_bytes()
-                + self.client_invocation_counter.to_bytes(4, "big")
-                + gmac_result
-            )
-        else:
-            raise NotImplementedError(
-                f"No implementation for HSL: {self.authentication_method!r}"
-            )
-
-    def hls_response_valid(self, response_to_client_challenge: bytes) -> bool:
-        """
-        After sending the HLS reply to the meter the meter sends back the result of the
-        client challenge in the ActionResponse. To make sure the meter has dont the HLS
-        auth correctly we must validate the data.
-        The data looks different depending on the HLS type
-
-        HLS_GMAC:
-            SC + IC + GMAC(SC + AK + Challenge)
-
-        """
-
-        security_control = security.SecurityControlField.from_bytes(
-            response_to_client_challenge[0].to_bytes(1, "big")
-        )
-        invocation_counter = int.from_bytes(response_to_client_challenge[1:5], "big")
-        gmac_result = response_to_client_challenge[-12:]
-
-        if not self.global_encryption_key:
-            raise ProtectionError(
-                "Unable to verify GMAC. Missing global_encryption_key"
-            )
-        if not self.global_authentication_key:
-            raise ProtectionError(
-                "Unable to verify GMAC. Missing global_authentication_key"
-            )
-        if not self.meter_system_title:
-            raise ProtectionError(
-                "Unable to verify GMAC. Have not received the meters system title."
-            )
-        if not self.client_to_meter_challenge:
-            raise ProtectionError(
-                "Unable to verify GMAC. Have not received the meters system title."
-            )
-
-        correct_gmac = security.gmac(
-            security_control=security_control,
-            system_title=self.meter_system_title,
-            invocation_counter=invocation_counter,
-            key=self.global_encryption_key,
-            auth_key=self.global_authentication_key,
-            challenge=self.client_to_meter_challenge,
-        )
-        return gmac_result == correct_gmac
 
     def update_meter_invocation_counter(self, received_invocation_counter: int) -> None:
         """

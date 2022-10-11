@@ -5,9 +5,10 @@ from pprint import pprint
 from dateutil import parser as dateparser
 
 from dlms_cosem import a_xdr, cosem, enumerations, utils
-from dlms_cosem.authentication import HlsGmacAuthentication, NoAuthenticationManager
+from dlms_cosem.authentication import HlsGmacAuthentication, NoAuthentication
 from dlms_cosem.clients.dlms_client import DlmsClient
-from dlms_cosem.clients.hdlc_transport import HdlcTransport, SerialIO
+from dlms_cosem.clients.hdlc_transport import HdlcTransport
+from dlms_cosem.clients.io import SerialIO
 from dlms_cosem.cosem import selective_access
 from dlms_cosem.cosem.selective_access import RangeDescriptor
 from dlms_cosem.parsers import ProfileGenericBufferParser
@@ -57,7 +58,7 @@ public_hdlc_transport = HdlcTransport(
     io=serial_io,
 )
 public_client = DlmsClient(
-    transport=public_hdlc_transport, authentication=NoAuthenticationManager()
+    transport=public_hdlc_transport, authentication=NoAuthentication()
 )
 
 # public_client = partial(
@@ -135,7 +136,7 @@ management_hdlc_transport = HdlcTransport(
     io=serial_io,
 )
 management_client = DlmsClient(
-    transport=public_hdlc_transport,
+    transport=management_hdlc_transport,
     authentication=HlsGmacAuthentication(challenge_length=32),
     encryption_key=encryption_key,
     authentication_key=authentication_key,

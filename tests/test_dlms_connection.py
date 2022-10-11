@@ -1,6 +1,7 @@
 import pytest
 
 from dlms_cosem import dlms_data, enumerations, exceptions, security, state
+from dlms_cosem.authentication import NoAuthentication
 from dlms_cosem.connection import (
     DlmsConnection,
     XDlmsApduFactory,
@@ -12,20 +13,30 @@ from dlms_cosem.protocol.xdlms import Conformance
 
 
 def test_conformance_exists_on_simple_init():
-    c = DlmsConnection(client_system_title=b"12345678")
+    c = DlmsConnection(
+        client_system_title=b"12345678",
+        authentication=NoAuthentication(),
+    )
     assert c.conformance is not None
     assert not c.conformance.general_protection
     assert c.state.current_state == state.NO_ASSOCIATION
 
 
 def test_conformance_protection_is_set_when_passing_encryption_key():
-    c = DlmsConnection(global_encryption_key=b"1234", client_system_title=b"12345678")
+    c = DlmsConnection(
+        global_encryption_key=b"1234",
+        client_system_title=b"12345678",
+        authentication=NoAuthentication(),
+    )
     assert c.conformance.general_protection
     assert c.state.current_state == state.NO_ASSOCIATION
 
 
 def test_negotiated_conformance_is_updated():
-    c = DlmsConnection(client_system_title=b"12345678")
+    c = DlmsConnection(
+        client_system_title=b"12345678",
+        authentication=NoAuthentication(),
+    )
     c.send(c.get_aarq())
     c.receive_data(
         acse.ApplicationAssociationResponse(
@@ -52,6 +63,7 @@ def test_cannot_re_associate(aarq: acse.ApplicationAssociationRequest):
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.READY),
         client_system_title=b"12345678",
+        authentication=NoAuthentication(),
     )
 
     with pytest.raises(LocalDlmsProtocolError):
@@ -62,6 +74,7 @@ def test_can_release_in_ready_state(rlrq: acse.ReleaseRequest):
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.READY),
         client_system_title=b"12345678",
+        authentication=NoAuthentication(),
     )
 
     c.send(rlrq)
@@ -72,6 +85,7 @@ def test_receive_rlre_terminates_association(rlre: acse.ReleaseResponse):
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.AWAITING_RELEASE_RESPONSE),
         client_system_title=b"12345678",
+        authentication=NoAuthentication(),
     )
     c.receive_data(rlre.to_bytes())
     c.next_event()
@@ -82,6 +96,7 @@ def test_can_send_get_when_ready(get_request: xdlms.GetRequestNormal):
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.READY),
         client_system_title=b"12345678",
+        authentication=NoAuthentication(),
     )
 
     c.send(get_request)
@@ -92,6 +107,7 @@ def test_receive_get_response_sets_state_to_ready():
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.AWAITING_GET_RESPONSE),
         client_system_title=b"12345678",
+        authentication=NoAuthentication(),
     )
     c.receive_data(b"\xc4\x01\xc1\x00\x06\x00\x00\x13\x91")
     c.next_event()
@@ -104,6 +120,7 @@ def test_set_request_sets_state_in_waiting_for_set_response(
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.READY),
         client_system_title=b"12345678",
+        authentication=NoAuthentication(),
     )
 
     c.send(set_request)
@@ -114,6 +131,7 @@ def test_set_response_sets_state_in_ready(set_response: xdlms.SetResponseNormal)
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.AWAITING_SET_RESPONSE),
         client_system_title=b"12345678",
+        authentication=NoAuthentication(),
     )
 
     c.receive_data(set_response.to_bytes())
@@ -125,6 +143,7 @@ def test_can_send_action_request_in_ready(action_request: xdlms.ActionRequestNor
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.READY),
         client_system_title=b"12345678",
+        authentication=NoAuthentication(),
     )
 
     c.send(action_request)
@@ -136,6 +155,7 @@ def test_action_response_normal_sets_ready_when_awaiting_action_resoponse():
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.AWAITING_ACTION_RESPONSE),
         client_system_title=b"12345678",
+        authentication=NoAuthentication(),
     )
 
     c.receive_data(
@@ -155,6 +175,7 @@ def test_action_response_normal_with_error_sets_ready_when_awaiting_action_resop
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.AWAITING_ACTION_RESPONSE),
         client_system_title=b"12345678",
+        authentication=NoAuthentication(),
     )
 
     c.receive_data(
@@ -175,6 +196,7 @@ def test_action_response_normal_with_data_sets_ready_when_awaiting_action_resopo
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.AWAITING_ACTION_RESPONSE),
         client_system_title=b"12345678",
+        authentication=NoAuthentication(),
     )
 
     c.receive_data(
@@ -196,6 +218,7 @@ def test_receive_exception_response_sets_state_to_ready(
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.AWAITING_GET_RESPONSE),
         client_system_title=b"12345678",
+        authentication=NoAuthentication(),
     )
     c.receive_data(exception_response.to_bytes())
     c.next_event()
@@ -284,13 +307,13 @@ class TestPreEstablishedAssociation:
         c = DlmsConnection.with_pre_established_association(conformance=Conformance())
 
         with pytest.raises(exceptions.PreEstablishedAssociationError):
-            c.send_request(aarq)
+            c.send(aarq)
 
     def test_not_able_to_send_rlrq(self, rlrq: acse.ReleaseRequest):
         c = DlmsConnection.with_pre_established_association(conformance=Conformance())
 
         with pytest.raises(exceptions.PreEstablishedAssociationError):
-            c.send_request(rlrq)
+            c.send(rlrq)
 
 
 class TestXDlmsApduFactory:

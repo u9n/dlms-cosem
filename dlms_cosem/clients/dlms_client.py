@@ -6,14 +6,7 @@ import attr
 
 from dlms_cosem import cosem, dlms_data, enumerations, exceptions, state, utils
 from dlms_cosem.authentication import AuthenticationManager
-from dlms_cosem.clients.blocking_tcp_transport import BlockingTcpTransport
-from dlms_cosem.clients.hdlc_transport import (
-    BlockingTcpIO,
-    HdlcTransport,
-    SerialHdlcTransport,
-    SerialIO,
-)
-from dlms_cosem.clients.io_proto import DlmsTransport
+from dlms_cosem.clients.io import DlmsTransport
 from dlms_cosem.connection import DlmsConnection
 from dlms_cosem.cosem.selective_access import RangeDescriptor
 from dlms_cosem.protocol import acse, xdlms
@@ -207,7 +200,9 @@ class DlmsClient:
             if not hls_data:
                 raise HLSError("Did not receive any HLS response data")
 
-            if not self.dlms_connection.hls_response_valid(hls_data):
+            if not self.dlms_connection.authentication.hls_meter_data_is_valid(
+                hls_data, self.dlms_connection
+            ):
                 raise HLSError(
                     f"Meter did not respond with correct challenge calculation"
                 )
@@ -228,7 +223,9 @@ class DlmsClient:
                 1,
             ),
             data=dlms_data.OctetStringData(
-                self.dlms_connection.get_hls_reply()
+                self.dlms_connection.authentication.hls_generate_reply_data(
+                    self.dlms_connection
+                )
             ).to_bytes(),
         )
 

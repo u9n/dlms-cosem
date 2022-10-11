@@ -1,4 +1,4 @@
-# from __future__ import annotations
+from __future__ import annotations  # noqa
 
 import os
 from typing import *
@@ -27,6 +27,16 @@ def make_client_to_server_challenge(length: int = 8) -> bytes:
 
 
 class AuthenticationManager(Protocol):
+
+    """
+
+    HLS:
+    After sending the HLS reply to the meter the meter sends back the result of the
+    client challenge in the ActionResponse. To make sure the meter has dont the HLS
+    auth correctly we must validate the data.
+    The data looks different depending on the HLS type
+    """
+
     secret: Optional[bytes]
     authentication_method: ClassVar[enumerations.AuthenticationMechanism]
 
@@ -41,7 +51,7 @@ class AuthenticationManager(Protocol):
 
 
 @attr.s(auto_attribs=True)
-class NoAuthenticationManager:
+class NoAuthentication:
     secret = None
     authentication_method = enumerations.AuthenticationMechanism.NONE
 
@@ -97,6 +107,16 @@ class HlsGmacAuthentication:
         return self.calling_authentication_value
 
     def hls_generate_reply_data(self, connection: DlmsConnection) -> bytes:
+        """
+        When the meter has enterted the HLS procedure the client firsts sends a reply
+        to the server (meter) challenge. It is done with an ActionRequest to the
+        current LN Association object in the meter. Method 2, Reply_to_HLS.
+
+        Depending on the HLS type the data looks a bit different
+
+        :param connection:
+        :return:
+        """
         if not connection.meter_to_client_challenge:
             raise exceptions.LocalDlmsProtocolError("Meter has not send challenge")
         if not connection.global_encryption_key:

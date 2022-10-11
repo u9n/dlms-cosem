@@ -6,7 +6,10 @@ from time import sleep
 from dateutil import parser as dateparser
 
 from dlms_cosem import a_xdr, cosem, enumerations
+from dlms_cosem.authentication import HlsGmacAuthentication, NoAuthentication
+from dlms_cosem.clients.blocking_tcp_transport import TcpTransport
 from dlms_cosem.clients.dlms_client import DlmsClient
+from dlms_cosem.clients.io import BlockingTcpIO
 from dlms_cosem.cosem import selective_access
 from dlms_cosem.cosem.selective_access import RangeDescriptor
 from dlms_cosem.parsers import ProfileGenericBufferParser
@@ -45,20 +48,19 @@ auth = enumerations.AuthenticationMechanism.HLS_GMAC
 host = "100.119.108.3"
 port = 4059
 
-public_client = partial(
-    DlmsClient.with_tcp_transport, server_logical_address=1, client_logical_address=16
-)
 
-management_client = partial(
-    DlmsClient.with_tcp_transport,
+tcp_io = BlockingTcpIO(host=host, port=port)
+public_tcp_transport = TcpTransport(
+    client_logical_address=16,
     server_logical_address=1,
-    client_logical_address=1,
-    authentication_method=auth,
-    encryption_key=encryption_key,
-    authentication_key=authentication_key,
+    io=tcp_io,
+)
+public_client = DlmsClient(
+    transport=public_tcp_transport, authentication=NoAuthentication()
 )
 
-with public_client(host=host, port=port).session() as client:
+
+with public_client.session() as client:
 
     response_data = client.get(
         cosem.CosemAttribute(
@@ -79,9 +81,23 @@ with public_client(host=host, port=port).session() as client:
 # close the connection on its side
 sleep(1)
 
-with management_client(
-    host=host, port=port, client_initial_invocation_counter=invocation_counter + 1
-).session() as client:
+tcp_io = BlockingTcpIO(host=host, port=port)
+management_tcp_transport = TcpTransport(
+    client_logical_address=1,
+    server_logical_address=1,
+    io=tcp_io,
+)
+
+management_client = DlmsClient(
+    transport=management_tcp_transport,
+    authentication=HlsGmacAuthentication(challenge_length=32),
+    encryption_key=encryption_key,
+    authentication_key=authentication_key,
+    client_initial_invocation_counter=invocation_counter + 1,
+)
+
+
+with management_client.session() as client:
 
     profile = client.get(
         cosem.CosemAttribute(
@@ -93,13 +109,13 @@ with management_client(
             restricting_object=selective_access.CaptureObject(
                 cosem_attribute=cosem.CosemAttribute(
                     interface=enumerations.CosemInterface.CLOCK,
-                    instance=cosem.Obis.from_dotted("0.0.1.0.0.255"),
+                    instance=cosem.Obis.from_string("0.0.1.0.0.255"),
                     attribute=2,
                 ),
                 data_index=0,
             ),
-            from_value=dateparser.parse("2020-01-01T00:00:00-02:00"),
-            to_value=dateparser.parse("2020-01-02T00:00:00-01:00"),
+            from_value=dateparser.parse("2022-01-01T00:00:00-02:00"),
+            to_value=dateparser.parse("2022-01-02T00:00:00-01:00"),
         ),
     )
 

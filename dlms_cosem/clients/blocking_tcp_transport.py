@@ -1,31 +1,24 @@
 import logging
-import socket
 from typing import *
 
 import attr
 
-from dlms_cosem import exceptions
+from dlms_cosem.clients.io import IoImplementation
 from dlms_cosem.protocol.wrappers import WrapperHeader, WrapperProtocolDataUnit
 
 LOG = logging.getLogger(__name__)
 
 
 @attr.s(auto_attribs=True)
-class BlockingTcpTransport:
+class TcpTransport:
     """
-    A TCP transport using Blocking I/O.
+    A TCP transport.
     """
 
-    host: str
-    port: int
     client_logical_address: int
     server_logical_address: int
+    io: IoImplementation
     timeout: int = attr.ib(default=10)
-    tcp_socket: Optional[socket.socket] = attr.ib(init=False, default=None)
-
-    @property
-    def address(self) -> Tuple[str, int]:
-        return self.host, self.port
 
     def wrap(self, bytes_to_wrap: bytes) -> bytes:
         """
@@ -42,52 +35,16 @@ class BlockingTcpTransport:
         return WrapperProtocolDataUnit(bytes_to_wrap, header).to_bytes()
 
     def connect(self):
-        """
-        Create a new socket and set it on the transport
-        """
-        if self.tcp_socket:
-            raise RuntimeError(f"There is already an active socket to {self.address}")
-
-        try:
-            self.tcp_socket = socket.create_connection(
-                address=self.address, timeout=self.timeout
-            )
-        except (
-            OSError,
-            IOError,
-            socket.timeout,
-            socket.error,
-            ConnectionRefusedError,
-        ) as e:
-            raise exceptions.CommunicationError("Unable to connect socket") from e
-        LOG.info(f"Connected to {self.address}")
+        self.io.connect()
 
     def disconnect(self):
-        """
-        Close socket and remove it from the transport. No-op if the socket is already
-        closed.
-        """
-        if self.tcp_socket:
-            # only disconnect if there is a socket.
-            try:
-                self.tcp_socket.shutdown(socket.SHUT_RDWR)
-                self.tcp_socket.close()
-            except (OSError, IOError, socket.timeout, socket.error) as e:
-                self.tcp_socket = None
-                raise exceptions.CommunicationError from e
-            self.tcp_socket = None
-            LOG.info(f"Connection to {self.address} is closed")
+        self.io.disconnect()
 
     def send_request(self, bytes_to_send: bytes) -> bytes:
         """
         Sends a whole DLMS APDU wrapped in the DLMS IP Wrapper.
         """
-        if not self.tcp_socket:
-            raise RuntimeError("TCP transport not connected.")
-        try:
-            self.tcp_socket.sendall(self.wrap(bytes_to_send))
-        except (OSError, IOError, socket.timeout, socket.error) as e:
-            raise exceptions.CommunicationError("Could no send data") from e
+        self.io.send(self.wrap(bytes_to_send))
 
         return self.recv_response()
 
@@ -95,23 +52,7 @@ class BlockingTcpTransport:
         """
         Receives a whole DLMS APDU. Gets the total length from the DLMS IP Wrapper.
         """
-        try:
-            header = WrapperHeader.from_bytes(self._recv_bytes(8))
-            data = self._recv_bytes(header.length)
-        except (OSError, IOError, socket.timeout, socket.error) as e:
-            raise exceptions.CommunicationError("Could not receive data") from e
-        return data
-
-    def _recv_bytes(self, amount: int):
-        """
-        Some implementations will return partial data and we need to keep on trying
-        to read the bytes until we have them all.
-        """
-        if not self.tcp_socket:
-            raise RuntimeError("TCP transport not connected.")
-
-        data = b""
-        while len(data) < amount:
-            data += self.tcp_socket.recv(amount - len(data))
+        header = WrapperHeader.from_bytes(self.io.recv(8))
+        data = self.io.recv(header.length)
 
         return data
