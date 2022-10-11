@@ -19,7 +19,7 @@ class TestDlmsClient:
             client_initial_invocation_counter=500,
             client_logical_address=1,
             server_logical_address=1,
-            io_interface=io_interface,
+            transport=io_interface,
         )
 
         assert client.client_invocation_counter == 500
@@ -35,7 +35,7 @@ class TestDlmsClient:
             client_initial_invocation_counter=500,
             client_logical_address=1,
             server_logical_address=1,
-            io_interface=io_interface,
+            transport=io_interface,
         )
         client.client_invocation_counter = 1000
         assert client.client_invocation_counter == 1000
@@ -61,7 +61,7 @@ class TestDlmsClientContextSwitch:
             client_initial_invocation_counter=500,
             client_logical_address=1,
             server_logical_address=1,
-            io_interface=io_interface,
+            transport=io_interface,
         )
 
     def test_switching_client_addresss(self):
@@ -69,7 +69,7 @@ class TestDlmsClientContextSwitch:
 
         client.switch_client_type(client_logical_address=16)
         assert client.client_logical_address == 16
-        assert client.io_interface.client_logical_address == 16
+        assert client.transport.client_logical_address == 16
 
     def test_switching_client_address_when_not_unassocatiated(self):
         client = self.get_client()
@@ -87,7 +87,7 @@ class TestDlmsClientContextSwitch:
         )
 
         assert client.client_logical_address == 16
-        assert client.io_interface.client_logical_address == 16
+        assert client.transport.client_logical_address == 16
         assert client.encryption_key == self.encryption_key
         assert client.dlms_connection.global_encryption_key == self.encryption_key
         assert client.authentication_key == self.authentication_key

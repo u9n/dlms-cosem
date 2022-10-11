@@ -284,13 +284,13 @@ class TestPreEstablishedAssociation:
         c = DlmsConnection.with_pre_established_association(conformance=Conformance())
 
         with pytest.raises(exceptions.PreEstablishedAssociationError):
-            c.send(aarq)
+            c.send_request(aarq)
 
     def test_not_able_to_send_rlrq(self, rlrq: acse.ReleaseRequest):
         c = DlmsConnection.with_pre_established_association(conformance=Conformance())
 
         with pytest.raises(exceptions.PreEstablishedAssociationError):
-            c.send(rlrq)
+            c.send_request(rlrq)
 
 
 class TestXDlmsApduFactory:

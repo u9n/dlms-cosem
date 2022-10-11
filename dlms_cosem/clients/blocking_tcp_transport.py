@@ -5,7 +5,6 @@ from typing import *
 import attr
 
 from dlms_cosem import exceptions
-from dlms_cosem.clients.io_proto import DlmsIOInterface
 from dlms_cosem.protocol.wrappers import WrapperHeader, WrapperProtocolDataUnit
 
 LOG = logging.getLogger(__name__)
@@ -79,7 +78,7 @@ class BlockingTcpTransport:
             self.tcp_socket = None
             LOG.info(f"Connection to {self.address} is closed")
 
-    def send(self, bytes_to_send: bytes) -> bytes:
+    def send_request(self, bytes_to_send: bytes) -> bytes:
         """
         Sends a whole DLMS APDU wrapped in the DLMS IP Wrapper.
         """
@@ -90,9 +89,9 @@ class BlockingTcpTransport:
         except (OSError, IOError, socket.timeout, socket.error) as e:
             raise exceptions.CommunicationError("Could no send data") from e
 
-        return self.recv()
+        return self.recv_response()
 
-    def recv(self) -> bytes:
+    def recv_response(self) -> bytes:
         """
         Receives a whole DLMS APDU. Gets the total length from the DLMS IP Wrapper.
         """

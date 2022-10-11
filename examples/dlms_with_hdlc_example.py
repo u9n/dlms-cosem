@@ -5,7 +5,9 @@ from pprint import pprint
 from dateutil import parser as dateparser
 
 from dlms_cosem import a_xdr, cosem, enumerations, utils
+from dlms_cosem.authentication import HlsGmacAuthentication, NoAuthenticationManager
 from dlms_cosem.clients.dlms_client import DlmsClient
+from dlms_cosem.clients.hdlc_transport import HdlcTransport, SerialIO
 from dlms_cosem.cosem import selective_access
 from dlms_cosem.cosem.selective_access import RangeDescriptor
 from dlms_cosem.parsers import ProfileGenericBufferParser
@@ -45,27 +47,28 @@ authentication_key = bytes.fromhex("C7DDFC7EE8E0EF95B8D154C1CA09B450")
 
 
 auth = enumerations.AuthenticationMechanism.HLS_GMAC
+port = "/dev/tty.usbserial-A9031O5M"
 
-
-public_client = partial(
-    DlmsClient.with_serial_hdlc_transport,
-    server_logical_address=1,
-    server_physical_address=17,
+serial_io = SerialIO(port_name=port, baud_rate=9600)
+public_hdlc_transport = HdlcTransport(
     client_logical_address=16,
-)
-
-management_client = partial(
-    DlmsClient.with_serial_hdlc_transport,
     server_logical_address=1,
     server_physical_address=17,
-    client_logical_address=1,
-    authentication_method=auth,
-    encryption_key=encryption_key,
-    authentication_key=authentication_key,
+    io=serial_io,
+)
+public_client = DlmsClient(
+    transport=public_hdlc_transport, authentication=NoAuthenticationManager()
 )
 
-port = "/dev/tty.usbserial-A704H991"
-with public_client(serial_port=port).session() as client:
+# public_client = partial(
+#     DlmsClient.with_serial_hdlc_transport,
+#     server_logical_address=1,
+#     server_physical_address=17,
+#     client_logical_address=16,
+# )
+
+
+with public_client.session() as client:
 
     response_data = client.get(
         cosem.CosemAttribute(
@@ -115,10 +118,32 @@ LTE_SETTINGS = cosem.CosemAttribute(
     attribute=3,
 )
 
+# management_client = partial(
+#     DlmsClient.with_serial_hdlc_transport,
+#     server_logical_address=1,
+#     server_physical_address=17,
+#     client_logical_address=1,
+#     authentication_method=auth,
+#     encryption_key=encryption_key,
+#     authentication_key=authentication_key,
+# )
 
-with management_client(
-    serial_port=port, client_initial_invocation_counter=invocation_counter + 1
-).session() as client:
+management_hdlc_transport = HdlcTransport(
+    client_logical_address=1,
+    server_logical_address=1,
+    server_physical_address=17,
+    io=serial_io,
+)
+management_client = DlmsClient(
+    transport=public_hdlc_transport,
+    authentication=HlsGmacAuthentication(challenge_length=32),
+    encryption_key=encryption_key,
+    authentication_key=authentication_key,
+    client_initial_invocation_counter=invocation_counter + 1,
+)
+
+
+with management_client.session() as client:
 
     profile = client.get(
         LOAD_PROFILE_BUFFER,

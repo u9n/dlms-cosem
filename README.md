@@ -47,25 +47,22 @@ this is a use-case you need, consider sponsoring the development and contact us.
 # Example use:
 
 A simple example:
+
 ```python
 from dlms_cosem.clients.dlms_client import DlmsClient
+from dlms_cosem.clients.blocking_tcp_transport import BlockingTcpTransport
+from dlms_cosem.authentication import LowLevelAuthentication, NoAuthenticationManager
 from dlms_cosem import enumerations, cosem
 
-# read current client invocation counter
-with DlmsClient.with_tcp_transport(
-    server_logical_address=1,
-    client_logical_address=16,
-    host="localhost",
-    port=4059
-).session() as client:
-
-    data = client.get(
-        cosem.CosemAttribute(
-            interface=enumerations.CosemInterface.DATA,
-            instance=cosem.Obis(0, 0, 0x2B, 1, 0),
-            attribute=2,
-        )
-    )
+# read current client invocation counter over TCP with no auth.
+tcp_transport = BlockingTcpTransport(host="localhost", port=4059,
+    server_logical_address=1, client_logical_address=16, )
+auth_manager = NoAuthenticationManager()
+client = DlmsClient(transport=tcp_transport, authentication=auth_manager)
+with client.session() as dlms_client:
+    data = dlms_client.get(
+        cosem.CosemAttribute(interface=enumerations.CosemInterface.DATA,
+            instance=cosem.Obis(0, 0, 0x2B, 1, 0), attribute=2, ))
 ```
 
 

@@ -5,9 +5,15 @@ from typing import *
 import attr
 
 from dlms_cosem import cosem, dlms_data, enumerations, exceptions, state, utils
+from dlms_cosem.authentication import AuthenticationManager
 from dlms_cosem.clients.blocking_tcp_transport import BlockingTcpTransport
-from dlms_cosem.clients.hdlc_transport import SerialHdlcTransport
-from dlms_cosem.clients.io_proto import DlmsIOInterface
+from dlms_cosem.clients.hdlc_transport import (
+    BlockingTcpIO,
+    HdlcTransport,
+    SerialHdlcTransport,
+    SerialIO,
+)
+from dlms_cosem.clients.io_proto import DlmsTransport
 from dlms_cosem.connection import DlmsConnection
 from dlms_cosem.cosem.selective_access import RangeDescriptor
 from dlms_cosem.protocol import acse, xdlms
@@ -30,13 +36,8 @@ class HLSError(Exception):
 
 @attr.s(auto_attribs=True)
 class DlmsClient:
-    client_logical_address: int
-    server_logical_address: int
-    io_interface: DlmsIOInterface
-    authentication_method: Optional[enumerations.AuthenticationMechanism] = attr.ib(
-        default=None
-    )
-    password: Optional[bytes] = attr.ib(default=None)
+    transport: DlmsTransport
+    authentication: AuthenticationManager
     encryption_key: Optional[bytes] = attr.ib(default=None)
     authentication_key: Optional[bytes] = attr.ib(default=None)
     security_suite: Optional[int] = attr.ib(default=0)
@@ -52,8 +53,7 @@ class DlmsClient:
         default=attr.Factory(
             lambda self: DlmsConnection(
                 client_system_title=self.client_system_title,
-                authentication_method=self.authentication_method,
-                password=self.password,
+                authentication=self.authentication,
                 global_encryption_key=self.encryption_key,
                 global_authentication_key=self.authentication_key,
                 use_dedicated_ciphering=self.dedicated_ciphering,
@@ -66,98 +66,6 @@ class DlmsClient:
             takes_self=True,
         )
     )
-
-    @classmethod
-    def with_serial_hdlc_transport(
-        cls,
-        serial_port: str,
-        client_logical_address: int,
-        server_logical_address: int,
-        server_physical_address: Optional[int],
-        client_physical_address: Optional[int] = None,
-        baud_rate: int = 9600,
-        authentication_method: Optional[enumerations.AuthenticationMechanism] = None,
-        password: Optional[bytes] = None,
-        encryption_key: Optional[bytes] = None,
-        authentication_key: Optional[bytes] = None,
-        security_suite: Optional[int] = 0,
-        dedicated_ciphering: bool = False,
-        block_transfer: bool = False,
-        max_pdu_size: int = 65535,
-        client_system_title: Optional[bytes] = None,
-        client_initial_invocation_counter: int = 0,
-        meter_initial_invocation_counter: int = 0,
-        timeout: int = 10,
-    ):
-        serial_client = SerialHdlcTransport(
-            client_logical_address=client_logical_address,
-            client_physical_address=client_physical_address,
-            server_logical_address=server_logical_address,
-            server_physical_address=server_physical_address,
-            serial_port=serial_port,
-            serial_baud_rate=baud_rate,
-            timeout=timeout,
-        )
-        return cls(
-            client_logical_address=client_logical_address,
-            server_logical_address=server_logical_address,
-            authentication_method=authentication_method,
-            password=password,
-            encryption_key=encryption_key,
-            authentication_key=authentication_key,
-            security_suite=security_suite,
-            dedicated_ciphering=dedicated_ciphering,
-            block_transfer=block_transfer,
-            max_pdu_size=max_pdu_size,
-            client_system_title=client_system_title,
-            client_initial_invocation_counter=client_initial_invocation_counter,
-            meter_initial_invocation_counter=meter_initial_invocation_counter,
-            io_interface=serial_client,
-        )
-
-    @classmethod
-    def with_tcp_transport(
-        cls,
-        host: str,
-        port: int,
-        client_logical_address: int,
-        server_logical_address: int,
-        authentication_method: Optional[enumerations.AuthenticationMechanism] = None,
-        password: Optional[bytes] = None,
-        encryption_key: Optional[bytes] = None,
-        authentication_key: Optional[bytes] = None,
-        security_suite: Optional[int] = 0,
-        dedicated_ciphering: bool = False,
-        block_transfer: bool = False,
-        max_pdu_size: int = 65535,
-        client_system_title: Optional[bytes] = None,
-        client_initial_invocation_counter: int = 0,
-        meter_initial_invocation_counter: int = 0,
-        timeout: int = 10,
-    ):
-        tcp_transport = BlockingTcpTransport(
-            host=host,
-            port=port,
-            client_logical_address=client_logical_address,
-            server_logical_address=server_logical_address,
-            timeout=timeout,
-        )
-        return cls(
-            client_logical_address=client_logical_address,
-            server_logical_address=server_logical_address,
-            authentication_method=authentication_method,
-            password=password,
-            encryption_key=encryption_key,
-            authentication_key=authentication_key,
-            security_suite=security_suite,
-            dedicated_ciphering=dedicated_ciphering,
-            block_transfer=block_transfer,
-            max_pdu_size=max_pdu_size,
-            client_system_title=client_system_title,
-            client_initial_invocation_counter=client_initial_invocation_counter,
-            meter_initial_invocation_counter=meter_initial_invocation_counter,
-            io_interface=tcp_transport,
-        )
 
     @contextlib.contextmanager
     def session(self) -> "DlmsClient":
@@ -284,6 +192,8 @@ class DlmsClient:
             )
 
         if self.should_send_hls_reply():
+
+            # TODO: wrap hls logic in method
             try:
                 hls_response = self.send_hls_reply()
             except ActionError as e:
@@ -294,7 +204,7 @@ class DlmsClient:
 
             hls_data = utils.parse_as_dlms_data(hls_response)
 
-            if not hls_response:
+            if not hls_data:
                 raise HLSError("Did not receive any HLS response data")
 
             if not self.dlms_connection.hls_response_valid(hls_data):
@@ -329,15 +239,15 @@ class DlmsClient:
         return rlre
 
     def connect(self):
-        self.io_interface.connect()
+        self.transport.connect()
 
     def disconnect(self):
-        self.io_interface.disconnect()
+        self.transport.disconnect()
 
     def send(self, *events):
         for event in events:
             data = self.dlms_connection.send(event)
-            response_bytes = self.io_interface.send(data)
+            response_bytes = self.transport.send_request(data)
 
             self.dlms_connection.receive_data(response_bytes)
 
@@ -353,39 +263,3 @@ class DlmsClient:
     @client_invocation_counter.setter
     def client_invocation_counter(self, ic: int):
         self.dlms_connection.client_invocation_counter = ic
-
-    def switch_client_type(
-        self,
-        client_logical_address: Optional[int] = None,
-        authentication_method: Optional[enumerations.AuthenticationMechanism] = None,
-        encryption_key: Optional[bytes] = None,
-        authentication_key: Optional[bytes] = None,
-    ):
-        """
-        A convenience method to switch a client into another client type. For example
-        going from a public client to a management client.
-        """
-        if self.dlms_connection.state.current_state != state.NO_ASSOCIATION:
-            raise exceptions.DlmsClientException(
-                "Unable to switch to another client type while there is still an "
-                "active association."
-            )
-        if client_logical_address:
-            self.client_logical_address = client_logical_address
-            self.io_interface.client_logical_address = client_logical_address
-
-        if authentication_method:
-            self.authentication_method = authentication_method
-            self.dlms_connection.authentication_method = authentication_method
-
-        if encryption_key or authentication_key:
-            if not (encryption_key and authentication_key):
-                raise exceptions.DlmsClientException(
-                    "When switching the client to an encrypted context you need to "
-                    "specify both an encryption key and an authentication key."
-                )
-
-            self.encryption_key = encryption_key
-            self.dlms_connection.global_encryption_key = encryption_key
-            self.authentication_key = authentication_key
-            self.dlms_connection.global_authentication_key = authentication_key

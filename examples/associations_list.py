@@ -44,24 +44,24 @@ authentication_key = bytes.fromhex("EC29E2F4BD7D697394B190827CE3DD9A")
 auth = enumerations.AuthenticationMechanism.HLS_GMAC
 serial_port = "/dev/tty.usbserial-A704H8XP"
 
-public_client = partial(
-    DlmsClient.with_serial_hdlc_transport,
-    serial_port=serial_port,
-    server_logical_address=1,
-    server_physical_address=17,
-    client_logical_address=16,
-)
-
-management_client = partial(
-    DlmsClient.with_serial_hdlc_transport,
-    serial_port=serial_port,
-    server_logical_address=1,
-    server_physical_address=17,
-    client_logical_address=1,
-    authentication_method=auth,
-    encryption_key=encryption_key,
-    authentication_key=authentication_key,
-)
+# public_client = partial(
+#     DlmsClient.with_serial_hdlc_transport,
+#     serial_port=serial_port,
+#     server_logical_address=1,
+#     server_physical_address=17,
+#     client_logical_address=16,
+# )
+#
+# management_client = partial(
+#     DlmsClient.with_serial_hdlc_transport,
+#     serial_port=serial_port,
+#     server_logical_address=1,
+#     server_physical_address=17,
+#     client_logical_address=1,
+#     authentication_method=auth,
+#     encryption_key=encryption_key,
+#     authentication_key=authentication_key,
+# )
 
 LOAD_PROFILE_BUFFER = cosem.CosemAttribute(
     interface=enumerations.CosemInterface.PROFILE_GENERIC,
@@ -75,18 +75,26 @@ CURRENT_ASSOCIATION_OBJECTS = cosem.CosemAttribute(
     attribute=2,
 )
 
-with public_client().session() as client:
-    invocation_counter = utils.parse_as_dlms_data(
-        client.get(
-            cosem_attribute=cosem.CosemAttribute(
-                interface=enumerations.CosemInterface.DATA,
-                instance=cosem.Obis.from_string("0.0.43.1.0.255"),
-                attribute=2,
-            )
-        )
-    )
+host = "127.0.0.1"
+port = 11703
 
-    print(f"invocation_counter = {invocation_counter}")
+public_client = partial(
+    DlmsClient.with_tcp_transport, server_logical_address=1, client_logical_address=16
+)
+
+
+with public_client(host=host, port=port).session() as client:
+    # invocation_counter = utils.parse_as_dlms_data(
+    #     client.get(
+    #         cosem_attribute=cosem.CosemAttribute(
+    #             interface=enumerations.CosemInterface.DATA,
+    #             instance=cosem.Obis.from_string("0.0.43.1.0.255"),
+    #             attribute=2,
+    #         )
+    #     )
+    # )
+    #
+    # print(f"invocation_counter = {invocation_counter}")
 
     # with management_client(
     #    client_initial_invocation_counter=invocation_counter + 1
@@ -108,31 +116,31 @@ with public_client().session() as client:
         # ),
     )
 
-    parser = ProfileGenericBufferParser(
-        capture_objects=[
-            cosem.CosemAttribute(
-                interface=enumerations.CosemInterface.CLOCK,
-                instance=cosem.Obis(0, 0, 1, 0, 0, 255),
-                attribute=2,
-            ),
-            cosem.CosemAttribute(
-                interface=enumerations.CosemInterface.DATA,
-                instance=cosem.Obis(0, 0, 96, 10, 1, 255),
-                attribute=2,
-            ),
-            cosem.CosemAttribute(
-                interface=enumerations.CosemInterface.REGISTER,
-                instance=cosem.Obis(1, 0, 1, 8, 0, 255),
-                attribute=2,
-            ),
-            cosem.CosemAttribute(
-                interface=enumerations.CosemInterface.REGISTER,
-                instance=cosem.Obis(1, 0, 2, 8, 0, 255),
-                attribute=2,
-            ),
-        ],
-        capture_period=60,
-    )
+    # parser = ProfileGenericBufferParser(
+    #     capture_objects=[
+    #         cosem.CosemAttribute(
+    #             interface=enumerations.CosemInterface.CLOCK,
+    #             instance=cosem.Obis(0, 0, 1, 0, 0, 255),
+    #             attribute=2,
+    #         ),
+    #         cosem.CosemAttribute(
+    #             interface=enumerations.CosemInterface.DATA,
+    #             instance=cosem.Obis(0, 0, 96, 10, 1, 255),
+    #             attribute=2,
+    #         ),
+    #         cosem.CosemAttribute(
+    #             interface=enumerations.CosemInterface.REGISTER,
+    #             instance=cosem.Obis(1, 0, 1, 8, 0, 255),
+    #             attribute=2,
+    #         ),
+    #         cosem.CosemAttribute(
+    #             interface=enumerations.CosemInterface.REGISTER,
+    #             instance=cosem.Obis(1, 0, 2, 8, 0, 255),
+    #             attribute=2,
+    #         ),
+    #     ],
+    #     capture_period=60,
+    # )
     # result = parser.parse_bytes(profile)
     result = utils.parse_as_dlms_data(profile)
     meter_objects_list = AssociationObjectListParser.parse_entries(result)

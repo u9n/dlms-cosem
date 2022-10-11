@@ -8,6 +8,7 @@ from dlms_cosem import enumerations as enums
 from dlms_cosem import exceptions, security
 from dlms_cosem import state as dlms_state
 from dlms_cosem import utils
+from dlms_cosem.authentication import AuthenticationManager
 from dlms_cosem.exceptions import DecryptionError
 from dlms_cosem.protocol import acse, xdlms
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
@@ -107,6 +108,8 @@ class DlmsConnection:
     A DLMS connection.
     """
 
+    authentication: AuthenticationManager
+
     # Client system title can be any combination of 8 bytes.
     # But is should not be the same as the metering the connection is set up too.
     client_system_title: bytes = attr.ib(
@@ -127,25 +130,26 @@ class DlmsConnection:
     # its system title
     meter_system_title: Optional[bytes] = attr.ib(default=None)
 
-    # Meter authentication method.
-    authentication_method: Optional[enums.AuthenticationMechanism] = attr.ib(
-        default=None
-    )
-    # Low Level Security (LLS) password
-    password: Optional[bytes] = attr.ib(default=None)
-
-    # HLS challenge length.
-    challenge_length: int = attr.ib(default=32)
-
-    # client_to_meter_challenge is generated automatically with a random seed
-    # depending on the HLS setup.
-    client_to_meter_challenge: bytes = attr.ib(
-        init=False,
-        default=attr.Factory(
-            lambda self: make_client_to_server_challenge(self.challenge_length),
-            takes_self=True,
-        ),
-    )
+    # # Meter authentication method.
+    # # TODO: this should not be set to None. Should not be optional.
+    # authentication_method: Optional[enums.AuthenticationMechanism] = attr.ib(
+    #     default=None
+    # )
+    # # Low Level Security (LLS) password
+    # password: Optional[bytes] = attr.ib(default=None)
+    #
+    # # HLS challenge length.
+    # challenge_length: int = attr.ib(default=32)
+    #
+    # # client_to_meter_challenge is generated automatically with a random seed
+    # # depending on the HLS setup.
+    # client_to_meter_challenge: bytes = attr.ib(
+    #     init=False,
+    #     default=attr.Factory(
+    #         lambda self: make_client_to_server_challenge(self.challenge_length),
+    #         takes_self=True,
+    #     ),
+    # )
     meter_to_client_challenge: Optional[bytes] = attr.ib(default=None, init=False)
 
     # To keep track of invocation counters used by the meter. If a request is received
@@ -227,12 +231,10 @@ class DlmsConnection:
         The security control field is used in encryption/decryption of data. It also
         follows the protected apdus to indicate what kind of protections they have.
         """
-        _authenticated = bool(self.global_authentication_key)
-        _encrypted = bool(self.global_encryption_key)
         return security.SecurityControlField(
             self.security_suite,
-            encrypted=_encrypted,
-            authenticated=_authenticated,
+            encrypted=bool(self.global_encryption_key),
+            authenticated=bool(self.global_authentication_key),
             broadcast_key=False,
         )
 
@@ -242,15 +244,7 @@ class DlmsConnection:
         Depending on the authentication method for the connection the value in the
         authentication value of the AARQ is different.
         """
-        if self.authentication_method is None:
-            return None
-        elif self.authentication_method == enums.AuthenticationMechanism.NONE:
-            return None
-        elif self.authentication_method == enums.AuthenticationMechanism.LLS:
-            return self.password
-        else:
-            # HLS Mechanism
-            return self.client_to_meter_challenge
+        return self.authentication.calling_authentication_value
 
     def send(self, event) -> bytes:
         """
@@ -550,8 +544,8 @@ class DlmsConnection:
         return acse.ApplicationAssociationRequest(
             ciphered=ciphered_apdus,
             system_title=self.client_system_title,
-            authentication=self.authentication_method,
-            authentication_value=self.authentication_value,
+            authentication=self.authentication.authentication_method,
+            authentication_value=self.authentication.get_calling_authentication_value(),
             user_information=acse.UserInformation(content=initiate_request),
         )
 
@@ -686,5 +680,12 @@ class DlmsConnection:
 
     def update_meter_info(self, aare: acse.ApplicationAssociationResponse) -> None:
         self.meter_system_title = aare.system_title
+        # if aare.authentication != self.authentication.authentication_method:
+        #     raise RuntimeError(
+        #         f"Meter adverticed a different authentication method than client. "
+        #         f"Client authentication method: "
+        #         f"{self.authentication.authentication_method}, "
+        #         f"Meter authenticstion method: {aare.authentication}"
+        #     )
         self.authentication_method = aare.authentication
         self.meter_to_client_challenge = aare.authentication_value

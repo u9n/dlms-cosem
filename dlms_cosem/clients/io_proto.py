@@ -1,7 +1,7 @@
 from typing_extensions import Protocol  # type: ignore
 
 
-class DlmsIOInterface(Protocol):
+class DlmsTransport(Protocol):
     """
     Protocol for a class that should be used for transport.
     """
@@ -16,5 +16,5 @@ class DlmsIOInterface(Protocol):
     def disconnect(self) -> None:
         ...
 
-    def send(self, bytes_to_send: bytes) -> bytes:
+    def send_request(self, bytes_to_send: bytes) -> bytes:
         ...
