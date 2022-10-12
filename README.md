@@ -8,7 +8,7 @@
 <img src="dlms-logo.png" alt="dlms_logo" width="200"/>
 
 # Installation
-We only support Python 3.6+
+We only support Python 3.7+
 
 ```
 pip install dlms-cosem
