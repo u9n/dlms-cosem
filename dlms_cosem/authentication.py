@@ -1,16 +1,23 @@
 from __future__ import annotations  # noqa
 
 import os
+import sys
 from typing import *
+from typing import TYPE_CHECKING
 
 import attr
-import typing_extensions
+
+if sys.version_info == (3, 6):
+    from typing_extensions import Protocol
+else:
+    from typing import Protocol
+
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from dlms_cosem import enumerations, exceptions
 from dlms_cosem.security import SecurityControlField, gmac
 
-if typing_extensions.TYPE_CHECKING:
+if TYPE_CHECKING:
     from dlms_cosem.connection import DlmsConnection, ProtectionError
 
 

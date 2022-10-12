@@ -1,5 +1,11 @@
 import socket
-from typing import Optional, Protocol, Tuple
+import sys
+from typing import Optional, Tuple
+
+if sys.version_info == (3, 6):
+    from typing_extensions import Protocol
+else:
+    from typing import Protocol
 
 import attr
 import serial

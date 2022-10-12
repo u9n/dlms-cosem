@@ -1,16 +1,19 @@
-# CRC CCITT - HDLC Style 16-bit
-# In accordning with ANSI C12.18(2006)
-# Using 0xFFFF as initial value
-# Running over serial so all message bytes need to be reversed
-# before calculation (because least significant bit is sent first)
-# resulting crc bytes needs to be reversed to become in correct order
-# The reversed crc is then XOR:ed with 0xFFFF
-#
 from ctypes import c_ushort
 from typing import *
 
 
 class CRCCCITT:
+    """
+    CRC CCITT - HDLC Style 16-bit
+    In accordning with ANSI C12.18(2006)
+    Using 0xFFFF as initial value
+    Running over serial so all message bytes need to be reversed
+    before calculation (because least significant bit is sent first)
+    resulting crc bytes needs to be reversed to become in correct order
+    The reversed crc is then XOR:ed with 0xFFFF
+
+    """
+
     crc_ccitt_table: List[int] = list()
 
     # The CRC's are computed using polynomials.

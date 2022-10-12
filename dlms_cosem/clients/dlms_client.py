@@ -1,8 +1,8 @@
 import contextlib
-import logging
 from typing import *
 
 import attr
+import structlog
 
 from dlms_cosem import cosem, dlms_data, enumerations, exceptions, state, utils
 from dlms_cosem.authentication import AuthenticationManager
@@ -12,7 +12,7 @@ from dlms_cosem.cosem.selective_access import RangeDescriptor
 from dlms_cosem.protocol import acse, xdlms
 from dlms_cosem.protocol.xdlms import ConfirmedServiceError
 
-LOG = logging.getLogger(__name__)
+LOG = structlog.get_logger()
 
 
 class DataResultError(Exception):
@@ -250,7 +250,6 @@ class DlmsClient:
 
     def next_event(self):
         event = self.dlms_connection.next_event()
-        LOG.info(f"Received {event}")
         return event
 
     @property

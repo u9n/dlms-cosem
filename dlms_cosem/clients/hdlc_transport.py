@@ -82,7 +82,6 @@ class HdlcTransport:
         self.out_buffer += self.hdlc_connection.send(snrm)
         self.drain_out_buffer()
         ua_response = self.next_event()
-        LOG.info(f"Received {ua_response!r}")
         return ua_response
 
     def disconnect(self):
@@ -178,6 +177,7 @@ class HdlcTransport:
             self.out_buffer = self.out_buffer[data_size:]
             segmented = bool(self.out_buffer)
             if self.hdlc_connection.state.current_state != state.IDLE:
+                LOG.debug("Sending data", data=data, transport=self)
                 self.io.send(data)
                 return
             # We don't handle window sizes so final is always true
@@ -207,8 +207,9 @@ class HdlcTransport:
         )
 
     def send_frame(self, frame):
-        frame_bytes = self.hdlc_connection.send(frame)
         LOG.info(f"Sending HDLC frame", frame=frame)
+        frame_bytes = self.hdlc_connection.send(frame)
+        LOG.debug("Sending data", data=frame_bytes, transport=self)
         self.io.send(frame_bytes)
 
     def recv_frame(self) -> bytes:
@@ -217,6 +218,8 @@ class HdlcTransport:
         if in_bytes == frames.HDLC_FLAG:
             # We found the first HDLC Frame Flag. We should read until the last one.
             in_bytes += self.io.recv_until(frames.HDLC_FLAG)
+
+        LOG.debug("Received data", data=in_bytes, transport=self)
 
         return in_bytes
 

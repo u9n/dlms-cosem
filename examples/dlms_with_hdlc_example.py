@@ -157,8 +157,8 @@ with management_client.session() as client:
                 ),
                 data_index=0,
             ),
-            from_value=dateparser.parse("2020-01-01T00:00:00-02:00"),
-            to_value=dateparser.parse("2020-01-01T02:00:00-01:00"),
+            from_value=dateparser.parse("2021-01-01T00:00:00-02:00"),
+            to_value=dateparser.parse("2022-01-10T02:00:00-01:00"),
         ),
     )
 

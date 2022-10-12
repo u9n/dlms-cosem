@@ -1,20 +1,19 @@
-import logging
 import os
 from typing import *
 
 import attr
+import structlog
 
 from dlms_cosem import enumerations as enums
 from dlms_cosem import exceptions, security
 from dlms_cosem import state as dlms_state
 from dlms_cosem import utils
 from dlms_cosem.authentication import AuthenticationManager, NoAuthentication
-from dlms_cosem.exceptions import DecryptionError
 from dlms_cosem.protocol import acse, xdlms
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 from dlms_cosem.protocol.xdlms.conformance import Conformance
 
-LOG = logging.getLogger(__name__)
+LOG = structlog.get_logger()
 
 
 def default_system_title() -> bytes:
@@ -239,14 +238,6 @@ class DlmsConnection:
             broadcast_key=False,
         )
 
-    @property
-    def authentication_value(self) -> Optional[bytes]:
-        """
-        Depending on the authentication method for the connection the value in the
-        authentication value of the AARQ is different.
-        """
-        return self.authentication.calling_authentication_value
-
     def send(self, event) -> bytes:
         """
         Returns the bytes to be sent over the connection and changes the state
@@ -266,7 +257,7 @@ class DlmsConnection:
                 )
 
         self.state.process_event(event)
-        LOG.debug(f"Preparing to send: {event}")
+        LOG.debug(f"Preparing to send DLMS Request", request=event)
 
         if self.use_protection:
             event = self.protect(event)
@@ -275,7 +266,7 @@ class DlmsConnection:
         #    blocks = self.make_blocks(event)
         #    # TODO: How to handle the subcase of sending blocks?
 
-        LOG.info(f"Sending : {event}")
+        LOG.info(f"Sending DLMS Request", request=event)
 
         out = event.to_bytes()
 
@@ -292,7 +283,7 @@ class DlmsConnection:
         After this you could call next_event
         """
         if data:
-            LOG.debug(f"Received DLMS data: {data!r}")
+            LOG.debug(f"Adding data to buffer", data=data)
             self.buffer += data
 
     def next_event(self):
@@ -307,6 +298,8 @@ class DlmsConnection:
         """
         apdu = XDlmsApduFactory.apdu_from_bytes(self.buffer)
 
+        LOG.info("Received DLMS Response", response=apdu)
+
         if isinstance(apdu, acse.ApplicationAssociationResponse):
             # To be able to run the decryption we need to know some things about the
             # meter and that has to be extracted first
@@ -314,6 +307,7 @@ class DlmsConnection:
 
         if self.use_protection:
             apdu = self.unprotect(apdu)
+            LOG.info("Deciphered DLMS Response", response=apdu)
 
         if self.is_pre_established:
             if isinstance(
@@ -339,8 +333,9 @@ class DlmsConnection:
                 self.state.process_event(dlms_state.RejectAssociation())
 
             # we need to start the HLS auth.
-            elif apdu.authentication == enums.AuthenticationMechanism.HLS_GMAC:
-                self.state.process_event(dlms_state.HlsStart())
+            if apdu.authentication:
+                if apdu.authentication >= enums.AuthenticationMechanism.HLS:
+                    self.state.process_event(dlms_state.HlsStart())
 
         # Handle HLS verification
         if self.state.current_state == dlms_state.HLS_DONE:
@@ -362,7 +357,6 @@ class DlmsConnection:
                 raise exceptions.LocalDlmsProtocolError(
                     "Received a non Action response when in HLS DONE"
                 )
-
         return apdu
 
     def clear_buffer(self):
@@ -386,6 +380,9 @@ class DlmsConnection:
         """
         Will apply the correct protection to apdus depending on the security context
         """
+
+        LOG.info(f"Ciphering DLMS Request", apdu=event)
+
         # ASCE have different rules about protection
         if isinstance(event, (acse.ApplicationAssociationRequest, acse.ReleaseRequest)):
             if event.user_information:
@@ -405,7 +402,6 @@ class DlmsConnection:
         # XDLMS apdus should be protected with general-glo-ciphering
         elif isinstance(event, AbstractXDlmsApdu):
             ciphered_text, ic = self.encrypt(event.to_bytes())
-            LOG.info(f"Protecting a {type(event)} with GlobalCiphering")
 
             event = xdlms.GeneralGlobalCipher(
                 system_title=self.client_system_title,
@@ -511,7 +507,6 @@ class DlmsConnection:
         elif isinstance(event, xdlms.GeneralGlobalCipher):
             self.update_meter_invocation_counter(event.invocation_counter)
             plain_text = self.decrypt(event.ciphered_text)
-            LOG.warning(f"apdu_bytes: {plain_text!r}")
             return XDlmsApduFactory.apdu_from_bytes(plain_text)
 
         return event

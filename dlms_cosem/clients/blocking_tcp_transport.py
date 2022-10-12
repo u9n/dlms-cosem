@@ -1,12 +1,10 @@
-import logging
-from typing import *
-
 import attr
+import structlog
 
 from dlms_cosem.clients.io import IoImplementation
 from dlms_cosem.protocol.wrappers import WrapperHeader, WrapperProtocolDataUnit
 
-LOG = logging.getLogger(__name__)
+LOG = structlog.get_logger()
 
 
 @attr.s(auto_attribs=True)
@@ -44,6 +42,8 @@ class TcpTransport:
         """
         Sends a whole DLMS APDU wrapped in the DLMS IP Wrapper.
         """
+        wrapped = self.wrap(bytes_to_send)
+        LOG.debug("Sending data", data=wrapped, transport=self)
         self.io.send(self.wrap(bytes_to_send))
 
         return self.recv_response()
@@ -52,7 +52,10 @@ class TcpTransport:
         """
         Receives a whole DLMS APDU. Gets the total length from the DLMS IP Wrapper.
         """
-        header = WrapperHeader.from_bytes(self.io.recv(8))
+        header_data = self.io.recv(8)
+        header = WrapperHeader.from_bytes(header_data)
         data = self.io.recv(header.length)
+
+        LOG.debug("Received data", data=header_data + data, transport=self)
 
         return data

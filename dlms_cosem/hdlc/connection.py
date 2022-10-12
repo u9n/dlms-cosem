@@ -1,6 +1,5 @@
-import logging
-
 import attr
+import structlog
 
 from dlms_cosem.hdlc import address, exceptions, frames
 from dlms_cosem.hdlc.exceptions import LocalProtocolError
@@ -12,7 +11,7 @@ from dlms_cosem.hdlc.state import (
     HdlcConnectionState,
 )
 
-LOG = logging.getLogger(__name__)
+LOG = structlog.get_logger()
 
 
 @attr.s(auto_attribs=True)
@@ -92,7 +91,7 @@ class HdlcConnection:
         After this you could call next_event
         """
         if data:
-            LOG.debug(f"Received HDLC data: {data!r}")
+            LOG.debug(f"Added data to buffer", data=data)
             self.buffer += data
 
     def next_event(self):
@@ -138,7 +137,7 @@ class HdlcConnection:
             LOG.debug("HDLC frame could not be parsed. Need more data")
             return NEED_DATA
 
-        LOG.debug(f"Received frame: {frame}")
+        LOG.debug(f"Received HDLC frame", frame=frame)
         self.state.process_frame(frame)
         self._tidy_buffer()
 
