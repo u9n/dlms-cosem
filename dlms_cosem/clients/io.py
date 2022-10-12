@@ -2,7 +2,7 @@ import socket
 import sys
 from typing import Optional, Tuple
 
-if sys.version_info == (3, 6):
+if sys.version_info < (3, 8):
     from typing_extensions import Protocol
 else:
     from typing import Protocol
