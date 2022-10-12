@@ -331,6 +331,7 @@ class DlmsConnection:
             ]:
                 # reset the association on a reject
                 self.state.process_event(dlms_state.RejectAssociation())
+                return apdu
 
             # we need to start the HLS auth.
             if apdu.authentication:
