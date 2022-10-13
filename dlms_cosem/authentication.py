@@ -76,7 +76,6 @@ class NoAuthentication:
 class LowLevelAuthentication:
     secret: Optional[bytes]
     authentication_method = enumerations.AuthenticationMechanism.LLS
-    responding_authentication_value: Optional[bytes] = attr.ib(default=None)
 
     def get_calling_authentication_value(self) -> Optional[bytes]:
         return self.secret
@@ -183,6 +182,7 @@ class HlsGmacAuthentication:
         return gmac_result == correct_gmac
 
 
+@attr.s(auto_attribs=True)
 class CommonHlsAuthentication:
     """
     In older meters that only specify auth method 2 it is common to use AES128-ECB to
@@ -192,7 +192,6 @@ class CommonHlsAuthentication:
 
     secret: bytes
     authentication_method = enumerations.AuthenticationMechanism.HLS
-    connection: DlmsConnection
 
     @property
     def padded_secret(self) -> bytes:
@@ -206,14 +205,14 @@ class CommonHlsAuthentication:
     def get_calling_authentication_value(self) -> bytes:
         return self.secret
 
-    def generate_reply_data(self) -> bytes:
+    def hls_generate_reply_data(self, connection: DlmsConnection) -> bytes:
         encryptor = Cipher(algorithms.AES(self.padded_secret), modes.ECB()).encryptor()
         return (
-            encryptor.update(self.connection.meter_to_client_challenge)
+            encryptor.update(connection.meter_to_client_challenge)
             + encryptor.finalize()
         )
 
-    def meter_data_is_valid(self, data: bytes) -> bool:
+    def hls_meter_data_is_valid(self, data: bytes, connection: DlmsConnection) -> bool:
         encryptor = Cipher(algorithms.AES(self.padded_secret), modes.ECB()).encryptor()
         calculated_data = (
             encryptor.update(self.get_calling_authentication_value())
