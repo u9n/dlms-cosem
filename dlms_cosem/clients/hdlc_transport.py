@@ -31,6 +31,7 @@ class HdlcTransport:
     io: IoImplementation
     server_physical_address: Optional[int] = attr.ib(default=None)
     client_physical_address: Optional[int] = attr.ib(default=None)
+    extended_addressing: bool = attr.ib(default=False)
     timeout: int = attr.ib(default=10)
     hdlc_connection: connection.HdlcConnection = attr.ib(
         default=attr.Factory(
@@ -51,6 +52,7 @@ class HdlcTransport:
             logical_address=self.server_logical_address,
             physical_address=self.server_physical_address,
             address_type="server",
+            extended_addressing=self.extended_addressing,
         )
 
     @property
@@ -59,6 +61,7 @@ class HdlcTransport:
             logical_address=self.client_logical_address,
             physical_address=self.client_physical_address,
             address_type="client",
+            extended_addressing=self.extended_addressing,
         )
 
     def connect(self):
