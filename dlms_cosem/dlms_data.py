@@ -181,6 +181,13 @@ class VisibleStringData(BaseDlmsData):
     TAG = 10
     LENGTH = VARIABLE_LENGTH
 
+    @classmethod
+    def from_bytes(cls, bytes_data: bytes):
+        return cls(value=bytes_data.decode("ascii"))
+
+    def value_to_bytes(self) -> bytes:
+        return self.value.encode("ascii")
+
 
 @attr.s(auto_attribs=True)
 class UTF8StringData(BaseDlmsData):
