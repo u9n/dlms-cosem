@@ -11,6 +11,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 ### Added
 
+* Implemented VisibleStringData
+
 ### Changed
 
 ### Deprecated
