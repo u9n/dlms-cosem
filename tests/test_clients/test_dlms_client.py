@@ -1,12 +1,6 @@
-import pytest
-
-from dlms_cosem import enumerations
-from dlms_cosem.authentication import NoAuthentication
-from dlms_cosem.clients.blocking_tcp_transport import TcpTransport
-from dlms_cosem.clients.dlms_client import DlmsClient
-from dlms_cosem.clients.io import BlockingTcpIO
-from dlms_cosem.exceptions import DlmsClientException
-from dlms_cosem.state import READY
+from dlms_cosem.security import NoSecurityAuthentication
+from dlms_cosem.client import DlmsClient
+from dlms_cosem.io import BlockingTcpIO, TcpTransport
 
 
 class TestDlmsClient:
@@ -19,7 +13,7 @@ class TestDlmsClient:
         client = DlmsClient(
             client_initial_invocation_counter=500,
             transport=transport,
-            authentication=NoAuthentication(),
+            authentication=NoSecurityAuthentication(),
         )
 
         assert client.client_invocation_counter == 500
@@ -33,7 +27,7 @@ class TestDlmsClient:
         client = DlmsClient(
             client_initial_invocation_counter=500,
             transport=transport,
-            authentication=NoAuthentication(),
+            authentication=NoSecurityAuthentication(),
         )
         client.client_invocation_counter = 1000
         assert client.client_invocation_counter == 1000

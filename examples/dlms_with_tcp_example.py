@@ -1,15 +1,16 @@
 import logging
-from functools import partial
 from pprint import pprint
 from time import sleep
 
 from dateutil import parser as dateparser
 
 from dlms_cosem import a_xdr, cosem, enumerations
-from dlms_cosem.authentication import HlsGmacAuthentication, NoAuthentication
-from dlms_cosem.clients.blocking_tcp_transport import TcpTransport
-from dlms_cosem.clients.dlms_client import DlmsClient
-from dlms_cosem.clients.io import BlockingTcpIO
+from dlms_cosem.security import (
+    NoSecurityAuthentication,
+    HighLevelSecurityGmacAuthentication,
+)
+from dlms_cosem.client import DlmsClient
+from dlms_cosem.io import BlockingTcpIO, TcpTransport
 from dlms_cosem.cosem import selective_access
 from dlms_cosem.cosem.selective_access import RangeDescriptor
 from dlms_cosem.parsers import ProfileGenericBufferParser
@@ -56,7 +57,7 @@ public_tcp_transport = TcpTransport(
     io=tcp_io,
 )
 public_client = DlmsClient(
-    transport=public_tcp_transport, authentication=NoAuthentication()
+    transport=public_tcp_transport, authentication=NoSecurityAuthentication()
 )
 
 
@@ -79,7 +80,7 @@ with public_client.session() as client:
 
 # we are not reusing the socket as of now. We just need to give the meter some time to
 # close the connection on its side
-sleep(1)
+sleep(2)
 
 tcp_io = BlockingTcpIO(host=host, port=port)
 management_tcp_transport = TcpTransport(
@@ -90,7 +91,7 @@ management_tcp_transport = TcpTransport(
 
 management_client = DlmsClient(
     transport=management_tcp_transport,
-    authentication=HlsGmacAuthentication(challenge_length=32),
+    authentication=HighLevelSecurityGmacAuthentication(challenge_length=32),
     encryption_key=encryption_key,
     authentication_key=authentication_key,
     client_initial_invocation_counter=invocation_counter + 1,

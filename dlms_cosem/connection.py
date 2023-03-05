@@ -8,7 +8,7 @@ from dlms_cosem import enumerations as enums
 from dlms_cosem import exceptions, security
 from dlms_cosem import state as dlms_state
 from dlms_cosem import utils
-from dlms_cosem.authentication import AuthenticationManager, NoAuthentication
+from dlms_cosem.security import AuthenticationMethodManager, NoSecurityAuthentication
 from dlms_cosem.protocol import acse, xdlms
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 from dlms_cosem.protocol.xdlms.conformance import Conformance
@@ -107,7 +107,7 @@ class DlmsConnection:
     A DLMS connection.
     """
 
-    authentication: AuthenticationManager
+    authentication: AuthenticationMethodManager
 
     # Client system title can be any combination of 8 bytes.
     # But is should not be the same as the metering the connection is set up too.
@@ -222,7 +222,7 @@ class DlmsConnection:
             is_pre_established=True,
             conformance=conformance,
             max_pdu_size=max_pdu_size,
-            authentication=NoAuthentication(),
+            authentication=NoSecurityAuthentication(),
         )
 
     @property

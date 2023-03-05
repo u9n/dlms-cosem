@@ -1,15 +1,11 @@
 import logging
-import time
 from functools import partial
 from pprint import pprint
 
-from dlms_cosem import cosem, enumerations, utils
-from dlms_cosem.clients.dlms_client import DlmsClient
-from dlms_cosem.clients.experimental_meter import Meter
-from dlms_cosem.cosem import CosemAttribute, Obis
-from dlms_cosem.cosem.profile_generic import Data, ProfileGeneric
-from dlms_cosem.cosem.selective_access import CaptureObject
-from dlms_cosem.parsers import AssociationObjectListParser, ProfileGenericBufferParser
+from dlms_cosem import cosem, enumerations, utils, security
+from dlms_cosem.client import DlmsClient
+from dlms_cosem.io import TcpTransport, BlockingTcpIO
+from dlms_cosem.parsers import AssociationObjectListParser
 from dlms_cosem.protocol.xdlms.conformance import Conformance
 
 # set up logging so you get a bit nicer printout of what is happening.
@@ -77,71 +73,18 @@ CURRENT_ASSOCIATION_OBJECTS = cosem.CosemAttribute(
 
 host = "127.0.0.1"
 port = 11703
-
-public_client = partial(
-    DlmsClient.with_tcp_transport, server_logical_address=1, client_logical_address=16
+transport = TcpTransport(
+    io=BlockingTcpIO(host, port), server_logical_address=1, client_logical_address=16
 )
 
-
-with public_client(host=host, port=port).session() as client:
-    # invocation_counter = utils.parse_as_dlms_data(
-    #     client.get(
-    #         cosem_attribute=cosem.CosemAttribute(
-    #             interface=enumerations.CosemInterface.DATA,
-    #             instance=cosem.Obis.from_string("0.0.43.1.0.255"),
-    #             attribute=2,
-    #         )
-    #     )
-    # )
-    #
-    # print(f"invocation_counter = {invocation_counter}")
-
-    # with management_client(
-    #    client_initial_invocation_counter=invocation_counter + 1
-    # ).session() as client:
+with DlmsClient(
+    transport=transport, authentication=security.NoSecurityAuthentication()
+).session() as client:
 
     profile = client.get(
         CURRENT_ASSOCIATION_OBJECTS,
-        # access_descriptor=RangeDescriptor(
-        #    restricting_object=selective_access.CaptureObject(
-        #        cosem_attribute=cosem.CosemAttribute(
-        #            interface=enumerations.CosemInterface.CLOCK,
-        #            instance=cosem.Obis.from_dotted("0.0.1.0.0.255"),
-        #            attribute=2,
-        #        ),
-        #        data_index=0,
-        #    ),
-        #    from_value=dateparser.parse("2020-01-01T00:00:00-02:00"),
-        #    to_value=dateparser.parse("2020-01-01T02:00:00-01:00"),
-        # ),
     )
 
-    # parser = ProfileGenericBufferParser(
-    #     capture_objects=[
-    #         cosem.CosemAttribute(
-    #             interface=enumerations.CosemInterface.CLOCK,
-    #             instance=cosem.Obis(0, 0, 1, 0, 0, 255),
-    #             attribute=2,
-    #         ),
-    #         cosem.CosemAttribute(
-    #             interface=enumerations.CosemInterface.DATA,
-    #             instance=cosem.Obis(0, 0, 96, 10, 1, 255),
-    #             attribute=2,
-    #         ),
-    #         cosem.CosemAttribute(
-    #             interface=enumerations.CosemInterface.REGISTER,
-    #             instance=cosem.Obis(1, 0, 1, 8, 0, 255),
-    #             attribute=2,
-    #         ),
-    #         cosem.CosemAttribute(
-    #             interface=enumerations.CosemInterface.REGISTER,
-    #             instance=cosem.Obis(1, 0, 2, 8, 0, 255),
-    #             attribute=2,
-    #         ),
-    #     ],
-    #     capture_period=60,
-    # )
-    # result = parser.parse_bytes(profile)
     result = utils.parse_as_dlms_data(profile)
     meter_objects_list = AssociationObjectListParser.parse_entries(result)
     meter_objects_dict = {

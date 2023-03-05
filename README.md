@@ -40,25 +40,23 @@ this is a use-case you need, consider sponsoring the development and contact us.
 * ACTION
 * DataNotification
 * GlobalCiphering - Authenticated and Encrypted.
-* HLS-GMAC auth
+* HLS-GMAC, LLS, HLS-Common auth
 * Selective access via RangeDescriptor
 * Parsing of ProfileGeneric buffers
 
 # Example use:
 
-A simple example:
+A simple example of reading invocation counters using a public client:
 
 ```python
-from dlms_cosem.clients.dlms_client import DlmsClient
-from dlms_cosem.clients.blocking_tcp_transport import TcpTransport
-from dlms_cosem.authentication import LowLevelAuthentication, NoAuthentication
+from dlms_cosem.client import DlmsClient
+from dlms_cosem.io import TcpTransport, BlockingTcpIO
+from dlms_cosem.security import NoSecurityAuthentication
 from dlms_cosem import enumerations, cosem
 
-# read current client invocation counter over TCP with no auth.
-tcp_transport = TcpTransport(host="localhost", port=4059, server_logical_address=1,
-                             client_logical_address=16, )
-auth_manager = NoAuthentication()
-client = DlmsClient(transport=tcp_transport, authentication=auth_manager)
+tcp_io = BlockingTcpIO(host="localhost", port=4059)
+tcp_transport = TcpTransport(io=tcp_io, server_logical_address=1, client_logical_address=16)
+client = DlmsClient(transport=tcp_transport, authentication=NoSecurityAuthentication())
 with client.session() as dlms_client:
     data = dlms_client.get(
         cosem.CosemAttribute(interface=enumerations.CosemInterface.DATA,
@@ -93,6 +91,21 @@ We have some meters we have run tests on or know the library is used for in prod
 * Pietro Fiorentini RSE 1,2 LA N1. Italian gas meter
 * Iskraemeco AM550. IDIS compliant electricity meter.
 
+
+# License
+
+The `dlms-cosem` library is released under the Business Source License 1.1 .
+It is not an Open Source License but will eventually be made available under an Open Source License 
+(Apache License, Version 2.0), as stated in the license document.
+
+You may make use of the library provided that you, or the corporations that you 
+represent, handle no more than a combined total of one hundred (100) individual DLMS end devices.
+
+For information about alternative licensing arrangements for the library,
+please contact us at `info(at)pwit.se`. 
+
+We offer special licences for open source, academic and non-profit use cases. 
+
 # Development
 
 This library is developed by Palmlund Wahlgren Innovative Technology AB. We are
@@ -100,15 +113,15 @@ based in Sweden and are members of the DLMS User Association.
 
 If you find a bug please raise an issue on Github.
 
-We welcome contributions of any kind.
-
 We add features depending on our own, and our clients use cases. If you
 need a feature implemented please contact us.
 
-# Training / Consultancy / Commercial Support
+# Training / Consultancy / Commercial Support / Services
 
 We offer consultancy service and training services around this library and general DLMS/COSEM.
 If you are interested in our services just reach out to us.
 
-If you have implemented a solution based on this library we also offer a commercial
-support scheme.
+The library is an important part of our [Smart meter platform Utilitarian, https://utilitarian.io](https://utilitarian.io). If you need to 
+collect data from a lot of DLMS devices or meters, deploying Utilitarian might be the smoothest 
+solution for you.
+

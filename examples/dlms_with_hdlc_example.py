@@ -1,14 +1,15 @@
 import logging
-from functools import partial
 from pprint import pprint
 
 from dateutil import parser as dateparser
 
 from dlms_cosem import a_xdr, cosem, enumerations, utils
-from dlms_cosem.authentication import HlsGmacAuthentication, NoAuthentication
-from dlms_cosem.clients.dlms_client import DlmsClient
-from dlms_cosem.clients.hdlc_transport import HdlcTransport
-from dlms_cosem.clients.io import SerialIO
+from dlms_cosem.security import (
+    NoSecurityAuthentication,
+    HighLevelSecurityGmacAuthentication,
+)
+from dlms_cosem.client import DlmsClient
+from dlms_cosem.io import SerialIO, HdlcTransport
 from dlms_cosem.cosem import selective_access
 from dlms_cosem.cosem.selective_access import RangeDescriptor
 from dlms_cosem.parsers import ProfileGenericBufferParser
@@ -58,15 +59,8 @@ public_hdlc_transport = HdlcTransport(
     io=serial_io,
 )
 public_client = DlmsClient(
-    transport=public_hdlc_transport, authentication=NoAuthentication()
+    transport=public_hdlc_transport, authentication=NoSecurityAuthentication()
 )
-
-# public_client = partial(
-#     DlmsClient.with_serial_hdlc_transport,
-#     server_logical_address=1,
-#     server_physical_address=17,
-#     client_logical_address=16,
-# )
 
 
 with public_client.session() as client:
@@ -119,15 +113,6 @@ LTE_SETTINGS = cosem.CosemAttribute(
     attribute=3,
 )
 
-# management_client = partial(
-#     DlmsClient.with_serial_hdlc_transport,
-#     server_logical_address=1,
-#     server_physical_address=17,
-#     client_logical_address=1,
-#     authentication_method=auth,
-#     encryption_key=encryption_key,
-#     authentication_key=authentication_key,
-# )
 
 management_hdlc_transport = HdlcTransport(
     client_logical_address=1,
@@ -137,7 +122,7 @@ management_hdlc_transport = HdlcTransport(
 )
 management_client = DlmsClient(
     transport=management_hdlc_transport,
-    authentication=HlsGmacAuthentication(challenge_length=32),
+    authentication=HighLevelSecurityGmacAuthentication(challenge_length=32),
     encryption_key=encryption_key,
     authentication_key=authentication_key,
     client_initial_invocation_counter=invocation_counter + 1,
@@ -188,14 +173,6 @@ with management_client.session() as client:
         capture_period=60,
     )
 
-    # result = parser.parse_bytes(profile)
     result = utils.parse_as_dlms_data(profile)
-    # meter_objects_list = AssociationObjectListParser.parse_entries(result)
-    # meter_objects_dict = {
-    #     obj.logical_name.dotted_repr(): obj for obj in meter_objects_list
-    # }
-    # pprint(meter_objects_dict)
     pprint(profile)
     pprint(result)
-    print(client.dlms_connection.meter_system_title.hex())
-    # print(result[0][0].value.isoformat())
