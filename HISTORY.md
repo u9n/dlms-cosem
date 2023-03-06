@@ -16,6 +16,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 * Support for HLS (method 2) using common method of AES128-ECB.
 * Structlog logging
 
+* Implemented VisibleStringData
+
 ### Changed
 * Refactor of authentication to make it simpler support more authentication types. And make
   it possible to supply manufacturer specific implementations.

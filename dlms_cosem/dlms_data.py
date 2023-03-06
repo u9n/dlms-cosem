@@ -183,14 +183,11 @@ class VisibleStringData(BaseDlmsData):
 
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
-        return cls(value=bytes_data)
+        return cls(value=bytes_data.decode("ascii"))
 
     def value_to_bytes(self) -> bytes:
-        return self.value
-
-    def to_python(self) -> bytes:
-        return self.value
-
+        return self.value.encode("ascii")
+        
 
 @attr.s(auto_attribs=True)
 class UTF8StringData(BaseDlmsData):
