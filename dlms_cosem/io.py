@@ -5,6 +5,7 @@ import sys
 from typing import Optional, Tuple
 
 from dlms_cosem.hdlc import connection, address, state, frames
+from dlms_cosem.protocol.wrappers import WrapperHeader, WrapperProtocolDataUnit
 
 if sys.version_info < (3, 8):
     from typing_extensions import Protocol
