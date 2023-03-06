@@ -19,6 +19,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 * Implemented VisibleStringData
 
 ### Changed
+* Changed License from MIT to BSL v1.1
 * Refactor of authentication to make it simpler support more authentication types. And make
   it possible to supply manufacturer specific implementations.
 

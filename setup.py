@@ -15,12 +15,12 @@ PROJECT_URLS = {
 }
 EMAIL = "henrik@pwit.se"
 AUTHOR = "Henrik Palmlund Wahlgren @ Palmlund Wahlgren Innovative Technology AB"
-REQUIRES_PYTHON = "~=3.6"
-VERSION = "21.3.2"
+REQUIRES_PYTHON = "~=3.7"
+VERSION = "23.1.0a1"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    "attrs>=20.3.0",
+    "attrs>=22.2.0",
     "pyserial>=3.5",
     "cryptography>=35.0.0",
     "asn1crypto>=1.4.0",
@@ -42,15 +42,18 @@ EXTRAS = {
 CLASSIFIERS = [
     "Intended Audience :: Developers",
     "Natural Language :: English",
-    "License :: OSI Approved :: MIT License",
+    "License :: Other/Proprietary License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Communications",
+
 ]
 
 here = os.path.abspath(os.path.dirname(__file__))
