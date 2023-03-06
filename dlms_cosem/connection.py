@@ -1,19 +1,19 @@
-import logging
 import os
 from typing import *
 
 import attr
+import structlog
 
 from dlms_cosem import enumerations as enums
 from dlms_cosem import exceptions, security
 from dlms_cosem import state as dlms_state
 from dlms_cosem import utils
-from dlms_cosem.exceptions import DecryptionError
+from dlms_cosem.security import AuthenticationMethodManager, NoSecurityAuthentication
 from dlms_cosem.protocol import acse, xdlms
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 from dlms_cosem.protocol.xdlms.conformance import Conformance
 
-LOG = logging.getLogger(__name__)
+LOG = structlog.get_logger()
 
 
 def default_system_title() -> bytes:
@@ -107,6 +107,8 @@ class DlmsConnection:
     A DLMS connection.
     """
 
+    authentication: AuthenticationMethodManager
+
     # Client system title can be any combination of 8 bytes.
     # But is should not be the same as the metering the connection is set up too.
     client_system_title: bytes = attr.ib(
@@ -127,25 +129,26 @@ class DlmsConnection:
     # its system title
     meter_system_title: Optional[bytes] = attr.ib(default=None)
 
-    # Meter authentication method.
-    authentication_method: Optional[enums.AuthenticationMechanism] = attr.ib(
-        default=None
-    )
-    # Low Level Security (LLS) password
-    password: Optional[bytes] = attr.ib(default=None)
-
-    # HLS challenge length.
-    challenge_length: int = attr.ib(default=32)
-
-    # client_to_meter_challenge is generated automatically with a random seed
-    # depending on the HLS setup.
-    client_to_meter_challenge: bytes = attr.ib(
-        init=False,
-        default=attr.Factory(
-            lambda self: make_client_to_server_challenge(self.challenge_length),
-            takes_self=True,
-        ),
-    )
+    # # Meter authentication method.
+    # # TODO: this should not be set to None. Should not be optional.
+    # authentication_method: Optional[enums.AuthenticationMechanism] = attr.ib(
+    #     default=None
+    # )
+    # # Low Level Security (LLS) password
+    # password: Optional[bytes] = attr.ib(default=None)
+    #
+    # # HLS challenge length.
+    # challenge_length: int = attr.ib(default=32)
+    #
+    # # client_to_meter_challenge is generated automatically with a random seed
+    # # depending on the HLS setup.
+    # client_to_meter_challenge: bytes = attr.ib(
+    #     init=False,
+    #     default=attr.Factory(
+    #         lambda self: make_client_to_server_challenge(self.challenge_length),
+    #         takes_self=True,
+    #     ),
+    # )
     meter_to_client_challenge: Optional[bytes] = attr.ib(default=None, init=False)
 
     # To keep track of invocation counters used by the meter. If a request is received
@@ -219,6 +222,7 @@ class DlmsConnection:
             is_pre_established=True,
             conformance=conformance,
             max_pdu_size=max_pdu_size,
+            authentication=NoSecurityAuthentication(),
         )
 
     @property
@@ -227,30 +231,12 @@ class DlmsConnection:
         The security control field is used in encryption/decryption of data. It also
         follows the protected apdus to indicate what kind of protections they have.
         """
-        _authenticated = bool(self.global_authentication_key)
-        _encrypted = bool(self.global_encryption_key)
         return security.SecurityControlField(
             self.security_suite,
-            encrypted=_encrypted,
-            authenticated=_authenticated,
+            encrypted=bool(self.global_encryption_key),
+            authenticated=bool(self.global_authentication_key),
             broadcast_key=False,
         )
-
-    @property
-    def authentication_value(self) -> Optional[bytes]:
-        """
-        Depending on the authentication method for the connection the value in the
-        authentication value of the AARQ is different.
-        """
-        if self.authentication_method is None:
-            return None
-        elif self.authentication_method == enums.AuthenticationMechanism.NONE:
-            return None
-        elif self.authentication_method == enums.AuthenticationMechanism.LLS:
-            return self.password
-        else:
-            # HLS Mechanism
-            return self.client_to_meter_challenge
 
     def send(self, event) -> bytes:
         """
@@ -271,7 +257,7 @@ class DlmsConnection:
                 )
 
         self.state.process_event(event)
-        LOG.debug(f"Preparing to send: {event}")
+        LOG.debug(f"Preparing to send DLMS Request", request=event)
 
         if self.use_protection:
             event = self.protect(event)
@@ -280,7 +266,7 @@ class DlmsConnection:
         #    blocks = self.make_blocks(event)
         #    # TODO: How to handle the subcase of sending blocks?
 
-        LOG.info(f"Sending : {event}")
+        LOG.info(f"Sending DLMS Request", request=event)
 
         out = event.to_bytes()
 
@@ -297,7 +283,7 @@ class DlmsConnection:
         After this you could call next_event
         """
         if data:
-            LOG.debug(f"Received DLMS data: {data!r}")
+            LOG.debug(f"Adding data to buffer", data=data)
             self.buffer += data
 
     def next_event(self):
@@ -312,6 +298,8 @@ class DlmsConnection:
         """
         apdu = XDlmsApduFactory.apdu_from_bytes(self.buffer)
 
+        LOG.info("Received DLMS Response", response=apdu)
+
         if isinstance(apdu, acse.ApplicationAssociationResponse):
             # To be able to run the decryption we need to know some things about the
             # meter and that has to be extracted first
@@ -319,6 +307,7 @@ class DlmsConnection:
 
         if self.use_protection:
             apdu = self.unprotect(apdu)
+            LOG.info("Deciphered DLMS Response", response=apdu)
 
         if self.is_pre_established:
             if isinstance(
@@ -342,17 +331,21 @@ class DlmsConnection:
             ]:
                 # reset the association on a reject
                 self.state.process_event(dlms_state.RejectAssociation())
+                return apdu
 
             # we need to start the HLS auth.
-            elif apdu.authentication == enums.AuthenticationMechanism.HLS_GMAC:
-                self.state.process_event(dlms_state.HlsStart())
+            if apdu.authentication:
+                if apdu.authentication >= enums.AuthenticationMechanism.HLS:
+                    self.state.process_event(dlms_state.HlsStart())
 
         # Handle HLS verification
         if self.state.current_state == dlms_state.HLS_DONE:
             if isinstance(apdu, xdlms.ActionResponseNormalWithData):
                 if apdu.status != enums.ActionResultStatus.SUCCESS:
                     self.state.process_event(dlms_state.HlsFailed())
-                if self.hls_response_valid(utils.parse_as_dlms_data(apdu.data)):
+                if self.authentication.hls_meter_data_is_valid(
+                    utils.parse_as_dlms_data(apdu.data), self
+                ):
                     self.state.process_event(dlms_state.HlsSuccess())
                 else:
                     self.state.process_event(dlms_state.HlsFailed())
@@ -365,7 +358,6 @@ class DlmsConnection:
                 raise exceptions.LocalDlmsProtocolError(
                     "Received a non Action response when in HLS DONE"
                 )
-
         return apdu
 
     def clear_buffer(self):
@@ -389,6 +381,9 @@ class DlmsConnection:
         """
         Will apply the correct protection to apdus depending on the security context
         """
+
+        LOG.info(f"Ciphering DLMS Request", apdu=event)
+
         # ASCE have different rules about protection
         if isinstance(event, (acse.ApplicationAssociationRequest, acse.ReleaseRequest)):
             if event.user_information:
@@ -408,7 +403,6 @@ class DlmsConnection:
         # XDLMS apdus should be protected with general-glo-ciphering
         elif isinstance(event, AbstractXDlmsApdu):
             ciphered_text, ic = self.encrypt(event.to_bytes())
-            LOG.info(f"Protecting a {type(event)} with GlobalCiphering")
 
             event = xdlms.GeneralGlobalCipher(
                 system_title=self.client_system_title,
@@ -514,7 +508,6 @@ class DlmsConnection:
         elif isinstance(event, xdlms.GeneralGlobalCipher):
             self.update_meter_invocation_counter(event.invocation_counter)
             plain_text = self.decrypt(event.ciphered_text)
-            LOG.warning(f"apdu_bytes: {plain_text!r}")
             return XDlmsApduFactory.apdu_from_bytes(plain_text)
 
         return event
@@ -550,8 +543,8 @@ class DlmsConnection:
         return acse.ApplicationAssociationRequest(
             ciphered=ciphered_apdus,
             system_title=self.client_system_title,
-            authentication=self.authentication_method,
-            authentication_value=self.authentication_value,
+            authentication=self.authentication.authentication_method,
+            authentication_value=self.authentication.get_calling_authentication_value(),
             user_information=acse.UserInformation(content=initiate_request),
         )
 
@@ -584,95 +577,6 @@ class DlmsConnection:
                     aare.user_information.content.server_max_receive_pdu_size
                 )
 
-    def get_hls_reply(self) -> bytes:
-        """
-        When the meter has enterted the HLS procedure the client firsts sends a reply
-        to the server (meter) challenge. It is done with an ActionRequest to the
-        current LN Association object in the meter. Method 2, Reply_to_HLS.
-
-        Depending on the HLS type the data looks a bit different
-
-        HLS_GMAC:
-            SC + IC + GMAC(SC + AK + Challenge)
-        """
-        if not self.meter_to_client_challenge:
-            raise exceptions.LocalDlmsProtocolError("Meter has not send challenge")
-        if not self.global_encryption_key:
-            raise ProtectionError(
-                "Unable to create GMAC. Missing global_encryption_key"
-            )
-        if not self.global_authentication_key:
-            raise ProtectionError(
-                "Unable to create GMAC. Missing global_authentication_key"
-            )
-        if self.authentication_method == enums.AuthenticationMechanism.HLS_GMAC:
-            only_auth_security_control = security.SecurityControlField(
-                security_suite=self.security_suite, authenticated=True, encrypted=False
-            )
-
-            gmac_result = security.gmac(
-                security_control=only_auth_security_control,
-                system_title=self.client_system_title,
-                invocation_counter=self.client_invocation_counter,
-                key=self.global_encryption_key,
-                auth_key=self.global_authentication_key,
-                challenge=self.meter_to_client_challenge,
-            )
-            return (
-                only_auth_security_control.to_bytes()
-                + self.client_invocation_counter.to_bytes(4, "big")
-                + gmac_result
-            )
-        else:
-            raise NotImplementedError(
-                f"No implementation for HSL: {self.authentication_method!r}"
-            )
-
-    def hls_response_valid(self, response_to_client_challenge: bytes) -> bool:
-        """
-        After sending the HLS reply to the meter the meter sends back the result of the
-        client challenge in the ActionResponse. To make sure the meter has dont the HLS
-        auth correctly we must validate the data.
-        The data looks different depending on the HLS type
-
-        HLS_GMAC:
-            SC + IC + GMAC(SC + AK + Challenge)
-
-        """
-
-        security_control = security.SecurityControlField.from_bytes(
-            response_to_client_challenge[0].to_bytes(1, "big")
-        )
-        invocation_counter = int.from_bytes(response_to_client_challenge[1:5], "big")
-        gmac_result = response_to_client_challenge[-12:]
-
-        if not self.global_encryption_key:
-            raise ProtectionError(
-                "Unable to verify GMAC. Missing global_encryption_key"
-            )
-        if not self.global_authentication_key:
-            raise ProtectionError(
-                "Unable to verify GMAC. Missing global_authentication_key"
-            )
-        if not self.meter_system_title:
-            raise ProtectionError(
-                "Unable to verify GMAC. Have not received the meters system title."
-            )
-        if not self.client_to_meter_challenge:
-            raise ProtectionError(
-                "Unable to verify GMAC. Have not received the meters system title."
-            )
-
-        correct_gmac = security.gmac(
-            security_control=security_control,
-            system_title=self.meter_system_title,
-            invocation_counter=invocation_counter,
-            key=self.global_encryption_key,
-            auth_key=self.global_authentication_key,
-            challenge=self.client_to_meter_challenge,
-        )
-        return gmac_result == correct_gmac
-
     def update_meter_invocation_counter(self, received_invocation_counter: int) -> None:
         """
         The received invocation counter must be larger than the last one we registered.
@@ -686,5 +590,12 @@ class DlmsConnection:
 
     def update_meter_info(self, aare: acse.ApplicationAssociationResponse) -> None:
         self.meter_system_title = aare.system_title
+        # if aare.authentication != self.authentication.authentication_method:
+        #     raise RuntimeError(
+        #         f"Meter adverticed a different authentication method than client. "
+        #         f"Client authentication method: "
+        #         f"{self.authentication.authentication_method}, "
+        #         f"Meter authenticstion method: {aare.authentication}"
+        #     )
         self.authentication_method = aare.authentication
         self.meter_to_client_challenge = aare.authentication_value

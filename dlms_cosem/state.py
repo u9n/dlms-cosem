@@ -1,11 +1,10 @@
-import logging
-
 import attr
+import structlog
 
 from dlms_cosem.exceptions import LocalDlmsProtocolError
 from dlms_cosem.protocol import acse, xdlms
 
-LOG = logging.getLogger(__name__)
+LOG = structlog.get_logger()
 
 
 class _SentinelBase(type):
@@ -158,4 +157,4 @@ class DlmsConnectionState:
             )
         old_state = self.current_state
         self.current_state = new_state
-        LOG.debug(f"DLMS state transitioned from {old_state} to {new_state}")
+        LOG.debug(f"DLMS state transitioned", old_state=old_state, new_state=new_state)

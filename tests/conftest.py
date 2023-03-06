@@ -1,5 +1,6 @@
 import pytest
 
+import dlms_cosem.security
 from dlms_cosem import cosem, dlms_data, enumerations
 from dlms_cosem.connection import DlmsConnection
 from dlms_cosem.protocol import acse, xdlms
@@ -234,7 +235,7 @@ def connection_with_hls(
 
     return DlmsConnection(
         client_system_title=system_title,
-        authentication_method=enumerations.AuthenticationMechanism.HLS_GMAC,
+        authentication=dlms_cosem.security.HighLevelSecurityGmacAuthentication(),
         global_encryption_key=global_encryption_key,
         global_authentication_key=global_authentication_key,
         security_suite=0,

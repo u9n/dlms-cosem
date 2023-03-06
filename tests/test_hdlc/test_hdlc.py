@@ -62,6 +62,28 @@ class TestHdlcAddress:
         )
         assert add.to_bytes() == resulting_bytes
 
+    def test_find_4_byte_address(self):
+        """
+        Source address is using 4 bytes.
+        :return:
+        """
+        frame1 = b"~\xa0#\x03\x00\x02\x00#s\xc0H\x81\x80\x14\x05\x02\x00\x80\x06\x02\x00\x80\x07\x04\x00\x00\x00\x01\x08\x04\x00\x00\x00\x01\xcej~"
+        frame2 = b"~\xa0#!\x00\x02\x00#s\xf6\xc5\x81\x80\x14\x05\x02\x00\x80\x06\x02\x00\x80\x07\x04\x00\x00\x00\x01\x08\x04\x00\x00\x00\x01\xcej~"
+
+        (
+            destination_address,
+            source_address,
+        ) = address.HdlcAddress.find_address_in_frame_bytes(frame1)
+        assert destination_address == (1, None, 1)
+        assert source_address == (1, 17, 4)
+
+        (
+            destination_address,
+            source_address,
+        ) = address.HdlcAddress.find_address_in_frame_bytes(frame2)
+        assert destination_address == (16, None, 1)
+        assert source_address == (1, 17, 4)
+
 
 class TestCrc:
     def test_crc(self):
@@ -129,6 +151,16 @@ class TestUAFrame:
         in_data = b"~\xa0\x1f!\x02#s\xe6\xc7\x81\x80\x12\x05\x01\x9a\x06\x01\x9a\x07\x04\x00\x00\x00\x01\x08\x04\x00\x00\x00\x01\xcc\xa2~"
         frame = frames.UnNumberedAcknowledgmentFrame.from_bytes(in_data)
         assert in_data == frame.to_bytes()
+
+    def test_4_byte_address(self):
+        frame1 = b"~\xa0#\x03\x00\x02\x00#s\xc0H\x81\x80\x14\x05\x02\x00\x80\x06\x02\x00\x80\x07\x04\x00\x00\x00\x01\x08\x04\x00\x00\x00\x01\xcej~"
+        frame2 = b"~\xa0#!\x00\x02\x00#s\xf6\xc5\x81\x80\x14\x05\x02\x00\x80\x06\x02\x00\x80\x07\x04\x00\x00\x00\x01\x08\x04\x00\x00\x00\x01\xcej~"
+
+        frame = frames.UnNumberedAcknowledgmentFrame.from_bytes(frame1)
+        assert frame1 == frame.to_bytes()
+
+        frame = frames.UnNumberedAcknowledgmentFrame.from_bytes(frame2)
+        assert frame2 == frame.to_bytes()
 
 
 class TestInformationFrame:

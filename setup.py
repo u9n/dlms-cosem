@@ -26,6 +26,7 @@ REQUIRED = [
     "asn1crypto>=1.4.0",
     "python-dateutil>=2.8.1",
     "typing-extensions>=3.10",
+    "structlog>=22.1.0",
 ]
 
 DOC_PACKAGES = ["mkdocs", "mkdocs-material"]

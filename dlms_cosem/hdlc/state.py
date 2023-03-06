@@ -1,11 +1,10 @@
-import logging
-
 import attr
+import structlog
 
 from dlms_cosem.hdlc import frames
 from dlms_cosem.hdlc.exceptions import LocalProtocolError
 
-LOG = logging.getLogger(__name__)
+LOG = structlog.get_logger()
 
 
 class _SentinelBase(type):
@@ -99,4 +98,4 @@ class HdlcConnectionState:
             )
         old_state = self.current_state
         self.current_state = new_state
-        LOG.debug(f"HDLC state transitioned from {old_state} to {new_state}")
+        LOG.debug(f"HDLC state transitioned", old_state=old_state, new_state=new_state)

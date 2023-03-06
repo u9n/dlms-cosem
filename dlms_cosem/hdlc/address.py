@@ -27,6 +27,7 @@ class HdlcAddress:
     address_type: str = attr.ib(
         default="client", validator=[validators.validate_hdlc_address_type]
     )
+    extended_addressing: bool = attr.ib(default=False)
 
     @property
     def length(self):
@@ -62,7 +63,12 @@ class HdlcAddress:
 
         out_bytes = list()
         for address in out:
-            if address:
+            if address == 0:
+                if self.extended_addressing:
+                    out_bytes.append(address.to_bytes(1, "big"))
+                else:
+                    pass
+            else:
                 out_bytes.append(address.to_bytes(1, "big"))
 
         return b"".join(out_bytes)
@@ -78,7 +84,7 @@ class HdlcAddress:
 
         else:
             lower = address << 1
-            higher = None
+            higher = 0
 
         return higher, lower
 
@@ -104,7 +110,28 @@ class HdlcAddress:
         _, source_address_data = HdlcAddress.find_address_in_frame_bytes(frame_bytes)
 
         source_logical, source_physical, source_length = source_address_data
-        return cls(source_logical, source_physical, address_type)
+        extended_address = source_length == 4
+        return cls(source_logical, source_physical, address_type, extended_address)
+
+    @staticmethod
+    def extract_address_bytes(in_data: bytes) -> Tuple[bytes, bytes]:
+
+        address = bytearray()
+        data = bytearray(in_data)
+        found_whole_address = False
+        while not found_whole_address:
+            _byte = data.pop(0)
+            if bool(_byte & 0b00000001):
+                address.append(_byte)
+                found_whole_address = True
+            else:
+                address.append(_byte)
+            if len(address) > 4:
+                raise ValueError(
+                    "Recovered and HDLC address of length longer than 4 bytes"
+                )
+
+        return bytes(address), bytes(data)
 
     @staticmethod
     def find_address_in_frame_bytes(
@@ -133,19 +160,23 @@ class HdlcAddress:
                 break
             continue
         if destination_length == 1:
-            address_bytes = hdlc_frame_bytes[3].to_bytes(1, "big")
-            destination_logical = address_bytes[0] >> 1
+            destinantion_address_bytes = hdlc_frame_bytes[3].to_bytes(1, "big")
+            destination_logical = destinantion_address_bytes[0] >> 1
             destination_physical = None
 
         elif destination_length == 2:
-            address_bytes = hdlc_frame_bytes[3:5]
-            destination_logical = address_bytes[0] >> 1
-            destination_physical = address_bytes[1] >> 1
+            destinantion_address_bytes = hdlc_frame_bytes[3:5]
+            destination_logical = destinantion_address_bytes[0] >> 1
+            destination_physical = destinantion_address_bytes[1] >> 1
 
         elif destination_length == 4:
-            address_bytes = hdlc_frame_bytes[3:7]
-            destination_logical = HdlcAddress.parse_two_byte_address(address_bytes[:2])
-            destination_physical = HdlcAddress.parse_two_byte_address(address_bytes[3:])
+            destinantion_address_bytes = hdlc_frame_bytes[3:7]
+            destination_logical = HdlcAddress.parse_two_byte_address(
+                destinantion_address_bytes[:2]
+            )
+            destination_physical = HdlcAddress.parse_two_byte_address(
+                destinantion_address_bytes[2:]
+            )
 
         # Find source address
         source_length: int = 1
@@ -163,19 +194,29 @@ class HdlcAddress:
                 break
             continue
         if source_length == 1:
-            address_bytes = hdlc_frame_bytes[3 + destination_length].to_bytes(1, "big")
-            source_logical = address_bytes[0] >> 1
+            source_address_bytes = hdlc_frame_bytes[3 + destination_length].to_bytes(
+                1, "big"
+            )
+            source_logical = source_address_bytes[0] >> 1
             source_physical = None
 
         elif source_length == 2:
-            address_bytes = hdlc_frame_bytes[3 + destination_length : 5 + source_length]
-            source_logical = address_bytes[0] >> 1
-            source_physical = address_bytes[1] >> 1
+            source_address_bytes = hdlc_frame_bytes[
+                3 + destination_length : 3 + destination_length + source_length
+            ]
+            source_logical = source_address_bytes[0] >> 1
+            source_physical = source_address_bytes[1] >> 1
 
-        elif destination_length == 4:
-            address_bytes = hdlc_frame_bytes[3 + destination_length : 7 + source_length]
-            source_logical = HdlcAddress.parse_two_byte_address(address_bytes[:2])
-            source_physical = HdlcAddress.parse_two_byte_address(address_bytes[3:])
+        elif source_length == 4:
+            source_address_bytes = hdlc_frame_bytes[
+                3 + destination_length : 3 + destination_length + source_length
+            ]
+            source_logical = HdlcAddress.parse_two_byte_address(
+                source_address_bytes[:2]
+            )
+            source_physical = HdlcAddress.parse_two_byte_address(
+                source_address_bytes[2:]
+            )
 
         return (
             (destination_logical, destination_physical, destination_length),
@@ -184,7 +225,7 @@ class HdlcAddress:
 
     @staticmethod
     def parse_two_byte_address(address_bytes: bytes):
-        if address_bytes != 2:
+        if len(address_bytes) != 2:
             raise ValueError(f"Can only parse 2 bytes for address")
         upper = address_bytes[0] >> 1
         lower = address_bytes[1] >> 1

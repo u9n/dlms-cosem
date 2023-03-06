@@ -10,14 +10,22 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 
 ### Added
+* Support for HDLC over TCP via composition of IO-implementation separate from
+  transport implementation.
+* Support for LLS (Low Level Security)
+* Support for HLS (method 2) using common method of AES128-ECB.
+* Structlog logging
 
 * Implemented VisibleStringData
 
 ### Changed
+* Refactor of authentication to make it simpler support more authentication types. And make
+  it possible to supply manufacturer specific implementations.
 
 ### Deprecated
 
 ### Removed
+* Shorthand class methods to create DlmsClients. Now composition has to be used.
 
 ### Fixed
 

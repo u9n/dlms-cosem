@@ -105,7 +105,7 @@ using keys of the correct length.
 ## Simple example
 
 ```python3
-from dlms_cosem.clients.dlms_client import DlmsClient
+from dlms_cosem.client import DlmsClient
 from dlms_cosem import cosem, enumerations
 
 usb_port: str = "/dev/tty.usbserial-A704H991"

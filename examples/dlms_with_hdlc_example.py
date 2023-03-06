@@ -1,11 +1,15 @@
 import logging
-from functools import partial
 from pprint import pprint
 
 from dateutil import parser as dateparser
 
 from dlms_cosem import a_xdr, cosem, enumerations, utils
-from dlms_cosem.clients.dlms_client import DlmsClient
+from dlms_cosem.security import (
+    NoSecurityAuthentication,
+    HighLevelSecurityGmacAuthentication,
+)
+from dlms_cosem.client import DlmsClient
+from dlms_cosem.io import SerialIO, HdlcTransport
 from dlms_cosem.cosem import selective_access
 from dlms_cosem.cosem.selective_access import RangeDescriptor
 from dlms_cosem.parsers import ProfileGenericBufferParser
@@ -45,27 +49,21 @@ authentication_key = bytes.fromhex("C7DDFC7EE8E0EF95B8D154C1CA09B450")
 
 
 auth = enumerations.AuthenticationMechanism.HLS_GMAC
+port = "/dev/tty.usbserial-A9031O5M"
 
-
-public_client = partial(
-    DlmsClient.with_serial_hdlc_transport,
-    server_logical_address=1,
-    server_physical_address=17,
+serial_io = SerialIO(port_name=port, baud_rate=9600)
+public_hdlc_transport = HdlcTransport(
     client_logical_address=16,
-)
-
-management_client = partial(
-    DlmsClient.with_serial_hdlc_transport,
     server_logical_address=1,
     server_physical_address=17,
-    client_logical_address=1,
-    authentication_method=auth,
-    encryption_key=encryption_key,
-    authentication_key=authentication_key,
+    io=serial_io,
+)
+public_client = DlmsClient(
+    transport=public_hdlc_transport, authentication=NoSecurityAuthentication()
 )
 
-port = "/dev/tty.usbserial-A704H991"
-with public_client(serial_port=port).session() as client:
+
+with public_client.session() as client:
 
     response_data = client.get(
         cosem.CosemAttribute(
@@ -116,9 +114,22 @@ LTE_SETTINGS = cosem.CosemAttribute(
 )
 
 
-with management_client(
-    serial_port=port, client_initial_invocation_counter=invocation_counter + 1
-).session() as client:
+management_hdlc_transport = HdlcTransport(
+    client_logical_address=1,
+    server_logical_address=1,
+    server_physical_address=17,
+    io=serial_io,
+)
+management_client = DlmsClient(
+    transport=management_hdlc_transport,
+    authentication=HighLevelSecurityGmacAuthentication(challenge_length=32),
+    encryption_key=encryption_key,
+    authentication_key=authentication_key,
+    client_initial_invocation_counter=invocation_counter + 1,
+)
+
+
+with management_client.session() as client:
 
     profile = client.get(
         LOAD_PROFILE_BUFFER,
@@ -131,8 +142,8 @@ with management_client(
                 ),
                 data_index=0,
             ),
-            from_value=dateparser.parse("2020-01-01T00:00:00-02:00"),
-            to_value=dateparser.parse("2020-01-01T02:00:00-01:00"),
+            from_value=dateparser.parse("2022-10-12T00:00:00-01:00"),
+            to_value=dateparser.parse("2022-10-13T00:00:00-01:00"),
         ),
     )
 
@@ -162,14 +173,6 @@ with management_client(
         capture_period=60,
     )
 
-    # result = parser.parse_bytes(profile)
     result = utils.parse_as_dlms_data(profile)
-    # meter_objects_list = AssociationObjectListParser.parse_entries(result)
-    # meter_objects_dict = {
-    #     obj.logical_name.dotted_repr(): obj for obj in meter_objects_list
-    # }
-    # pprint(meter_objects_dict)
     pprint(profile)
     pprint(result)
-    print(client.dlms_connection.meter_system_title.hex())
-    # print(result[0][0].value.isoformat())
