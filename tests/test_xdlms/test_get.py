@@ -163,6 +163,7 @@ class TestGetResponseNormal:
             ),
         )
         assert GetResponseNormal.from_bytes(data) == get_response
+        assert get_response.to_bytes() == data
 
     def test_wrong_tag_raises_valueerror(self):
         data = b"\xc1\x01\xc1\x00\x06\x00\x00\x13\x91"  # Wrong tag
