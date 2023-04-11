@@ -275,7 +275,7 @@ class GetResponseNormal(AbstractXDlmsApdu):
         out = bytearray()
         out.append(self.TAG)
         out.append(self.RESPONSE_TYPE)
-        out.append(self.invoke_id_and_priority.to_bytes())
+        out.extend(self.invoke_id_and_priority.to_bytes())
         out.append(0)  # data result choice
         out.extend(self.data)
         return bytes(out)

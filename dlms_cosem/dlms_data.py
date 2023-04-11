@@ -29,6 +29,7 @@ class AbstractDlmsData(abc.ABC):
 class BaseDlmsData(AbstractDlmsData):
     TAG: ClassVar[int] = 0
     LENGTH: ClassVar[int] = 0
+    LENGTH_IN_BITS: ClassVar[bool] = False
 
     value: Any
 
@@ -125,9 +126,11 @@ class BooleanData(BaseDlmsData):
 class BitStringData(BaseDlmsData):
     TAG = 4
     LENGTH = VARIABLE_LENGTH
+    LENGTH_IN_BITS = True
 
-    def value_to_bytes(self) -> bytes:
-        return self.value
+    @classmethod
+    def from_bytes(cls, bytes_data: bytes):
+        return cls(value=bytes_data)
 
 
 @attr.s(auto_attribs=True)

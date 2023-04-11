@@ -104,6 +104,14 @@ class EncodingConf:
 # TODO: if it is the last element give it all data left.
 
 
+def find_amount_of_bytes_to_contain_bits(bits: int):
+    bytes_amount = 1
+    while bytes_amount * 8 < bits:
+        bytes_amount += 1
+
+    return bytes_amount
+
+
 @attr.s(auto_attribs=True)
 class AXdrDecoder:
     encoding_conf: EncodingConf
@@ -238,6 +246,10 @@ class AXdrDecoder:
 
         if data_class.LENGTH == VARIABLE_LENGTH:
             length = self.get_axdr_length()
+
+            if data_class.LENGTH_IN_BITS:
+                length = find_amount_of_bytes_to_contain_bits(length)
+
             return data_class.from_bytes(self.get_bytes(length)).to_python()
         else:
             return data_class.from_bytes(self.get_bytes(data_class.LENGTH)).to_python()
