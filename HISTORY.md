@@ -29,6 +29,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 * Shorthand class methods to create DlmsClients. Now composition has to be used.
 
 ### Fixed
+* BitString was not parsed correctly. Added support in AXDR parser.
 
 ### Security
 
