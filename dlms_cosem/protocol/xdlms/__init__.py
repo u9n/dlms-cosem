@@ -36,8 +36,11 @@ from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
 from dlms_cosem.protocol.xdlms.set import (
     SetRequestFactory,
     SetRequestNormal,
+    SetRequestWithFirstBlock,
     SetResponseFactory,
     SetResponseNormal,
+    SetResponseWithBlock,
+    SetResponseLastBlock,
 )
 
 __all__ = [
@@ -59,6 +62,8 @@ __all__ = [
     "GetRequestFactory",
     "GetResponseFactory",
     "SetResponseNormal",
+    "SetResponseWithBlock",
+    "SetResponseLastBlock",
     "SetResponseFactory",
     "SetRequestNormal",
     "SetRequestFactory",
