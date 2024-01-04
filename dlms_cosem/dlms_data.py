@@ -1,3 +1,7 @@
+"""
+AXDR encoding is described in  IEC 61334-6:2000
+(Distribution automation using distribution line carrier systems Part 6: A-XDR encoding rule)
+"""
 import abc
 import datetime
 from typing import *
@@ -119,6 +123,9 @@ class BooleanData(BaseDlmsData):
     def from_bytes(cls, bytes_data: bytes):
         value = bool(int.from_bytes(bytes_data, "big"))
         return cls(value)  # TODO: test this.
+
+    def value_to_bytes(self) -> bytes:
+        return b'\xFF' if self.value else b'\x00'
 
 
 @attr.s(auto_attribs=True)
