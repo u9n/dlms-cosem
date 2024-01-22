@@ -5,13 +5,31 @@ Parameters
 Licensor:             Palmlund Wahlgren Innovative Technology AB
 
 Licensed Work:        The python library `dlms-cosem`
-                      The Licensed Work is (c) 2023 Palmlund Wahlgren
+                      The Licensed Work is (c) 2024 Palmlund Wahlgren
                       Innovative Technology AB.
 
-Additional Use Grant: You may make use of the library provided that you, or
-                      the corporations that you represent, handle no more
-                      than a combined total of one hundred (100) individual
-                      DLMS end devices.
+Additional Use Grant: You may make use of the Licensed Work for any Permitted Purpose other than a Competing Use.
+                      A Competing Use means use of the Licensed Work in or for a commercial product or service that
+                      competes with the Licensed Work or any other product or service we offer using the Licensed Work
+                      as of the date we make the Software available.
+
+                      Competing Uses specifically include using the Licensed Work:
+
+                      1. as a substitute for any of our products or services;
+
+                      2. in a way that exposes the APIs of the Licensed Work; and
+
+                      3. in a product or service that offers the same or substantially similar
+                         functionality to the Licensed Work.
+
+                      Permitted Purposes specifically include using the Software:
+
+                      1. for your internal use and access;
+
+                      2. for non-commercial education; and
+
+                      3. for non-commercial research.
+
 
 Change Date:          4 years from release date
 

@@ -8,7 +8,6 @@
 <img src="dlms-logo.png" alt="dlms_logo" width="200"/>
 
 # Installation
-We only support Python 3.7+
 
 ```
 pip install dlms-cosem
@@ -90,21 +89,46 @@ We have some meters we have run tests on or know the library is used for in prod
 
 * Pietro Fiorentini RSE 1,2 LA N1. Italian gas meter
 * Iskraemeco AM550. IDIS compliant electricity meter.
+* Itron SL7000
+* Hexing HXF300
 
 
 # License
 
-The `dlms-cosem` library is released under the Business Source License 1.1 .
-It is not an Open Source License but will eventually be made available under an Open Source License 
-(Apache License, Version 2.0), as stated in the license document.
 
-You may make use of the library provided that you, or the corporations that you 
-represent, handle no more than a combined total of one hundred (100) individual DLMS end devices.
+*The `dlms-cosem` library is released under the Business Source License 1.1 .
+It is not a fully Open Source License but will eventually be made available under an Open Source License 
+(Apache License, Version 2.0), as stated in the license document.*
 
-For information about alternative licensing arrangements for the library,
+Our goal with this licence is to provide enough freedom for you to use and learn from the software without
+[harmful free-riding](https://en.wikipedia.org/wiki/Free-rider_problem).
+
+---
+
+You may make use of the Licensed Work for any Permitted Purpose other than a Competing Use.
+A Competing Use means use of the Licensed Work in or for a commercial product or service that
+competes with the Licensed Work or any other product or service we offer using the Licensed Work 
+as of the date we make the Software available.
+
+Competing Uses specifically include using the Licensed Work:
+
+1. as a substitute for any of our products or services;
+
+2. in a way that exposes the APIs of the Licensed Work; and
+
+3. in a product or service that offers the same or substantially similar
+functionality to the Licensed Work.
+
+Permitted Purposes specifically include using the Software:
+
+1. for your internal use and access;
+
+2. for non-commercial education; and
+
+3. for non-commercial research.
+
+For information about alternative licensing arrangements or questions about permitted use of the library,
 please contact us at `info(at)pwit.se`. 
-
-We offer special licences for open source, academic and non-profit use cases. 
 
 # Development
 
@@ -119,7 +143,7 @@ need a feature implemented please contact us.
 # Training / Consultancy / Commercial Support / Services
 
 We offer consultancy service and training services around this library and general DLMS/COSEM.
-If you are interested in our services just reach out to us.
+If you are interested in our services just reach at `ìnfo(at)pwit.se`
 
 The library is an important part of our [Smart meter platform Utilitarian, https://utilitarian.io](https://utilitarian.io). If you need to 
 collect data from a lot of DLMS devices or meters, deploying Utilitarian might be the smoothest 

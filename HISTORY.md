@@ -10,27 +10,39 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 
 ### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+
+## 24.1.0 - 2024-01-22
+
+### Added
 * Support for HDLC over TCP via composition of IO-implementation separate from
   transport implementation.
 * Support for LLS (Low Level Security)
 * Support for HLS (method 2) using common method of AES128-ECB.
-* Structlog logging
-
-* Implemented VisibleStringData
+* Structlog logging.
+* Implemented VisibleStringData.
+* DlmsConnectionSettings to handle manufacturer specific quirks in communication.
 
 ### Changed
 * Changed License from MIT to BSL v1.1
 * Refactor of authentication to make it simpler support more authentication types. And make
   it possible to supply manufacturer specific implementations.
 
-### Deprecated
-
 ### Removed
 * Shorthand class methods to create DlmsClients. Now composition has to be used.
 
 ### Fixed
-
-### Security
+* Error in DataArray dlms data type 
 
 
 ## [21.3.2] - 2021-11-07
