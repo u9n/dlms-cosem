@@ -76,7 +76,7 @@ class DataArray(BaseDlmsData):
     def to_bytes(self) -> bytes:
         out = bytearray()
         out.append(self.TAG)
-        out.append(encode_variable_integer(len(self.value)))
+        out.extend(encode_variable_integer(len(self.value)))
         for item in self.value:
             out.extend(item.to_bytes())
         return bytes(out)
