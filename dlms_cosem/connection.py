@@ -2,6 +2,7 @@ import os
 from typing import *
 
 import attr
+import attrs
 import structlog
 
 from dlms_cosem import enumerations as enums
@@ -102,6 +103,18 @@ class ProtectionError(Exception):
 
 
 @attr.s(auto_attribs=True)
+class DlmsConnectionSettings:
+    """
+    Class to hold values and settings to handle different quirks of different dlms
+    server implementations and manufacturers specific irregularity.
+    """
+
+    # In Pietro Fiorentini local communication over HDLC the system title in GeneralGlobalCiphering is omitted.
+    empty_system_title_in_general_glo_ciphering: bool = attr.ib(default=False)
+
+
+
+@attr.s(auto_attribs=True)
 class DlmsConnection:
     """
     A DLMS connection.
@@ -193,18 +206,23 @@ class DlmsConnection:
             takes_self=True,
         )
     )
+    settings: DlmsConnectionSettings = attr.ib(
+        default=DlmsConnectionSettings(),
+        converter=attr.converters.default_if_none(
+            factory=DlmsConnectionSettings
+        ))
 
     @classmethod
     def with_pre_established_association(
-        cls,
-        conformance: Conformance,
-        max_pdu_size: int = 65535,
-        global_encryption_key: Optional[bytes] = None,
-        global_authentication_key: Optional[bytes] = None,
-        client_invocation_counter: Optional[int] = None,
-        meter_invocation_counter: Optional[int] = None,
-        client_system_title: Optional[bytes] = None,
-        meter_system_title: Optional[bytes] = None,
+            cls,
+            conformance: Conformance,
+            max_pdu_size: int = 65535,
+            global_encryption_key: Optional[bytes] = None,
+            global_authentication_key: Optional[bytes] = None,
+            client_invocation_counter: Optional[int] = None,
+            meter_invocation_counter: Optional[int] = None,
+            client_system_title: Optional[bytes] = None,
+            meter_system_title: Optional[bytes] = None,
     ):
         """
         A pre-established association does not need the ACSE APDUs. It is
@@ -249,7 +267,7 @@ class DlmsConnection:
             # Only invalid state change is to send the ReleaseRequestApdu. But it is not
             # possible to close a pre-established association.
             if isinstance(
-                event, (acse.ReleaseRequest, acse.ApplicationAssociationRequest)
+                    event, (acse.ReleaseRequest, acse.ApplicationAssociationRequest)
             ):
                 raise exceptions.PreEstablishedAssociationError(
                     f"It is not allowed to send a {type(event)} when the association is"
@@ -311,8 +329,8 @@ class DlmsConnection:
 
         if self.is_pre_established:
             if isinstance(
-                apdu,
-                (acse.ApplicationAssociationResponse, acse.ReleaseResponse),
+                    apdu,
+                    (acse.ApplicationAssociationResponse, acse.ReleaseResponse),
             ):
                 raise exceptions.PreEstablishedAssociationError(
                     f"Received a {apdu.__class__.__name__}. In a pre-established "
@@ -344,13 +362,13 @@ class DlmsConnection:
                 if apdu.status != enums.ActionResultStatus.SUCCESS:
                     self.state.process_event(dlms_state.HlsFailed())
                 if self.authentication.hls_meter_data_is_valid(
-                    utils.parse_as_dlms_data(apdu.data), self
+                        utils.parse_as_dlms_data(apdu.data), self
                 ):
                     self.state.process_event(dlms_state.HlsSuccess())
                 else:
                     self.state.process_event(dlms_state.HlsFailed())
             elif isinstance(
-                apdu, (xdlms.ActionResponseNormalWithError, xdlms.ActionResponseNormal)
+                    apdu, (xdlms.ActionResponseNormalWithError, xdlms.ActionResponseNormal)
             ):
                 self.state.process_event(dlms_state.HlsFailed())
 
@@ -370,8 +388,8 @@ class DlmsConnection:
         :return:
         """
         if (
-            self.global_encryption_key is not None
-            or self.global_authentication_key is not None
+                self.global_encryption_key is not None
+                or self.global_authentication_key is not None
         ):
             return True
         else:
@@ -387,7 +405,6 @@ class DlmsConnection:
         # ASCE have different rules about protection
         if isinstance(event, (acse.ApplicationAssociationRequest, acse.ReleaseRequest)):
             if event.user_information:
-
                 ciphered_text, ic = self.encrypt(
                     event.user_information.content.to_bytes()
                 )
@@ -404,8 +421,13 @@ class DlmsConnection:
         elif isinstance(event, AbstractXDlmsApdu):
             ciphered_text, ic = self.encrypt(event.to_bytes())
 
+            if self.settings.empty_system_title_in_general_glo_ciphering:
+                system_title = None
+            else:
+                system_title = self.client_system_title
+
             event = xdlms.GeneralGlobalCipher(
-                system_title=self.client_system_title,
+                system_title=system_title,
                 security_control=self.security_control,
                 invocation_counter=ic,
                 ciphered_text=ciphered_text,
@@ -448,8 +470,8 @@ class DlmsConnection:
         return ciphered_text, invocation_counter
 
     def decrypt(
-        self,
-        ciphered_text: bytes,
+            self,
+            ciphered_text: bytes,
     ):
         """
         Encrypts ciphered bytes according to the current association and connection.
@@ -487,12 +509,12 @@ class DlmsConnection:
         """
 
         if isinstance(
-            event, (acse.ApplicationAssociationResponse, acse.ReleaseResponse)
+                event, (acse.ApplicationAssociationResponse, acse.ReleaseResponse)
         ):
             if event.user_information:
                 if isinstance(
-                    event.user_information.content,
-                    xdlms.GlobalCipherInitiateResponse,
+                        event.user_information.content,
+                        xdlms.GlobalCipherInitiateResponse,
                 ):
                     self.update_meter_invocation_counter(
                         event.user_information.content.invocation_counter
@@ -563,7 +585,7 @@ class DlmsConnection:
         )
 
     def update_negotiated_parameters(
-        self, aare: acse.ApplicationAssociationResponse
+            self, aare: acse.ApplicationAssociationResponse
     ) -> None:
         """
         When an AARE is received we need to update the connection to the negotiated

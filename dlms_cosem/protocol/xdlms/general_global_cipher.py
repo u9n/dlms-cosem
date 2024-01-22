@@ -1,4 +1,5 @@
 from functools import partial
+from typing import Optional
 
 import attr
 
@@ -41,7 +42,8 @@ class GeneralGlobalCipher(AbstractXDlmsApdu):
         ]
     )
 
-    system_title: bytes
+    # Some implementations does not send the system_title. But it seems like it is against the standard.
+    system_title: Optional[bytes]
     security_control: SecurityControlField
     invocation_counter: int
     ciphered_text: bytes
@@ -66,8 +68,11 @@ class GeneralGlobalCipher(AbstractXDlmsApdu):
     def to_bytes(self) -> bytes:
         out = bytearray()
         out.append(self.TAG)
-        out.append(len(self.system_title))
-        out.extend(self.system_title)
+        if self.system_title:
+            out.append(len(self.system_title))
+            out.extend(self.system_title)
+        else:
+            out.extend(b"\x00")
         out.append(
             len(
                 self.security_control.to_bytes()

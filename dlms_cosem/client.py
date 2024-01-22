@@ -7,7 +7,7 @@ import structlog
 from dlms_cosem import cosem, dlms_data, enumerations, exceptions, state, utils
 from dlms_cosem.security import AuthenticationMethodManager
 from dlms_cosem.io import DlmsTransport
-from dlms_cosem.connection import DlmsConnection
+from dlms_cosem.connection import DlmsConnection, DlmsConnectionSettings
 from dlms_cosem.cosem.selective_access import RangeDescriptor
 from dlms_cosem.protocol import acse, xdlms
 from dlms_cosem.protocol.xdlms import ConfirmedServiceError
@@ -41,6 +41,7 @@ class DlmsClient:
     client_initial_invocation_counter: int = attr.ib(default=0)
     meter_initial_invocation_counter: int = attr.ib(default=0)
     timeout: int = attr.ib(default=10)
+    connection_settings: Optional[DlmsConnectionSettings] = attr.ib(default=None)
 
     dlms_connection: DlmsConnection = attr.ib(
         default=attr.Factory(
@@ -55,6 +56,7 @@ class DlmsClient:
                 max_pdu_size=self.max_pdu_size,
                 client_invocation_counter=self.client_initial_invocation_counter,
                 meter_invocation_counter=self.meter_initial_invocation_counter,
+                settings=self.connection_settings,
             ),
             takes_self=True,
         )
