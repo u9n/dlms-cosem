@@ -1,6 +1,8 @@
 import pytest
 
 from dlms_cosem.hdlc import address, fields, frames
+from dlms_cosem.hdlc.address import HdlcAddress
+from dlms_cosem.io import HdlcTransport
 
 
 def test_hdlc_frame_format_field_from_bytes():
@@ -87,7 +89,6 @@ class TestHdlcAddress:
 
 class TestCrc:
     def test_crc(self):
-
         data = "033f"
         correct_crc = "5bec"
 
@@ -147,7 +148,6 @@ class TestUAFrame:
         assert ua.to_bytes() == out_data
 
     def test_from_bytes(self):
-
         in_data = b"~\xa0\x1f!\x02#s\xe6\xc7\x81\x80\x12\x05\x01\x9a\x06\x01\x9a\x07\x04\x00\x00\x00\x01\x08\x04\x00\x00\x00\x01\xcc\xa2~"
         frame = frames.UnNumberedAcknowledgmentFrame.from_bytes(in_data)
         assert in_data == frame.to_bytes()
@@ -165,7 +165,6 @@ class TestUAFrame:
 
 class TestInformationFrame:
     def test_construct(self):
-
         total = bytes.fromhex(
             "7EA02C02232110AF9FE6E600601DA109060760857405080101BE10040E01000000065F1F0400001E1DFFFFC5E47E"
         )
@@ -255,3 +254,35 @@ class TestUnnumberedInformationControlField:
         data = b"\x13"
         cf = fields.UnnumberedInformationControlField.from_bytes(data)
         assert cf.to_bytes() == data
+
+
+class TestFiorentiniLocal:
+    """ no physical address when talking to fiorentini meters"""
+
+    def test_frame(self):
+        response = b'~\xa0\x07!\x03s\x01@~'
+
+        frame = frames.UnNumberedAcknowledgmentFrame.from_bytes(response)
+
+    def test_ua_frame(self):
+        frame = frames.UnNumberedAcknowledgmentFrame(
+            destination_address=HdlcAddress(logical_address=16, physical_address=None, address_type='client',
+                                            extended_addressing=False),
+            source_address=HdlcAddress(logical_address=1, physical_address=None, address_type='server',
+                                       extended_addressing=False), payload=b'', segmented=False, final=True)
+
+        fsc = frame.fcs
+    def test_fcs(self):
+        data = b'~\xa0\x07!\x03s\x01@~'
+        fcs = data[-3:-1]
+        assert fcs == b"\x01@"
+        # frame_content should be everything except flag and fcs
+
+
+# class TestKaifaMeter:
+#
+#     def test_kaifa_data(self):
+#         # data = "7ea09b01000110561be6e7000f40000000090c07e7090401103400ff800000021209074b464d5f30303109103733343031353730313132353335343409084d41333034483444060000044f0600000000060000000006000000c0060000088f06000005aa060000057c06000008da06000008f906000008e6090c07e7090401103400ff8000000608c141c9060000000006001ae03806013151959d787e"
+#         data = "7ea11d01000110b0aee6e7000f4000000000022409060100000281ff09074b464d5f30303109060000600100ff09103733343031353730333037383433393509060000600107ff09074d41333034483409060100010700ff060000017209060100020700ff060000000009060100030700ff060000000009060100040700ff0600000050090601001f0700ff06000001be09060100330700ff060000047b09060100470700ff060000009409060100200700ff06000008ee09060100340700ff06000008e609060100480700ff06000008dd09060000010000ff090c07e709040111132dffffc40009060100010800ff0600bc0d9009060100020800ff060000000009060100030800ff06001c05dc09060100040800ff06000fed42acfd7e"
+#         frame = frames.UnnumberedInformationFrame.from_bytes(bytes.fromhex(data))
+#         print(frame)

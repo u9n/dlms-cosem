@@ -192,6 +192,23 @@ class UnNumberedAcknowledgmentFrame(BaseHdlcFrame):
     fixed_length_bytes = 7
 
     @property
+    def frame_length(self) -> int:
+
+        if self.information:
+            # with an informatoin field it should have HSC
+            fixed = self.fixed_length_bytes
+        else:
+            fixed = self.fixed_length_bytes - 2
+
+        return (
+                fixed
+                + self.destination_address.length
+                + self.source_address.length
+                + len(self.information)
+        )
+
+
+    @property
     def information(self) -> bytes:
         """
         Information field on UA does not contain an LLC as it is not a true
@@ -202,6 +219,17 @@ class UnNumberedAcknowledgmentFrame(BaseHdlcFrame):
             out.append(self.payload)
 
         return b"".join(out)
+
+    @property
+    def hcs(self) -> bytes:
+        """
+        UnNumberedAcknowledgmentFrame is an HDLC S-frame and does if it does not contain an
+        information field it should also not contain a HCS field. That means that there is no HCS field present, only FCS
+        """
+        if self.payload:
+            return HCS.calculate_for(self.header_content)
+        else:
+            return b""
 
     def get_control_field(self):
         return fields.UaControlField()
@@ -232,10 +260,12 @@ class UnNumberedAcknowledgmentFrame(BaseHdlcFrame):
 
         frame = cls(destination_address, source_address, information)
 
-        if hcs != frame.hcs:
-            raise hdlc_exceptions.HdlcParsingError(
-                f"HCS is not correct. " f"Calculated: {frame.hcs!r}, in data: {hcs!r}"
-            )
+        if frame.hcs:
+            "Some frames might not have hcs so we should not check it."
+            if hcs != frame.hcs:
+                raise hdlc_exceptions.HdlcParsingError(
+                    f"HCS is not correct. " f"Calculated: {frame.hcs!r}, in data: {hcs!r}"
+                )
 
         if fcs != frame.fcs:
             raise hdlc_exceptions.HdlcParsingError("FCS is not correct")

@@ -5,7 +5,7 @@ from dlms_cosem.security import NoSecurityAuthentication
 from dlms_cosem.connection import (
     DlmsConnection,
     XDlmsApduFactory,
-    make_client_to_server_challenge,
+    make_client_to_server_challenge, DlmsConnectionSettings,
 )
 from dlms_cosem.exceptions import LocalDlmsProtocolError
 from dlms_cosem.protocol import acse, xdlms
@@ -57,6 +57,58 @@ def test_negotiated_conformance_is_updated():
     assert c.conformance.general_block_transfer
     assert c.max_pdu_size == 500
     assert c.state.current_state == state.READY
+
+
+def test_settings_exists_on_simple_init():
+    c = DlmsConnection(
+        client_system_title=b"12345678",
+        authentication=NoSecurityAuthentication(),
+    )
+    assert c.settings is not None
+
+def test_settings_empty_system_title_in_general_glo_cipher_false(get_request: xdlms.GetRequestNormal):
+    """
+    Make sure that system_title is is used when protecting APDUs with default connection settings.
+    """
+    system_title = b"12345678"
+    c = DlmsConnection(
+        state=state.DlmsConnectionState(current_state=state.READY),
+        client_system_title=system_title,
+        authentication=NoSecurityAuthentication(),
+        global_encryption_key=b"1111111111111111",
+        global_authentication_key=b"0000000000000000"
+    )
+
+    assert c.settings is not None
+
+    print(c.settings)
+
+    ciphered = c.protect(get_request)
+    print(ciphered)
+    assert ciphered.system_title is not None
+    assert ciphered.system_title == system_title
+
+
+def test_settings_empty_system_title_in_general_glo_cipher_true(get_request: xdlms.GetRequestNormal):
+    """
+    Make sure that system_title is not used when protecting APDUs if the connections settings is to leave it empty
+    """
+    system_title = b"12345678"
+    settings = DlmsConnectionSettings(empty_system_title_in_general_glo_ciphering=True)
+
+    c = DlmsConnection(
+        state=state.DlmsConnectionState(current_state=state.READY),
+        client_system_title=system_title,
+        authentication=NoSecurityAuthentication(),
+        global_encryption_key=b"1111111111111111",
+        global_authentication_key=b"0000000000000000",
+        settings=settings,
+    )
+
+    assert c.settings is not None
+
+    ciphered = c.protect(get_request)
+    assert ciphered.system_title is None
 
 
 def test_cannot_re_associate(aarq: acse.ApplicationAssociationRequest):
