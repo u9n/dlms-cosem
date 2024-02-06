@@ -32,6 +32,15 @@ from dlms_cosem.protocol.xdlms.initiate_response import (
     GlobalCipherInitiateResponse,
     InitiateResponse,
 )
+from dlms_cosem.protocol.xdlms.service_specific_cipher import (
+    GlobalGetRequest,
+    GlobalSetRequest,
+    GlobalActionNotificationRequest,
+    GlobalActionRequest,
+    GlobalGetResponse,
+    GlobalSetResponse,
+    GlobalActionResponse,
+)
 from dlms_cosem.protocol.xdlms.invoke_id_and_priority import InvokeIdAndPriority
 from dlms_cosem.protocol.xdlms.set import (
     SetRequestFactory,
