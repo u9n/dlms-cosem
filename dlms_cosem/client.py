@@ -71,9 +71,9 @@ class DlmsClient:
         self.disconnect()
 
     def get(
-        self,
-        cosem_attribute: cosem.CosemAttribute,
-        access_descriptor: Optional[RangeDescriptor] = None,
+            self,
+            cosem_attribute: cosem.CosemAttribute,
+            access_descriptor: Optional[RangeDescriptor] = None,
     ) -> bytes:
         self.send(
             xdlms.GetRequestNormal(
@@ -115,7 +115,7 @@ class DlmsClient:
         return bytes(data)
 
     def get_many(
-        self, cosem_attributes_with_selection: List[cosem.CosemAttributeWithSelection]
+            self, cosem_attributes_with_selection: List[cosem.CosemAttributeWithSelection]
     ):
         """
         Make a GET.WITH_LIST call. Get many items in one request.
@@ -153,8 +153,8 @@ class DlmsClient:
         return
 
     def associate(
-        self,
-        association_request: Optional[acse.ApplicationAssociationRequest] = None,
+            self,
+            association_request: Optional[acse.ApplicationAssociationRequest] = None,
     ) -> acse.ApplicationAssociationResponse:
 
         # the aarq can be overridden or the standard one from the connection is used.
@@ -174,7 +174,7 @@ class DlmsClient:
                 extra_error = None
                 if response.user_information:
                     if isinstance(
-                        response.user_information.content, ConfirmedServiceError
+                            response.user_information.content, ConfirmedServiceError
                     ):
                         extra_error = response.user_information.content.error
                 raise exceptions.DlmsClientException(
@@ -203,7 +203,7 @@ class DlmsClient:
                 raise HLSError("Did not receive any HLS response data")
 
             if not self.dlms_connection.authentication.hls_meter_data_is_valid(
-                hls_data, self.dlms_connection
+                    hls_data, self.dlms_connection
             ):
                 raise HLSError(
                     f"Meter did not respond with correct challenge calculation"
@@ -213,8 +213,8 @@ class DlmsClient:
 
     def should_send_hls_reply(self) -> bool:
         return (
-            self.dlms_connection.state.current_state
-            == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
+                self.dlms_connection.state.current_state
+                == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
         )
 
     def send_hls_reply(self) -> Optional[bytes]:
@@ -231,11 +231,15 @@ class DlmsClient:
             ).to_bytes(),
         )
 
-    def release_association(self) -> acse.ReleaseResponse:
+    def release_association(self) -> Optional[acse.ReleaseResponse]:
+
         rlrq = self.dlms_connection.get_rlrq()
-        self.send(rlrq)
-        rlre = self.next_event()
-        return rlre
+        try:
+            self.send(rlrq)
+            rlre = self.next_event()
+            return rlre
+        except exceptions.NoRlrqRlreError:
+            return None
 
     def connect(self):
         self.transport.connect()
@@ -247,7 +251,6 @@ class DlmsClient:
         for event in events:
             data = self.dlms_connection.send(event)
             response_bytes = self.transport.send_request(data)
-
             self.dlms_connection.receive_data(response_bytes)
 
     def next_event(self):

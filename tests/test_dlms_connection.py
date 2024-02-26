@@ -66,6 +66,7 @@ def test_settings_exists_on_simple_init():
     )
     assert c.settings is not None
 
+
 def test_settings_empty_system_title_in_general_glo_cipher_false(get_request: xdlms.GetRequestNormal):
     """
     Make sure that system_title is is used when protecting APDUs with default connection settings.
@@ -167,7 +168,7 @@ def test_receive_get_response_sets_state_to_ready():
 
 
 def test_set_request_sets_state_in_waiting_for_set_response(
-    set_request: xdlms.SetRequestNormal,
+        set_request: xdlms.SetRequestNormal,
 ):
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.READY),
@@ -203,7 +204,6 @@ def test_can_send_action_request_in_ready(action_request: xdlms.ActionRequestNor
 
 
 def test_action_response_normal_sets_ready_when_awaiting_action_resoponse():
-
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.AWAITING_ACTION_RESPONSE),
         client_system_title=b"12345678",
@@ -223,7 +223,6 @@ def test_action_response_normal_sets_ready_when_awaiting_action_resoponse():
 
 
 def test_action_response_normal_with_error_sets_ready_when_awaiting_action_resoponse():
-
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.AWAITING_ACTION_RESPONSE),
         client_system_title=b"12345678",
@@ -244,7 +243,6 @@ def test_action_response_normal_with_error_sets_ready_when_awaiting_action_resop
 
 
 def test_action_response_normal_with_data_sets_ready_when_awaiting_action_resoponse():
-
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.AWAITING_ACTION_RESPONSE),
         client_system_title=b"12345678",
@@ -265,7 +263,7 @@ def test_action_response_normal_with_data_sets_ready_when_awaiting_action_resopo
 
 
 def test_receive_exception_response_sets_state_to_ready(
-    exception_response: xdlms.ExceptionResponse,
+        exception_response: xdlms.ExceptionResponse,
 ):
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.AWAITING_GET_RESPONSE),
@@ -278,16 +276,16 @@ def test_receive_exception_response_sets_state_to_ready(
 
 
 def test_hls_is_started_automatically(
-    connection_with_hls: DlmsConnection,
-    ciphered_hls_aare: acse.ApplicationAssociationResponse,
+        connection_with_hls: DlmsConnection,
+        ciphered_hls_aare: acse.ApplicationAssociationResponse,
 ):
     # Force state into awaiting response
     connection_with_hls.state.current_state = state.AWAITING_ASSOCIATION_RESPONSE
     connection_with_hls.receive_data(ciphered_hls_aare.to_bytes())
     connection_with_hls.next_event()
     assert (
-        connection_with_hls.state.current_state
-        == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
+            connection_with_hls.state.current_state
+            == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
     )
 
 
@@ -319,8 +317,8 @@ def test_hls_fails(connection_with_hls: DlmsConnection):
 
 
 def test_rejection_resets_connection_state(
-    connection_with_hls: DlmsConnection,
-    ciphered_hls_aare: acse.ApplicationAssociationResponse,
+        connection_with_hls: DlmsConnection,
+        ciphered_hls_aare: acse.ApplicationAssociationResponse,
 ):
     connection_with_hls.state.current_state = state.AWAITING_ASSOCIATION_RESPONSE
     ciphered_hls_aare.result = enumerations.AssociationResult.REJECTED_PERMANENT
@@ -329,10 +327,19 @@ def test_rejection_resets_connection_state(
     assert connection_with_hls.state.current_state == state.NO_ASSOCIATION
 
 
-# what happens if the gmac provided by the meter is wrong
-# -> we get an error
+def test_rlrq_raises_norlrqrlreerror_when_settings_use_rlrq_rlre_is_false():
+    settings = DlmsConnectionSettings(use_rlrq_rlre=False)
+    c = DlmsConnection(
+        state=state.DlmsConnectionState(current_state=state.READY),
+        client_system_title=b"12345678",
+        authentication=NoSecurityAuthentication(),
+        settings=settings
+    )
+    rlrq = c.get_rlrq()
+    with pytest.raises(exceptions.NoRlrqRlreError):
+        c.send(rlrq)
 
-# what happens if the gmac provided by the client is wrong
+    assert c.state.current_state == state.NO_ASSOCIATION
 
 
 class TestPreEstablishedAssociation:
@@ -387,7 +394,6 @@ class TestMakeClientToServerChallenge:
         assert type(challenge) == bytes
 
     def test_too_short_length_raises_value_error(self):
-
         with pytest.raises(ValueError):
             make_client_to_server_challenge(7)
 

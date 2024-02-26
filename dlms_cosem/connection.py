@@ -109,9 +109,11 @@ class DlmsConnectionSettings:
     server implementations and manufacturers specific irregularity.
     """
 
+    # If false there should be no RLRQ and RLRE to release an association. It is fine to disconnect the lower layer
+    # directly
+    use_rlrq_rlre: bool = attr.ib(default=True)
     # In Pietro Fiorentini local communication over HDLC the system title in GeneralGlobalCiphering is omitted.
     empty_system_title_in_general_glo_ciphering: bool = attr.ib(default=False)
-
 
 
 @attr.s(auto_attribs=True)
@@ -274,6 +276,17 @@ class DlmsConnection:
                     f"pre-established "
                 )
 
+        if not self.settings.use_rlrq_rlre and isinstance(event, acse.ReleaseRequest):
+            # Client has issued a release request but the connection is not using them
+            # Connection states goes to NO_ASSOCIATION directly
+
+            LOG.info("Stopped ReleaseRequest as settings.use_rlrq_rlre is False. Ending association",
+                     settings=self.settings, rlrq=event)
+            self.state.process_event(dlms_state.EndAssociation())
+            raise exceptions.NoRlrqRlreError(
+                "Connection settings does not allow ReleaseRequest and ReleaseResponse"
+            )
+
         self.state.process_event(event)
         LOG.debug(f"Preparing to send DLMS Request", request=event)
 
@@ -314,6 +327,7 @@ class DlmsConnection:
         the IP wrapper element so it is possible to can keep on trying until all data
         is received.
         """
+
         apdu = XDlmsApduFactory.apdu_from_bytes(self.buffer)
 
         LOG.info("Received DLMS Response", response=apdu)
@@ -572,8 +586,9 @@ class DlmsConnection:
 
     def get_rlrq(self) -> acse.ReleaseRequest:
         """
-        Returns a ReleaseRequestApdu to release the current association.
+        Returns a ReleaseRequestApdu to release the current association if one should be used.
         """
+
         initiate_request = xdlms.InitiateRequest(
             proposed_conformance=self.conformance,
             client_max_receive_pdu_size=self.max_pdu_size,

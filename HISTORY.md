@@ -10,6 +10,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 
 ### Added
+* `use_rlrq_rlre` added to DlmsConnectionSettings. If `False` no ReleaseRequest is sent to server/device and lower 
+   layer can be disconnected right away.
 
 ### Changed
 

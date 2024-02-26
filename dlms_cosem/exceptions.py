@@ -36,3 +36,10 @@ class DecryptionError(CryptographyError):
     because the ciphertext has changed or that the key, nonce or associated data is
     wrong
     """
+
+
+class NoRlrqRlreError(Exception):
+    """
+    Is raised from connection when a ReleaseRequest is issued on a connection that has use_rlrq_rlre==False
+    Control for client to just skip Release and disconnect the lower layer.
+    """
