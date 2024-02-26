@@ -48,6 +48,14 @@ class RejectAssociation:
     pass
 
 
+@attr.s()
+class EndAssociation:
+    """
+    Is used when settings.use_rlrq_rlre == False to send the state to NO_ASSOCIATION
+    """
+    pass
+
+
 def make_sentinel(name):
     cls = _SentinelBase(name, (_SentinelBase,), {})
     cls.__class__ = cls
@@ -94,6 +102,7 @@ DLMS_STATE_TRANSITIONS = {
         RejectAssociation: NO_ASSOCIATION,
         xdlms.ActionRequestNormal: AWAITING_ACTION_RESPONSE,
         xdlms.DataNotification: READY,
+        EndAssociation: NO_ASSOCIATION,
     },
     SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT: {
         xdlms.ActionRequestNormal: AWAITING_HLS_CLIENT_CHALLENGE_RESULT
