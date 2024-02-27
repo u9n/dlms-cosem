@@ -1,6 +1,8 @@
 import pprint
 from functools import partial
 
+import pytest
+
 from dlms_cosem import enumerations as enums
 from dlms_cosem.a_xdr import (
     Attribute,
@@ -155,8 +157,18 @@ def test_gsm_diagnistics_cell_info():
     assert result[1] == 0
 
 
-def test_get_axdr_length():
+@pytest.mark.skip(
+    "Currently it enters in an infinite loop "
+    "(in dlms_data.py:466::DlmsDataParser.parse) and it eats the PC memory"
+    "because it fills the result with many Null values"
+)
+def test_incomplete_struct():
+    data = b"\x01\x02"
+    with pytest.raises(Exception):
+        result = parse_as_dlms_data(data)
 
+
+def test_get_axdr_length():
     data = bytearray(b"\x82\x0f\x0f")
 
     assert get_axdr_length(data) == int.from_bytes(b"\x0f\x0f", "big")
