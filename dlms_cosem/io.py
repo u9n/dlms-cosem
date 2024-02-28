@@ -15,6 +15,7 @@ import attr
 import serial
 
 from dlms_cosem import exceptions
+from dlms_cosem.protocol.wrappers import *
 
 from typing import *
 
