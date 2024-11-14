@@ -18,6 +18,8 @@ from dlms_cosem import exceptions
 
 from typing import *
 
+from dlms_cosem.protocol.wrappers import *
+
 import structlog
 
 if TYPE_CHECKING:
