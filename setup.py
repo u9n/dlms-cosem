@@ -120,7 +120,7 @@ setup(
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     include_package_data=True,
-    license="MIT",
+    license="BUSL",
     zip_safe=False,
     keywords="AMR, Metering, smart meters, MDM, dlms, cosem",
     classifiers=CLASSIFIERS,
