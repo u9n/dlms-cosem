@@ -23,6 +23,14 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 ### Security
 
+## 25.1.0 - 2025-03-26
+
+### Added
+* `use_rlrq_rlre` added to DlmsConnectionSettings with default to `True`. If `False` no ReleaseRequest is sent to 
+  server/device and lower layer can be disconnected right away.
+
+### Fixed
+* Missing imports in io.py
 
 ## 24.1.0 - 2024-01-22
 
