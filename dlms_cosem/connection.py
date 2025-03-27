@@ -180,7 +180,7 @@ class DlmsConnection:
     # it hits the maximum value the global key needs to be exchanged.
     use_dedicated_ciphering: bool = attr.ib(default=False)
     # Dedicated key will be generated on each association
-    global_dedicated_key: Optional[bytes] = attr.ib(default=None)
+    global_dedicated_key: Optional[bytes] = attr.ib(default=None) # FIXME: a key can be global or dedicated, not both
     # the dedicated invocation_counter will be reset on each new dedicated_key.
     dedicated_invocation_counter: int = attr.ib(init=False, default=0)
 
