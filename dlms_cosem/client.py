@@ -135,7 +135,14 @@ class DlmsClient:
 
     def set(self, cosem_attribute: cosem.CosemAttribute, data: bytes):
         self.send(xdlms.SetRequestNormal(cosem_attribute=cosem_attribute, data=data))
-        return self.next_event()
+
+        response = self.next_event()
+        if isinstance(response, xdlms.SetResponseNormal) and response.result != enumerations.DataAccessResult.SUCCESS:
+            raise DataResultError(
+                f"Could not perform SET request: {response.result!r}"
+            )
+        # TODO: Should to be a separated class? Analogous to xdmls.GetResponseNormalWithError
+        return
 
     def action(self, method: cosem.CosemMethod, data: bytes):
         self.send(xdlms.ActionRequestNormal(cosem_method=method, data=data))
