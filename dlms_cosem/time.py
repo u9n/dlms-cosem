@@ -325,7 +325,7 @@ def datetime_to_bytes(dt: datetime, clock_status: Optional[ClockStatus] = None):
         )
 
     if clock_status is None:
-        clock_status_bytes = ClockStatus().to_bytes()
+        clock_status_bytes = b'\xff' # means not specified
     else:
         clock_status_bytes = clock_status.to_bytes()
 
