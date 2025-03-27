@@ -36,6 +36,7 @@ class XDlmsApduFactory:
         40: xdlms.GlobalCipherInitiateResponse,
         216: xdlms.ExceptionResponse,
         219: xdlms.GeneralGlobalCipher,
+        220: xdlms.GeneralDedCipher,
         # ACSE APDUs:
         96: acse.ApplicationAssociationRequest,
         97: acse.ApplicationAssociationResponse,

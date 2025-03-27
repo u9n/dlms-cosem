@@ -11,6 +11,7 @@ from dlms_cosem.protocol.xdlms.conformance import Conformance
 from dlms_cosem.protocol.xdlms.data_notification import DataNotification
 from dlms_cosem.protocol.xdlms.exception_response import ExceptionResponse
 from dlms_cosem.protocol.xdlms.general_global_cipher import GeneralGlobalCipher
+from dlms_cosem.protocol.xdlms.general_ded_cipher import GeneralDedCipher
 from dlms_cosem.protocol.xdlms.get import (
     GetRequestFactory,
     GetRequestNext,
