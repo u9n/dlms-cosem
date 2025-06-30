@@ -64,7 +64,7 @@ class AsyncDlmsTransport(Protocol):
 @attr.s(auto_attribs=True)
 class AsyncTcpTransport(AsyncDlmsTransport):
     """
-    A TCP transport.
+    An async TCP transport.
     """
 
     client_logical_address: int
@@ -119,7 +119,7 @@ class AsyncTcpTransport(AsyncDlmsTransport):
 @attr.s(auto_attribs=True)
 class AsyncTcpIO(AsyncIoImplementation):
     """
-    A TCP transport using Blocking I/O.
+    A TCP transport using asyncio
     """
 
     host: str
@@ -170,7 +170,7 @@ class AsyncTcpIO(AsyncIoImplementation):
             ConnectionRefusedError,
         ) as e:
             raise exceptions.CommunicationError("Unable to connect socket") from e
-        #LOG.info(f"Connected to {self.address}")
+        LOG.info(f"Connected to {self.address}")
 
     async def disconnect(self):
         """
@@ -187,7 +187,7 @@ class AsyncTcpIO(AsyncIoImplementation):
             raise exceptions.CommunicationError from e
         finally:
             self.writer = self.reader = None
-        #LOG.info(f"Connection to {self.address} is closed")
+        LOG.info(f"Connection to {self.address} is closed")
 
     async def send(self, data: bytes):
         """

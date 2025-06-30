@@ -6,7 +6,7 @@ import attr
 import structlog
 
 from dlms_cosem import cosem, dlms_data, enumerations, exceptions, state, utils
-from dlms_cosem.security import AuthenticationMethodManager
+from dlms_cosem.security import AuthenticationMethodManager, NoSecurityAuthentication
 from dlms_cosem.asyncio import AsyncDlmsTransport
 from dlms_cosem.connection import DlmsConnection, DlmsConnectionSettings
 from dlms_cosem.cosem.selective_access import RangeDescriptor
@@ -31,7 +31,7 @@ class HLSError(Exception):
 @attr.s(auto_attribs=True)
 class AsyncDlmsClient:
     transport: AsyncDlmsTransport
-    authentication: AuthenticationMethodManager
+    authentication: AuthenticationMethodManager = attr.ib(default=NoSecurityAuthentication())
     encryption_key: Optional[bytes] = attr.ib(default=None)
     authentication_key: Optional[bytes] = attr.ib(default=None)
     security_suite: Optional[int] = attr.ib(default=0)
