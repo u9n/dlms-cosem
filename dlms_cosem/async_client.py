@@ -1,13 +1,13 @@
 import contextlib
 from typing import Optional, List
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 
 import attr
 import structlog
 
 from dlms_cosem import cosem, dlms_data, enumerations, exceptions, state, utils
 from dlms_cosem.security import AuthenticationMethodManager
-from dlms_cosem.io import DlmsTransport
+from dlms_cosem.asyncio import AsyncDlmsTransport
 from dlms_cosem.connection import DlmsConnection, DlmsConnectionSettings
 from dlms_cosem.cosem.selective_access import RangeDescriptor
 from dlms_cosem.protocol import acse, xdlms
@@ -29,8 +29,8 @@ class HLSError(Exception):
 
 
 @attr.s(auto_attribs=True)
-class DlmsClient:
-    transport: DlmsTransport
+class AsyncDlmsClient:
+    transport: AsyncDlmsTransport
     authentication: AuthenticationMethodManager
     encryption_key: Optional[bytes] = attr.ib(default=None)
     authentication_key: Optional[bytes] = attr.ib(default=None)
@@ -63,22 +63,22 @@ class DlmsClient:
         )
     )
 
-    @contextlib.contextmanager
-    def session(self) -> Generator["DlmsClient", None, None]:
-        self.connect()
+    @contextlib.asynccontextmanager
+    async def session(self) -> AsyncGenerator["AsyncDlmsClient", None]:
+        await self.connect()
         try:
-            self.associate()
+            await self.associate()
             yield self
-            self.release_association()
+            await self.release_association()
         finally:
-            self.disconnect()
+            await self.disconnect()
 
-    def get(
+    async def get(
             self,
             cosem_attribute: cosem.CosemAttribute,
             access_descriptor: Optional[RangeDescriptor] = None,
     ) -> bytes:
-        self.send(
+        await self.send(
             xdlms.GetRequestNormal(
                 cosem_attribute=cosem_attribute, access_selection=access_descriptor
             )
@@ -93,7 +93,7 @@ class DlmsClient:
                 continue
             if isinstance(get_response, xdlms.GetResponseWithBlock):
                 data.extend(get_response.data)
-                self.send(
+                await self.send(
                     xdlms.GetRequestNext(
                         invoke_id_and_priority=get_response.invoke_id_and_priority,
                         block_number=get_response.block_number,
@@ -117,7 +117,7 @@ class DlmsClient:
 
         return bytes(data)
 
-    def get_many(
+    async def get_many(
             self, cosem_attributes_with_selection: List[cosem.CosemAttributeWithSelection]
     ):
         """
@@ -126,7 +126,7 @@ class DlmsClient:
         out = xdlms.GetRequestWithList(
             cosem_attributes_with_selection=cosem_attributes_with_selection
         )
-        self.send(out)
+        await self.send(out)
         response = self.next_event()
         if isinstance(response, xdlms.ExceptionResponse):
             raise exceptions.DlmsClientException(
@@ -136,12 +136,12 @@ class DlmsClient:
             )
         return response
 
-    def set(self, cosem_attribute: cosem.CosemAttribute, data: bytes):
-        self.send(xdlms.SetRequestNormal(cosem_attribute=cosem_attribute, data=data))
+    async def set(self, cosem_attribute: cosem.CosemAttribute, data: bytes):
+        await self.send(xdlms.SetRequestNormal(cosem_attribute=cosem_attribute, data=data))
         return self.next_event()
 
-    def action(self, method: cosem.CosemMethod, data: bytes):
-        self.send(xdlms.ActionRequestNormal(cosem_method=method, data=data))
+    async def action(self, method: cosem.CosemMethod, data: bytes):
+        await self.send(xdlms.ActionRequestNormal(cosem_method=method, data=data))
         response = self.next_event()
 
         if isinstance(response, xdlms.ActionResponseNormalWithError):
@@ -155,7 +155,7 @@ class DlmsClient:
                 raise ActionError(f"Unsuccessful ActionRequest: {response.status.name}")
         return
 
-    def associate(
+    async def associate(
             self,
             association_request: Optional[acse.ApplicationAssociationRequest] = None,
     ) -> acse.ApplicationAssociationResponse:
@@ -163,7 +163,7 @@ class DlmsClient:
         # the aarq can be overridden or the standard one from the connection is used.
         aarq = association_request or self.dlms_connection.get_aarq()
 
-        self.send(aarq)
+        await self.send(aarq)
         response = self.next_event()
         # we could have received an exception from the meter.
         if isinstance(response, xdlms.ExceptionResponse):
@@ -193,7 +193,7 @@ class DlmsClient:
 
             # TODO: wrap hls logic in method
             try:
-                hls_response = self.send_hls_reply()
+                hls_response = await self.send_hls_reply()
             except ActionError as e:
                 raise HLSError from e
 
@@ -220,8 +220,8 @@ class DlmsClient:
                 == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
         )
 
-    def send_hls_reply(self) -> Optional[bytes]:
-        return self.action(
+    async def send_hls_reply(self) -> Optional[bytes]:
+        return await self.action(
             method=cosem.CosemMethod(
                 enumerations.CosemInterface.ASSOCIATION_LN,
                 cosem.Obis(0, 0, 40, 0, 0),
@@ -234,26 +234,26 @@ class DlmsClient:
             ).to_bytes(),
         )
 
-    def release_association(self) -> Optional[acse.ReleaseResponse]:
+    async def release_association(self) -> Optional[acse.ReleaseResponse]:
 
         rlrq = self.dlms_connection.get_rlrq()
         try:
-            self.send(rlrq)
+            await self.send(rlrq)
             rlre = self.next_event()
             return rlre
         except exceptions.NoRlrqRlreError:
             return None
 
-    def connect(self):
-        self.transport.connect()
+    async def connect(self):
+        await self.transport.connect()
 
-    def disconnect(self):
-        self.transport.disconnect()
+    async def disconnect(self):
+        await self.transport.disconnect()
 
-    def send(self, *events):
+    async def send(self, *events):
         for event in events:
             data = self.dlms_connection.send(event)
-            response_bytes = self.transport.send_request(data)
+            response_bytes = await self.transport.send_request(data)
             self.dlms_connection.receive_data(response_bytes)
 
     def next_event(self):
@@ -267,3 +267,4 @@ class DlmsClient:
     @client_invocation_counter.setter
     def client_invocation_counter(self, ic: int):
         self.dlms_connection.client_invocation_counter = ic
+
