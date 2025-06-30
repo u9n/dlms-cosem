@@ -1,6 +1,5 @@
 import contextlib
-from typing import Optional, List
-from collections.abc import Generator
+from typing import *
 
 import attr
 import structlog
@@ -64,14 +63,12 @@ class DlmsClient:
     )
 
     @contextlib.contextmanager
-    def session(self) -> Generator["DlmsClient", None, None]:
+    def session(self) -> "DlmsClient":
         self.connect()
-        try:
-            self.associate()
-            yield self
-            self.release_association()
-        finally:
-            self.disconnect()
+        self.associate()
+        yield self
+        self.release_association()
+        self.disconnect()
 
     def get(
             self,
