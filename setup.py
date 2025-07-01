@@ -30,7 +30,7 @@ REQUIRED = [
 ]
 
 DOC_PACKAGES = ["mkdocs", "mkdocs-material"]
-TEST_PACKAGES = ["pytest", "pytest-cov", "pytest-sugar"]
+TEST_PACKAGES = ["pytest", "pytest-cov", "pytest-sugar", "pytest-asyncio"]
 DEV_PACKAGES = ["pre-commit"] + DOC_PACKAGES + TEST_PACKAGES
 
 EXTRAS = {
