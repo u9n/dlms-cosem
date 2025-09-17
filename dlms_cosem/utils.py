@@ -36,3 +36,12 @@ def parse_dlms_object(source_bytes: bytes) -> List[int]:
         values.append(data.pop(0))
 
     return values
+
+
+def pop_many(array: bytearray, amount: int) -> bytearray:
+    if amount < 2:
+        raise ValueError("Only use pop_many if you need to get more than 1 byte")
+    out = bytearray()
+    for _ in range(0, amount):
+        out.append(array.pop(0))
+    return out

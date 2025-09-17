@@ -1,9 +1,12 @@
+import csv
 import logging
+from datetime import datetime, timedelta, timezone
 from pprint import pprint
 from time import sleep
 
 from dateutil import parser as dateparser
 
+from dlms_cosem.utils import parse_as_dlms_data
 from dlms_cosem import a_xdr, cosem, enumerations
 from dlms_cosem.security import (
     NoSecurityAuthentication,
@@ -99,11 +102,12 @@ management_client = DlmsClient(
 
 
 with management_client.session() as client:
-
+    read_to = dateparser.parse("2024-08-15T00:00:00-01:00")
+    read_from = read_to - timedelta(days=500)
     profile = client.get(
         cosem.CosemAttribute(
             interface=enumerations.CosemInterface.PROFILE_GENERIC,
-            instance=cosem.Obis(1, 0, 99, 1, 0),
+            instance=cosem.Obis(1, 0, 99, 2, 0),
             attribute=2,
         ),
         access_descriptor=RangeDescriptor(
@@ -115,10 +119,13 @@ with management_client.session() as client:
                 ),
                 data_index=0,
             ),
-            from_value=dateparser.parse("2024-02-14T00:00:00-02:00"),
-            to_value=dateparser.parse("2024-02-15T00:00:00-01:00"),
+            from_value=read_from,
+            to_value=read_to,
         ),
     )
+
+    time_error = datetime.now(tz=timezone.utc) - read_to
+
 
     parser = ProfileGenericBufferParser(
         capture_objects=[
@@ -145,5 +152,15 @@ with management_client.session() as client:
         ],
         capture_period=60,
     )
-    result = parser.parse_bytes(profile)
-    pprint(result)
+    #result = parser.parse_bytes(profile)
+    result=None
+    pprint(profile)
+    data = parse_as_dlms_data(profile)
+
+
+    with open("data_output.csv", "w", newline="") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=["value"])
+        writer.writeheader()
+        for row in data:
+            writer.writerow({"value": row[2]})
+

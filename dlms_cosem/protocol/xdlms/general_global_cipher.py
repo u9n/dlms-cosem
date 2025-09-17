@@ -56,7 +56,7 @@ class GeneralGlobalCipher(AbstractXDlmsApdu):
             raise ValueError(f"Tag not as expected. Expected: {cls.TAG} but got {tag}")
         decoder = a_xdr.AXdrDecoder(encoding_conf=cls.ENCODING_CONF)
         in_dict = decoder.decode(data)
-        system_title = in_dict["system_title"].value
+        system_title = bytes(in_dict["system_title"].value)
         ciphered_content = in_dict["ciphered_content"].value
         security_control = SecurityControlField.from_bytes(
             ciphered_content.pop(0).to_bytes(1, "big")
