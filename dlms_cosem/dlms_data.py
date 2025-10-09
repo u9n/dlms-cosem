@@ -2,6 +2,7 @@ import abc
 import datetime
 from typing import *
 from typing import List, Optional
+import struct
 
 import attr
 
@@ -49,7 +50,7 @@ class BaseDlmsData(AbstractDlmsData):
         out.append(self.TAG)
         value_bytes = self.value_to_bytes()
         if self.LENGTH == VARIABLE_LENGTH:
-            out.append(len(value_bytes))
+            out.extend(encode_variable_integer(len(value_bytes)))
         out.extend(value_bytes)
         return bytes(out)
 
@@ -126,6 +127,10 @@ class BitStringData(BaseDlmsData):
     TAG = 4
     LENGTH = VARIABLE_LENGTH
 
+    @classmethod
+    def from_bytes(cls, bytes_data: bytes):
+        return cls(bytes_data)
+
     def value_to_bytes(self) -> bytes:
         return self.value
 
@@ -187,7 +192,7 @@ class VisibleStringData(BaseDlmsData):
 
     def value_to_bytes(self) -> bytes:
         return self.value.encode("ascii")
-        
+
 
 @attr.s(auto_attribs=True)
 class UTF8StringData(BaseDlmsData):
@@ -333,6 +338,10 @@ class Float32Data(BaseDlmsData):
     TAG = 23
     LENGTH = 4
 
+    @classmethod
+    def from_bytes(cls, bytes_data: bytes):
+        return cls(struct.unpack('>f', bytes_data)[0])
+
 
 @attr.s(auto_attribs=True)
 class Float64Data(BaseDlmsData):
@@ -342,6 +351,10 @@ class Float64Data(BaseDlmsData):
 
     TAG = 24
     LENGTH = 8
+
+    @classmethod
+    def from_bytes(cls, bytes_data: bytes):
+        return cls(struct.unpack('>d', bytes_data)[0])
 
 
 @attr.s(auto_attribs=True)
@@ -488,9 +501,9 @@ class DlmsDataParser:
     def decode_data(self, data_class) -> AbstractDlmsData:
         if data_class.LENGTH == VARIABLE_LENGTH:
             length = self.decode_variable_integer()
-            return data_class.from_bytes(self.get_bytes(length))
+            return data_class.from_bytes(bytes(self.get_bytes(length)))
         else:
-            return data_class.from_bytes(self.get_bytes(data_class.LENGTH))
+            return data_class.from_bytes(bytes(self.get_bytes(data_class.LENGTH)))
 
     def decode_array(self) -> DataArray:
         item_count = self.decode_variable_integer()
@@ -560,14 +573,13 @@ def encode_variable_integer(length: int):
         encoded_length = 1
         while True:
             try:
-                length.to_bytes(encoded_length, "big")
+                _bytes = length.to_bytes(encoded_length, "big")
             except OverflowError:
                 encoded_length += 1
                 continue
             break
 
         length_byte = (0b10000000 + encoded_length).to_bytes(1, "big")
-        return length_byte + length.to_bytes(encoded_length, "big")
-
+        return length_byte + _bytes
     else:
         return length.to_bytes(1, "big")

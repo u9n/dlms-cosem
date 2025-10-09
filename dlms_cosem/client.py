@@ -10,7 +10,8 @@ from dlms_cosem.io import DlmsTransport
 from dlms_cosem.connection import DlmsConnection, DlmsConnectionSettings
 from dlms_cosem.cosem.selective_access import RangeDescriptor
 from dlms_cosem.protocol import acse, xdlms
-from dlms_cosem.protocol.xdlms import ConfirmedServiceError
+from dlms_cosem.protocol.xdlms import ConfirmedServiceError, GetResponseWithList
+from dlms_cosem.dlms_data import decode_variable_integer, AbstractDlmsData
 
 LOG = structlog.get_logger()
 
@@ -116,7 +117,7 @@ class DlmsClient:
 
     def get_many(
             self, cosem_attributes_with_selection: List[cosem.CosemAttributeWithSelection]
-    ):
+    ) -> list[AbstractDlmsData]:
         """
         Make a GET.WITH_LIST call. Get many items in one request.
         """
@@ -125,13 +126,28 @@ class DlmsClient:
         )
         self.send(out)
         response = self.next_event()
+        if isinstance(response, xdlms.GetResponseWithBlock):
+            buffer = bytearray(b'')
+            while isinstance(response, xdlms.GetResponseWithBlock):
+                buffer.extend(response.data)
+                self.send(
+                    xdlms.GetRequestNext(
+                        invoke_id_and_priority=response.invoke_id_and_priority,
+                        block_number=response.block_number,
+                    )
+                )
+                response = self.next_event()
+            buffer.extend(response.data)
+            LOG.debug(f'recieved multiBlock responses with: {buffer}')
+            length = buffer.pop(0)
+            return GetResponseWithList.parse_list_response(buffer, length)
         if isinstance(response, xdlms.ExceptionResponse):
             raise exceptions.DlmsClientException(
                 f"Received an Exception response with state error: "
                 f"{response.state_error.name} and service error: "
                 f"{response.service_error.name}"
             )
-        return response
+        return response.response_data
 
     def set(self, cosem_attribute: cosem.CosemAttribute, data: bytes):
         self.send(xdlms.SetRequestNormal(cosem_attribute=cosem_attribute, data=data))

@@ -529,7 +529,7 @@ class GetResponseWithList(AbstractXDlmsApdu):
     def parse_list_response(source_bytes: bytes, amount: int):
         data = bytearray(source_bytes)
         dlms_data_items = list()
-        for index in range(0, amount):
+        for _ in range(amount):
             answer_selection = data.pop(0)
             if answer_selection == 0:
                 # DLMS data

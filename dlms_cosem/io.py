@@ -328,13 +328,16 @@ class HdlcTransport:
         self.io.disconnect()
         return response
 
-    def next_event(self):
+    def next_event(self, retries=10):
         """
         Will read the serial line until a proper response event is read.
         :return:
         """
 
         while True:
+            retries -= 1
+            if retries < 0:
+                raise exceptions.CommunicationError("Too many retries!")
             # If we already have a complete event buffered internally, just
             # return that. Otherwise, read some data, add it to the internal
             # buffer, and then try again.

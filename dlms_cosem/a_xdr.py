@@ -113,7 +113,7 @@ class AXdrDecoder:
 
     @property
     def buffer_empty(self) -> bool:
-        return self.pointer == len(self.buffer)
+        return self.pointer >= len(self.buffer)
 
     def decode(self, data: bytes):
         # clear previous results
@@ -159,7 +159,7 @@ class AXdrDecoder:
 
         # fixed lenght?  # TODO: Is all attributes of fixed lenght in X-ADR?
         if attribute.length != VARIABLE_LENGTH:
-            data = self.get_bytes(attribute.length)
+            data = bytes(self.get_bytes(attribute.length))
             return attribute.create_instance(data)
         else:
             # check if last element
@@ -167,7 +167,7 @@ class AXdrDecoder:
                 return attribute.create_instance()
             # We know hot to create the instance (just not how long it is)
             length = self.get_axdr_length()
-            data = self.get_bytes(length)
+            data = bytes(self.get_bytes(length))
             return attribute.create_instance(data)
 
     def decode_fixed_length_attribute(self, encoding: Attribute, data) -> Any:
@@ -238,9 +238,9 @@ class AXdrDecoder:
 
         if data_class.LENGTH == VARIABLE_LENGTH:
             length = self.get_axdr_length()
-            return data_class.from_bytes(self.get_bytes(length)).to_python()
+            return data_class.from_bytes(bytes(self.get_bytes(length))).to_python()
         else:
-            return data_class.from_bytes(self.get_bytes(data_class.LENGTH)).to_python()
+            return data_class.from_bytes(bytes(self.get_bytes(data_class.LENGTH))).to_python()
 
     def decode_array(self):
         item_count = self.get_axdr_length()
