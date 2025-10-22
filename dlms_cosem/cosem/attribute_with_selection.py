@@ -36,4 +36,4 @@ class CosemAttributeWithSelection:
         else:
             out.append(0)
 
-        return out
+        return bytes(out)

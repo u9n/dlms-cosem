@@ -199,7 +199,7 @@ class AXdrDecoder:
                 parsed_data.append(
                     data_class.from_bytes(
                         bytes(self.get_bytes(data_class.LENGTH))
-                    ).to_python()
+                    )
                 )
                 continue
 
@@ -210,14 +210,14 @@ class AXdrDecoder:
             parsed_data.append(
                 data_class.from_bytes(
                     bytes(self.get_bytes(length_or_items))
-                ).to_python()
+                )
             )
             continue
 
         if len(parsed_data) == 1:
             return {seq.attribute_name: parsed_data[0]}
 
-        return {seq.attribute_name: parsed_data}
+        return {seq.attribute_name: dlms_data.DataArray(parsed_data)}
 
     def decode_sequence_of(self):
 
@@ -238,16 +238,16 @@ class AXdrDecoder:
 
         if data_class.LENGTH == VARIABLE_LENGTH:
             length = self.get_axdr_length()
-            return data_class.from_bytes(bytes(self.get_bytes(length))).to_python()
+            return data_class.from_bytes(bytes(self.get_bytes(length)))
         else:
-            return data_class.from_bytes(bytes(self.get_bytes(data_class.LENGTH))).to_python()
+            return data_class.from_bytes(bytes(self.get_bytes(data_class.LENGTH)))
 
     def decode_array(self):
         item_count = self.get_axdr_length()
         elements = list()
         for _ in range(0, item_count):
             elements.append(self.decode_sequence_of())
-        return elements
+        return dlms_data.DataArray(elements)
 
     def decode_structure(self):
         item_count = self.get_axdr_length()
@@ -255,7 +255,7 @@ class AXdrDecoder:
         for _ in range(0, item_count):
             elements.append(self.decode_sequence_of())
 
-        return elements
+        return dlms_data.DataStructure(elements)
 
     def get_bytes(self, length: int) -> bytearray:
         """Gets some bytes from the buffer and moves the pointer forward."""
@@ -277,18 +277,3 @@ class AXdrDecoder:
         for _ in range(0, number_of_bytes_representing_the_length):
             length_data.extend(self.get_bytes(1))
         return int.from_bytes(length_data, "big")
-
-
-class DlmsDataToPythonConverter:
-    def __init__(self, encoding_conf: List[dlms_data.BaseDlmsData]):
-        self.encoding_conf = encoding_conf
-
-    def to_python(self):
-        out_list = list()
-        for item in self.encoding_conf:
-            out_list.append(item.value)
-
-        return out_list
-
-    def to_dlms(self, data: List):
-        raise NotImplementedError("Not yet supported to convert python values to DLMS")

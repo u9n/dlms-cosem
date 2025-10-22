@@ -8,7 +8,7 @@ def test_parse_data_from_kamstrup_han_port():
 
     parsed = parse_as_dlms_data(data)
 
-    assert len(parsed) == 25
+    assert len(parsed.to_python()) == 25
 
 
 class TestVisibleString:
@@ -22,7 +22,7 @@ class TestVisibleString:
     @pytest.mark.parametrize("encoded,decoded", parameter_data)
     def test_parse_data(self, encoded, decoded):
         parsed = parse_as_dlms_data(encoded)
-        assert parsed == decoded
+        assert parsed.to_python() == decoded
 
     @pytest.mark.parametrize("encoded,decoded", parameter_data)
     def test_encode_data(self, encoded, decoded):

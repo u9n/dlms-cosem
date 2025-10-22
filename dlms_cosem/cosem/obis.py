@@ -11,7 +11,7 @@ five_part = re.compile("^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$
 
 def allowed_range_for_obis_code(instance, attribute, value: int):
 
-    if 0 > value > 255:
+    if not 0 <= value <= 255:
         raise ValueError("An obis can only be between 0 - 255")
 
 
@@ -67,6 +67,7 @@ class Obis:
                 c=int(parts[2]),
                 d=int(parts[3]),
                 e=int(parts[4]),
+                f=int(parts[5]),
             )
         five_match = re.match(five_part, obis_string)
         if five_match:

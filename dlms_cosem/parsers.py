@@ -51,7 +51,7 @@ class ProfileGenericBufferParser:
         """
         parsed_entries = list()
         last_entry_timestamp: Optional[datetime] = None
-        for entry in entries:
+        for entry in entries.to_python():
             if len(entry) != len(self.capture_objects):
                 raise ValueError(
                     f"Unable to parse ProfileGeneric entry as the amount of columns "

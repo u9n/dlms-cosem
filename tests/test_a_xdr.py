@@ -64,10 +64,10 @@ class TestAxdrDecoder:
 
         decoder = AXdrDecoder(encoding_conf)
 
-        result = decoder.decode(data)["result"]
+        result = decoder.decode(data)["result"].to_python()
         assert len(result) == 24
         assert len(result[0]) == 3
-        assert isinstance(result[0][0], bytearray)
+        assert isinstance(result[0][0], bytes)
         assert isinstance(result[0][1], int)
         assert isinstance(result[0][2], int)
 
@@ -130,7 +130,7 @@ def test_lte_monitoring_quality_of_service():
     }
     """
     data = b"\x02\x05\x12\x02\xd0\x12\x0c\xa8\x11\x12\x11\x1e\x0f\xc0"
-    result = parse_as_dlms_data(data)
+    result = parse_as_dlms_data(data).to_python()
     assert 5 == len(result)
 
 
@@ -148,7 +148,7 @@ def test_gsm_diagnistics_cell_info():
     }
     """
     data = b"\x02\x07\x06\x00\x00\x00\x00\x12\x00\x00\x11\x00\x11\x00\x12\x00\x00\x12\x00\x00\x12\x00\x00"
-    result = parse_as_dlms_data(data)
+    result = parse_as_dlms_data(data).to_python()
 
     assert 7 == len(result)
     assert result[0] == 0

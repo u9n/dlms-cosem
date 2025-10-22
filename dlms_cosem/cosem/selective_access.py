@@ -13,8 +13,6 @@ class RangeDescriptor:
     The range descriptor can be used to read buffers of Profile Generic.
     Only buffer element that corresponds to the descriptor shall be returned in a get
     request.
-
-
     """
 
     ACCESS_DESCRIPTOR: ClassVar[int] = 1
@@ -22,8 +20,8 @@ class RangeDescriptor:
     restricting_object: CaptureObject = attr.ib(
         validator=attr.validators.instance_of(CaptureObject)
     )
-    from_value: datetime = attr.ib(validator=attr.validators.instance_of(datetime))
-    to_value: datetime = attr.ib(validator=attr.validators.instance_of(datetime))
+    from_value: datetime | dlms_data.AbstractDlmsData = attr.ib(validator=attr.validators.instance_of((datetime, dlms_data.AbstractDlmsData)))
+    to_value: datetime | dlms_data.AbstractDlmsData = attr.ib(validator=attr.validators.instance_of((datetime, dlms_data.AbstractDlmsData)))
     selected_values: Optional[List[CaptureObject]] = attr.ib(default=None)
 
     @classmethod
@@ -35,7 +33,7 @@ class RangeDescriptor:
                 f"Access descriptor {access_descriptor} is not valid for "
                 f"RangeDescriptor. It should be {cls.ACCESS_DESCRIPTOR}"
             )
-        parsed_data = utils.parse_as_dlms_data(data)
+        parsed_data = utils.parse_as_dlms_data(data).to_python()
 
         restricting_object_data = parsed_data[0]
         from_value_data = parsed_data[1]
@@ -70,14 +68,20 @@ class RangeDescriptor:
         out.append(self.ACCESS_DESCRIPTOR)
         out.extend(b"\x02\x04")  # structure of 4 elements
         out.extend(self.restricting_object.to_bytes())
-        out.extend(
-            dlms_data.OctetStringData(
-                time.datetime_to_bytes(self.from_value)
-            ).to_bytes()
-        )
-        out.extend(
-            dlms_data.OctetStringData(time.datetime_to_bytes(self.to_value)).to_bytes()
-        )
+        if isinstance(self.from_value, dlms_data.AbstractDlmsData):
+            out.extend(self.from_value.to_bytes())
+        else:
+            out.extend(
+                dlms_data.OctetStringData(
+                    time.datetime_to_bytes(self.from_value)
+                ).to_bytes()
+            )
+        if isinstance(self.to_value, dlms_data.AbstractDlmsData):
+            out.extend(self.to_value.to_bytes())
+        else:
+            out.extend(
+                dlms_data.OctetStringData(time.datetime_to_bytes(self.to_value)).to_bytes()
+            )
         if not self.selected_values:
             out.extend(b"\x01\x00")  # empty array for selected values means all columns
         else:
@@ -88,14 +92,14 @@ class RangeDescriptor:
 
 
 def validate_unsigned_double_long_int(instance, attribute, value):
-    if 0 >= value >= 0xFFFFFFFF:
+    if not 0 <= value <= 0xFFFFFFFF:
         raise ValueError(
             f"{value} is not withing the limits of a unsigned double long integer"
         )
 
 
 def validate_unsigned_long_int(instance, attribute, value):
-    if 0 >= value >= 0xFFFF:
+    if not 0 <= value <= 0xFFFF:
         raise ValueError(
             f"{value} is not withing the limits of a unsigned long integer"
         )
@@ -133,10 +137,41 @@ class EntryDescriptor:
 
     @classmethod
     def from_bytes(cls, source_bytes) -> "EntryDescriptor":
-        raise NotImplementedError()
+        data = bytearray(source_bytes)
+        access_descriptor = data.pop(0)
+        if access_descriptor is not cls.ACCESS_DESCRIPTOR:
+            raise ValueError(
+                f"Access descriptor {access_descriptor} is not valid for "
+                f"RangeDescriptor. It should be {cls.ACCESS_DESCRIPTOR}"
+            )
+        parsed_data = utils.parse_as_dlms_data(data).to_python()
+        from_entry = parsed_data[0]
+        to_entry = parsed_data[1]
+        from_selected_value = parsed_data[2]
+        to_selected_value = parsed_data[3]
+        return cls(
+            from_entry=from_entry, to_entry=to_entry,
+            from_selected_value=from_selected_value,
+            to_selected_value=to_selected_value,
+        )
 
     def to_bytes(self) -> bytes:
-        raise NotImplementedError()
+        out = bytearray()
+        out.append(self.ACCESS_DESCRIPTOR)
+        out.append(b'\x02\x04')
+        out.extend(
+            dlms_data.DoubleLongUnsignedData(self.from_entry).to_bytes()
+        )
+        out.extend(
+            dlms_data.DoubleLongUnsignedData(self.to_entry).to_bytes()
+        )
+        out.extend(
+            dlms_data.UnsignedLongData(self.from_selected_value).to_bytes()
+        )
+        out.extend(
+            dlms_data.UnsignedLongData(self.to_selected_value).to_bytes()
+        )
+        return bytes(out)
 
 
 @attr.s(auto_attribs=True)
