@@ -85,7 +85,7 @@ with DlmsClient(
         CURRENT_ASSOCIATION_OBJECTS,
     )
 
-    result = utils.parse_as_dlms_data(profile)
+    result = utils.parse_as_dlms_data(profile).to_python()
     meter_objects_list = AssociationObjectListParser.parse_entries(result)
     meter_objects_dict = {
         obj.logical_name.to_string(): obj for obj in meter_objects_list

@@ -1,7 +1,6 @@
 import abc
 import datetime
 from typing import *
-from typing import List, Optional
 import struct
 
 import attr
@@ -61,6 +60,9 @@ class NullData(BaseDlmsData):
     def from_bytes(cls, bytes_data: bytes):
         return cls(None)
 
+    def to_bytes(self):
+        return b''
+
     def to_python(self) -> Any:
         return None
 
@@ -83,10 +85,7 @@ class DataArray(BaseDlmsData):
         return bytes(out)
 
     def to_python(self) -> List[Any]:
-        values = list()
-        for item in self.value:
-            values.append(item.to_python())
-        return values
+        return [item.to_python() for item in self.value]
 
 
 @attr.s(auto_attribs=True)
@@ -105,10 +104,7 @@ class DataStructure(BaseDlmsData):
         return bytes(out)
 
     def to_python(self) -> List[Any]:
-        values = list()
-        for item in self.value:
-            values.append(item.to_python())
-        return values
+        return [item.to_python() for item in self.value]
 
 
 @attr.s(auto_attribs=True)
@@ -119,7 +115,10 @@ class BooleanData(BaseDlmsData):
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
         value = bool(int.from_bytes(bytes_data, "big"))
-        return cls(value)  # TODO: test this.
+        return cls(value)
+
+    def to_bytes(self):
+        return int.to_bytes(self.value)
 
 
 @attr.s(auto_attribs=True)
@@ -175,9 +174,6 @@ class OctetStringData(BaseDlmsData):
         return cls(value=bytes_data)
 
     def value_to_bytes(self) -> bytes:
-        return self.value
-
-    def to_python(self) -> bytes:
         return self.value
 
 
@@ -370,6 +366,9 @@ class DateTimeData(BaseDlmsData):
             raise ValueError(f"Datetime should be 12 bytes long, got {len(bytes_data)}")
         return cls(time.datetime_from_bytes(bytes_data))
 
+    def to_bytes(self):
+        return
+
 
 @attr.s(auto_attribs=True)
 class DateData(BaseDlmsData):
@@ -542,7 +541,7 @@ class DlmsDataParser:
         return int.from_bytes(length_data, "big")
 
 
-def decode_variable_integer(bytes_input: bytes):
+def decode_variable_integer(bytes_input: bytes) -> Tuple[int, bytes]:
     """
     If the length is fitting in 7 bits it can be encoded in 1 bytes.
     If it is larger then 7 bybitstes the last bit of the first byte indicates
@@ -568,7 +567,7 @@ def decode_variable_integer(bytes_input: bytes):
         return length, bytes_input[1:]
 
 
-def encode_variable_integer(length: int):
+def encode_variable_integer(length: int) -> bytes:
     if length > 0b01111111:
         encoded_length = 1
         while True:

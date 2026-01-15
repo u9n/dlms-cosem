@@ -79,37 +79,37 @@ class ClockStatus:
 
 def validate_day(value: Optional[int]):
     if value:
-        if 1 > value > 31:
+        if 1 > value or value > 31:
             raise ValueError(f"Day can only be within 1-31")
 
 
 def validate_month(value: Optional[int]):
     if value:
-        if 1 > value > 12:
+        if 1 > value or value > 12:
             raise ValueError(f"Month can only be within 1-12")
 
 
 def validate_weekday(value: Optional[int]):
     if value:
-        if 1 > value > 7:
+        if 1 > value or value > 7:
             raise ValueError(f"Day can only be within 1-7")
 
 
 def validate_hour(value: Optional[int]):
     if value:
-        if 0 > value > 23:
+        if 0 > value or value > 23:
             raise ValueError(f"Minutes and seconds can only be within 0-23")
 
 
 def validate_minute_or_second(value: Optional[int]):
     if value:
-        if 0 > value > 59:
+        if 0 > value or value > 59:
             raise ValueError(f"Minutes and seconds can only be within 0-59")
 
 
 def validate_hundredths(value: Optional[int]):
     if value:
-        if 0 > value > 99:
+        if 0 > value or value > 99:
             raise ValueError(f"Hundredths can only be within 0-59")
 
 

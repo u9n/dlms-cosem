@@ -213,7 +213,7 @@ class DlmsClient:
             if not hls_response:
                 raise HLSError("No HLS data in response")
 
-            hls_data = utils.parse_as_dlms_data(hls_response)
+            hls_data = utils.parse_as_dlms_data(hls_response).to_python()
 
             if not hls_data:
                 raise HLSError("Did not receive any HLS response data")

@@ -2,7 +2,7 @@ import attr
 
 from dlms_cosem import dlms_data, utils
 
-from .base import CosemAttribute
+from .base import CosemAttribute, Obis
 
 
 @attr.s(auto_attribs=True)
@@ -22,8 +22,12 @@ class CaptureObject:
         """
         It should be a structure of 4 elements-
         """
-        # data = utils.parse_as_dlms_data(source_bytes)
-        raise NotImplementedError()
+        data = utils.parse_as_dlms_data(source_bytes)
+        cosem_attribute = CosemAttribute(
+            data[0], Obis(*(v for v in data[1])), data[3]
+        )
+        data_index = data[4]
+        return cls(cosem_attribute, data_index)
 
     def to_bytes(self) -> bytes:
         out = bytearray()

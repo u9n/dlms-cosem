@@ -4,7 +4,7 @@ from typing import Optional
 import attr
 
 from dlms_cosem import a_xdr
-from dlms_cosem.dlms_data import OctetStringData
+from dlms_cosem.dlms_data import OctetStringData, encode_variable_integer
 from dlms_cosem.protocol.xdlms.base import AbstractXDlmsApdu
 from dlms_cosem.security import SecurityControlField, decrypt
 
@@ -73,11 +73,13 @@ class GeneralGlobalCipher(AbstractXDlmsApdu):
             out.extend(self.system_title)
         else:
             out.extend(b"\x00")
-        out.append(
-            len(
-                self.security_control.to_bytes()
-                + self.invocation_counter.to_bytes(4, "big")
-                + self.ciphered_text
+        out.extend(
+            encode_variable_integer(
+                len(
+                    self.security_control.to_bytes()
+                    + self.invocation_counter.to_bytes(4, "big")
+                    + self.ciphered_text
+                )
             )
         )
         out.extend(self.security_control.to_bytes())

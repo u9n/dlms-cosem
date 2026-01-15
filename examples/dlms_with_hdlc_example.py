@@ -173,6 +173,6 @@ with management_client.session() as client:
         capture_period=60,
     )
 
-    result = utils.parse_as_dlms_data(profile)
+    result = utils.parse_as_dlms_data(profile).to_python()
     pprint(profile)
     pprint(result)

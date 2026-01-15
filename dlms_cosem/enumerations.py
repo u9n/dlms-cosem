@@ -288,6 +288,8 @@ class CosemInterface(IntEnum):
     IEC_14908_PROTOCOL_STATUS = 132
     IEC_14908_DIAGNOSTICS = 133
 
+    ACTIVE_UNITS_TARIFF_PLAN = 8192
+
     # TODO: how do we represent different versions of interface classes.
     #   I guess the python class representing the interface should have the versions
     #   Like ProfileGenericV1, ProfileGerericV2

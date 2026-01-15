@@ -379,7 +379,7 @@ class DlmsConnection:
                 if apdu.status != enums.ActionResultStatus.SUCCESS:
                     self.state.process_event(dlms_state.HlsFailed())
                 if self.authentication.hls_meter_data_is_valid(
-                    utils.parse_as_dlms_data(apdu.data), self
+                    utils.parse_as_dlms_data(apdu.data).to_python(), self
                 ):
                     self.state.process_event(dlms_state.HlsSuccess())
                 else:
