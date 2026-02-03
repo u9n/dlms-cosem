@@ -334,6 +334,9 @@ class Float32Data(BaseDlmsData):
     TAG = 23
     LENGTH = 4
 
+    def value_to_bytes(self):
+        return struct.pack('>f', self.value)
+
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
         return cls(struct.unpack('>f', bytes_data)[0])
@@ -347,6 +350,9 @@ class Float64Data(BaseDlmsData):
 
     TAG = 24
     LENGTH = 8
+
+    def value_to_bytes(self):
+        return struct.pack('>d', self.value)
 
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
@@ -362,12 +368,13 @@ class DateTimeData(BaseDlmsData):
 
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
-        if len(bytes_data) != cls.LENGTH:
-            raise ValueError(f"Datetime should be 12 bytes long, got {len(bytes_data)}")
-        return cls(time.datetime_from_bytes(bytes_data))
+        return cls(time.DlmsDateTime.from_bytes(bytes_data))
 
-    def to_bytes(self):
-        return
+    def value_to_bytes(self):
+        return self.value.to_bytes()
+
+    def to_python(self):
+        return self.value
 
 
 @attr.s(auto_attribs=True)
@@ -379,9 +386,13 @@ class DateData(BaseDlmsData):
 
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
-        if len(bytes_data) != cls.LENGTH:
-            raise ValueError(f"Date should be 5 bytes long, got {len(bytes_data)}")
-        return cls(time.date_from_bytes(bytes_data))
+        return cls(time.DlmsDate.from_bytes(bytes_data))
+
+    def value_to_bytes(self):
+        return self.value.to_bytes()
+
+    def to_python(self):
+        return self.value
 
 
 @attr.s(auto_attribs=True)
@@ -393,9 +404,13 @@ class TimeData(BaseDlmsData):
 
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
-        if len(bytes_data) != cls.LENGTH:
-            raise ValueError(f"Time should be 4 bytes long, got {len(bytes_data)}")
-        return cls(time.time_from_bytes(bytes_data))
+        return cls(time.DlmsTime.from_bytes(bytes_data))
+
+    def value_to_bytes(self):
+        return self.value.to_bytes()
+
+    def to_python(self):
+        return self.value
 
 
 @attr.s(auto_attribs=True)
