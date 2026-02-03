@@ -150,8 +150,16 @@ class DlmsClient:
         return response.response_data
 
     def set(self, cosem_attribute: cosem.CosemAttribute, data: bytes):
-        self.send(xdlms.SetRequestNormal(cosem_attribute=cosem_attribute, data=data))
-        return self.next_event()
+        naive_request = xdlms.SetRequestNormal(cosem_attribute=cosem_attribute, data=data)
+        gen = xdlms.SetRequestFactory.to_gen(naive_request, 255)
+        try:
+            req = next(gen)
+            self.send(req)
+            while True:
+                resp = self.next_event()
+                req = gen.send(resp)
+        except StopIteration:
+            return resp
 
     def action(self, method: cosem.CosemMethod, data: bytes):
         self.send(xdlms.ActionRequestNormal(cosem_method=method, data=data))

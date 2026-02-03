@@ -100,7 +100,7 @@ class SetRequestNormal(AbstractXDlmsApdu):
 
 
 @attr.s(auto_attribs=True)
-class SetRequestWithFirstBlock:
+class SetRequestWithFirstBlock(AbstractXDlmsApdu):
     """
     Set-Request-With-First-Datablock ::= SEQUENCE
     {
@@ -117,12 +117,32 @@ class SetRequestWithFirstBlock:
     raw-data        OCTET STRING
     }
     """
+    TAG: ClassVar[int] = 193
+    HEADER_SIZE: ClassVar[int] = 8
+    RESPONSE_TYPE: ClassVar[enums.SetRequestType] = enums.SetRequestType.WITH_FIRST_BLOCK
+    data: bytes = attr.ib(validator=attr.validators.instance_of(bytes))
+    invoke_id_and_priority: InvokeIdAndPriority = attr.ib(
+        factory=InvokeIdAndPriority,
+        validator=attr.validators.instance_of(InvokeIdAndPriority),
+    )
 
-    ...
+    def to_bytes(self):
+        out = bytearray()
+        out.append(self.TAG)
+        out.append(self.RESPONSE_TYPE.value)
+        out.extend(self.invoke_id_and_priority.to_bytes())
+        out.append(0) # last block?
+        out.extend(int.to_bytes(1, 4, 'big')) # first block
+        out.extend(self.data)
+        return bytes(out)
+
+    @classmethod
+    def from_bytes(cls):
+        raise NotImplementedError()
 
 
 @attr.s(auto_attribs=True)
-class SetRequestWithBlock:
+class SetRequestWithBlock(AbstractXDlmsApdu):
     """
     Set-Request-With-Datablock ::= SEQUENCE
     {
@@ -137,8 +157,29 @@ class SetRequestWithBlock:
     raw-data        OCTET STRING
     }
     """
+    TAG: ClassVar[int] = 193
+    HEADER_SIZE: ClassVar[int] = 8
+    RESPONSE_TYPE: ClassVar[enums.SetRequestType] = enums.SetRequestType.WITH_BLOCK
+    last_block: bool = attr.ib(validator=attr.validators.instance_of(bool))
+    data: bytes = attr.ib(validator=attr.validators.instance_of(bytes))
+    no: int = attr.ib(validator=attr.validators.instance_of(int))
+    invoke_id_and_priority: InvokeIdAndPriority = attr.ib(
+        factory=InvokeIdAndPriority,
+        validator=attr.validators.instance_of(InvokeIdAndPriority),
+    )
 
-    ...
+    def to_bytes(self):
+        out = bytearray()
+        out.append(self.TAG)
+        out.append(self.RESPONSE_TYPE.value)
+        out.extend(self.invoke_id_and_priority.to_bytes())
+        out.append(self.last_block)
+        out.append(int.to_bytes(self.no, 4, 'big'))
+        out.extend(self.data)
+        return bytes(out)
+
+    def from_bytes(self):
+        raise NotImplementedError()
 
 
 @attr.s(auto_attribs=True)
@@ -197,6 +238,38 @@ class SetRequestFactory:
 
     TAG: ClassVar[int] = 193
 
+    @classmethod
+    def to_gen(cls, srn: SetRequestNormal, medium_size: int):
+        data = bytearray()
+        data.extend(srn.cosem_attribute.to_bytes())
+        if srn.access_selection:
+            data.extend(b"\x01")
+            data.extend(srn.access_selection.to_bytes())
+        else:
+            data.extend(b"\x00")
+        data.extend(srn.data)
+        data = bytes(data)
+        if len(srn.to_bytes()) > medium_size: #complex case
+            #first block
+            i = 1
+            size = medium_size - SetRequestWithFirstBlock.HEADER_SIZE
+            data_to_send = data[:size]
+            data = data[size:]
+            resp = yield SetRequestWithFirstBlock(data_to_send, srn.invoke_id_and_priority)
+            print(resp)
+            # TODO: check resp
+            size = medium_size - SetRequestWithBlock.HEADER_SIZE
+            # another blocks
+            while data:
+                data_to_send = data[:size]
+                data = data[size:]
+                i += 1
+                resp = yield SetRequestWithBlock(not len(data), data_to_send, i, srn.invoke_id_and_priority)
+                print(resp)
+                # TODO: check resp
+        else:
+            yield srn
+
     @staticmethod
     def from_bytes(source_bytes: bytes):
         data = bytearray(source_bytes)
@@ -209,7 +282,6 @@ class SetRequestFactory:
         request_type = enums.SetRequestType(data.pop(0))
         if request_type == enums.SetRequestType.NORMAL:
             return SetRequestNormal.from_bytes(source_bytes)
-
         else:
             raise NotImplementedError("Only SetRequestNormal implemented")
 

@@ -98,6 +98,8 @@ DLMS_STATE_TRANSITIONS = {
         xdlms.GetRequestNormal: AWAITING_GET_RESPONSE,
         xdlms.GetRequestWithList: AWAITING_GET_RESPONSE,
         xdlms.SetRequestNormal: AWAITING_SET_RESPONSE,
+        xdlms.SetRequestWithFirstBlock: AWAITING_SET_RESPONSE,
+        xdlms.SetRequestWithBlock: AWAITING_SET_RESPONSE,
         HlsStart: SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT,
         RejectAssociation: NO_ASSOCIATION,
         xdlms.ActionRequestNormal: AWAITING_ACTION_RESPONSE,
