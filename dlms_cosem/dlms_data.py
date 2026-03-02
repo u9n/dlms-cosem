@@ -10,6 +10,40 @@ from dlms_cosem import time
 VARIABLE_LENGTH = -1
 
 
+def convert_datetime_to_date(
+    in_value: Optional[Union[datetime.datetime, datetime.date]],
+) -> Optional[datetime.date]:
+    if in_value is None:
+        return None
+
+    if isinstance(in_value, datetime.datetime):
+        return in_value.date()
+
+    if isinstance(in_value, datetime.date):
+        return in_value
+
+    raise ValueError(
+        f"DateData.value can only be datetime.date, datetime.datetime or None. Got {type(in_value)!r}"
+    )
+
+
+def convert_datetime_to_time(
+    in_value: Optional[Union[datetime.datetime, datetime.time]],
+) -> Optional[datetime.time]:
+    if in_value is None:
+        return None
+
+    if isinstance(in_value, datetime.datetime):
+        return in_value.time()
+
+    if isinstance(in_value, datetime.time):
+        return in_value
+
+    raise ValueError(
+        f"TimeData.value can only be datetime.time, datetime.datetime or None. Got {type(in_value)!r}"
+    )
+
+
 class AbstractDlmsData(abc.ABC):
     @classmethod
     @abc.abstractmethod
@@ -365,11 +399,25 @@ class DateData(BaseDlmsData):
     TAG = 26
     LENGTH = 5
 
+    value: Optional[datetime.date] = attr.ib(
+        default=None, converter=convert_datetime_to_date
+    )
+
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
         if len(bytes_data) != cls.LENGTH:
             raise ValueError(f"Date should be 5 bytes long, got {len(bytes_data)}")
+
+        if bytes_data == b"\xff\xff\xff\xff\xff":
+            return cls(None)
+
         return cls(time.date_from_bytes(bytes_data))
+
+    def value_to_bytes(self) -> bytes:
+        if self.value is None:
+            return b"\xff\xff\xff\xff\xff"
+
+        return time.date_to_bytes(self.value)
 
 
 @attr.s(auto_attribs=True)
@@ -379,11 +427,25 @@ class TimeData(BaseDlmsData):
     TAG = 27
     LENGTH = 4
 
+    value: Optional[datetime.time] = attr.ib(
+        default=None, converter=convert_datetime_to_time
+    )
+
     @classmethod
     def from_bytes(cls, bytes_data: bytes):
         if len(bytes_data) != cls.LENGTH:
             raise ValueError(f"Time should be 4 bytes long, got {len(bytes_data)}")
+
+        if bytes_data == b"\xff\xff\xff\xff":
+            return cls(None)
+
         return cls(time.time_from_bytes(bytes_data))
+
+    def value_to_bytes(self) -> bytes:
+        if self.value is None:
+            return b"\xff\xff\xff\xff"
+
+        return time.time_to_bytes(self.value)
 
 
 @attr.s(auto_attribs=True)

@@ -14,12 +14,20 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
    layer can be disconnected right away.
 
 ### Changed
+* Renamed `TcpTransport` to `IPTransport` to reflect IP-wrapper semantics and kept
+  `TcpTransport` as a backward-compatible alias.
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+* Fixed RLRQ context handling so unciphered associations omit user information, and
+  ciphered associations reuse the original proposed xDLMS context from AARQ.
+* Fixed HDLC transport timeout handling so repeated empty serial reads no longer loop
+  forever and now raise a communication timeout error.
+* Implemented encoding and parsing rules for `DateData` and `TimeData`, including
+  support for `datetime` inputs and all-ones wildcard values mapping to `None`.
 
 ### Security
 

@@ -209,6 +209,13 @@ class DlmsConnection:
         )
     )
 
+    # Keep a copy of the context proposed in AARQ so the same context can be reused in
+    # RLRQ when ciphering is enabled.
+    proposed_initiate_request: Optional[xdlms.InitiateRequest] = attr.ib(
+        default=None,
+        init=False,
+    )
+
     settings: DlmsConnectionSettings = attr.ib(
         default=DlmsConnectionSettings(),
         converter=attr.converters.default_if_none(factory=DlmsConnectionSettings),
@@ -291,6 +298,7 @@ class DlmsConnection:
             )
 
         self.state.process_event(event)
+        self.register_proposed_context(event)
         LOG.debug(f"Preparing to send DLMS Request", request=event)
 
         if self.use_protection:
@@ -397,6 +405,39 @@ class DlmsConnection:
 
     def clear_buffer(self):
         self.buffer = bytearray()
+
+    @staticmethod
+    def copy_initiate_request(
+        initiate_request: xdlms.InitiateRequest,
+    ) -> xdlms.InitiateRequest:
+        return xdlms.InitiateRequest(
+            proposed_conformance=Conformance(
+                **attr.asdict(initiate_request.proposed_conformance)
+            ),
+            proposed_quality_of_service=initiate_request.proposed_quality_of_service,
+            client_max_receive_pdu_size=initiate_request.client_max_receive_pdu_size,
+            proposed_dlms_version_number=initiate_request.proposed_dlms_version_number,
+            response_allowed=initiate_request.response_allowed,
+            dedicated_key=initiate_request.dedicated_key,
+        )
+
+    def register_proposed_context(self, event: Any) -> None:
+        """
+        Keep track of the context proposed in AARQ so it can be reused in RLRQ.
+        """
+        if not isinstance(event, acse.ApplicationAssociationRequest):
+            return
+
+        if not event.user_information:
+            self.proposed_initiate_request = None
+            return
+
+        if not isinstance(event.user_information.content, xdlms.InitiateRequest):
+            return
+
+        self.proposed_initiate_request = self.copy_initiate_request(
+            event.user_information.content
+        )
 
     @property
     def use_protection(self) -> bool:
@@ -587,19 +628,33 @@ class DlmsConnection:
             user_information=acse.UserInformation(content=initiate_request),
         )
 
+    def get_rlrq_initiate_request(self) -> xdlms.InitiateRequest:
+        """
+        Return the original context proposed in AARQ when available.
+        """
+
+        if self.proposed_initiate_request is not None:
+            return self.copy_initiate_request(self.proposed_initiate_request)
+
+        return xdlms.InitiateRequest(
+            proposed_conformance=self.conformance,
+            client_max_receive_pdu_size=self.max_pdu_size,
+        )
+
     def get_rlrq(self) -> acse.ReleaseRequest:
         """
         Returns a ReleaseRequestApdu to release the current association if one should be used.
         """
 
-        initiate_request = xdlms.InitiateRequest(
-            proposed_conformance=self.conformance,
-            client_max_receive_pdu_size=self.max_pdu_size,
-        )
+        user_information = None
+
+        if self.use_protection:
+            initiate_request = self.get_rlrq_initiate_request()
+            user_information = acse.UserInformation(content=initiate_request)
 
         return acse.ReleaseRequest(
             reason=enums.ReleaseRequestReason.NORMAL,
-            user_information=acse.UserInformation(content=initiate_request),
+            user_information=user_information,
         )
 
     def update_negotiated_parameters(

@@ -2,7 +2,7 @@ import socket
 
 import pytest
 
-from dlms_cosem.io import BlockingTcpIO, TcpTransport
+from dlms_cosem.io import BlockingTcpIO, IPTransport, TcpTransport
 from dlms_cosem.exceptions import CommunicationError
 
 
@@ -18,7 +18,7 @@ class TestBlockingTcpTransport:
         server_socket.bind((self.host, self.port))
         server_socket.listen(1)
         io = BlockingTcpIO(host=self.host, port=self.port)
-        transport = TcpTransport(
+        transport = IPTransport(
             self.client_logical_address, self.server_logical_address, io
         )
         transport.connect()
@@ -30,7 +30,7 @@ class TestBlockingTcpTransport:
         server_socket.listen(1)
 
         io = BlockingTcpIO(host=self.host, port=self.port)
-        transport = TcpTransport(
+        transport = IPTransport(
             self.client_logical_address, self.server_logical_address, io
         )
         transport.connect()
@@ -39,7 +39,7 @@ class TestBlockingTcpTransport:
 
     def test_cant_connect_raises_communications_error(self):
         io = BlockingTcpIO(host=self.host, port=self.port)
-        transport = TcpTransport(
+        transport = IPTransport(
             self.client_logical_address, self.server_logical_address, io
         )
         with pytest.raises(CommunicationError):
@@ -51,7 +51,7 @@ class TestBlockingTcpTransport:
         server_socket.listen(1)
 
         io = BlockingTcpIO(host=self.host, port=self.port)
-        transport = TcpTransport(
+        transport = IPTransport(
             self.client_logical_address, self.server_logical_address, io
         )
         transport.connect()
@@ -64,10 +64,14 @@ class TestBlockingTcpTransport:
         server_socket.listen(1)
 
         io = BlockingTcpIO(host=self.host, port=self.port)
-        transport = TcpTransport(
+        transport = IPTransport(
             self.client_logical_address, self.server_logical_address, io
         )
         transport.connect()
         transport.disconnect()
         transport.disconnect()
         assert transport.io.tcp_socket is None
+
+
+def test_tcp_transport_is_kept_as_alias_for_backwards_compatibility():
+    assert TcpTransport is IPTransport

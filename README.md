@@ -49,19 +49,20 @@ A simple example of reading invocation counters using a public client:
 
 ```python
 from dlms_cosem.client import DlmsClient
-from dlms_cosem.io import TcpTransport, BlockingTcpIO
+from dlms_cosem.io import IPTransport, BlockingTcpIO
 from dlms_cosem.security import NoSecurityAuthentication
 from dlms_cosem import enumerations, cosem
 
 tcp_io = BlockingTcpIO(host="localhost", port=4059)
-tcp_transport = TcpTransport(io=tcp_io, server_logical_address=1, client_logical_address=16)
-client = DlmsClient(transport=tcp_transport, authentication=NoSecurityAuthentication())
+ip_transport = IPTransport(io=tcp_io, server_logical_address=1, client_logical_address=16)
+client = DlmsClient(transport=ip_transport, authentication=NoSecurityAuthentication())
 with client.session() as dlms_client:
     data = dlms_client.get(
         cosem.CosemAttribute(interface=enumerations.CosemInterface.DATA,
                              instance=cosem.Obis(0, 0, 0x2B, 1, 0), attribute=2, ))
 ```
 
+`TcpTransport` is kept as a backward-compatible alias of `IPTransport`.
 
 Look at the different files in the `examples` folder get a better feel on how to fully
 use the library.
