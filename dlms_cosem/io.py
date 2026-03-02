@@ -2,6 +2,7 @@ from __future__ import annotations  # noqa
 
 import socket
 import sys
+import time
 from typing import Optional, Tuple
 
 from dlms_cosem.hdlc import connection, address, state, frames
@@ -192,9 +193,11 @@ class BlockingTcpIO:
 
 
 @attr.s(auto_attribs=True)
-class TcpTransport:
+class IPTransport:
     """
-    A TCP transport.
+    A DLMS IP-wrapper transport.
+
+    Can be used over any IP-based IO implementation (for example TCP or UDP).
     """
 
     client_logical_address: int
@@ -243,6 +246,10 @@ class TcpTransport:
         LOG.debug("Received data", data=header_data + data, transport=self)
 
         return data
+
+
+# Backward compatible alias.
+TcpTransport = IPTransport
 
 
 @attr.s(auto_attribs=True)
@@ -334,13 +341,24 @@ class HdlcTransport:
         :return:
         """
 
+        timeout_at = time.monotonic() + self.timeout
+
         while True:
             # If we already have a complete event buffered internally, just
             # return that. Otherwise, read some data, add it to the internal
             # buffer, and then try again.
             event = self.hdlc_connection.next_event()
             if event is state.NEED_DATA:
-                self.hdlc_connection.receive_data(self.recv_frame())
+                if time.monotonic() >= timeout_at:
+                    raise exceptions.CommunicationError(
+                        f"Timed out waiting for HDLC response after {self.timeout} seconds"
+                    )
+
+                frame_data = self.recv_frame()
+                if not frame_data:
+                    continue
+
+                self.hdlc_connection.receive_data(frame_data)
                 continue
             return event
 

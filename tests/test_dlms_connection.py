@@ -134,6 +134,57 @@ def test_can_release_in_ready_state(rlrq: acse.ReleaseRequest):
     assert c.state.current_state == state.AWAITING_RELEASE_RESPONSE
 
 
+def test_get_rlrq_has_no_user_information_when_not_ciphered():
+    c = DlmsConnection(
+        client_system_title=b"12345678",
+        authentication=NoSecurityAuthentication(),
+    )
+
+    rlrq = c.get_rlrq()
+
+    assert rlrq.user_information is None
+    assert rlrq.to_bytes() == bytes.fromhex("6203800100")
+
+
+def test_get_rlrq_uses_original_proposed_context_when_ciphered():
+    proposed_conformance = Conformance(general_protection=True, get=True, set=True)
+    negotiated_conformance = Conformance(general_protection=True, get=True)
+
+    c = DlmsConnection(
+        client_system_title=b"12345678",
+        authentication=NoSecurityAuthentication(),
+        global_encryption_key=b"1111111111111111",
+        global_authentication_key=b"0000000000000000",
+        conformance=proposed_conformance,
+        max_pdu_size=2048,
+    )
+
+    c.send(c.get_aarq())
+
+    c.receive_data(
+        acse.ApplicationAssociationResponse(
+            result=enumerations.AssociationResult.ACCEPTED,
+            result_source_diagnostics=enumerations.AcseServiceUserDiagnostics.NULL,
+            ciphered=True,
+            system_title=b"METER123",
+            user_information=acse.UserInformation(
+                content=xdlms.InitiateResponse(
+                    negotiated_conformance=negotiated_conformance,
+                    server_max_receive_pdu_size=1024,
+                )
+            ),
+        ).to_bytes()
+    )
+    c.next_event()
+
+    rlrq = c.get_rlrq()
+
+    assert rlrq.user_information is not None
+    assert isinstance(rlrq.user_information.content, xdlms.InitiateRequest)
+    assert rlrq.user_information.content.proposed_conformance == proposed_conformance
+    assert rlrq.user_information.content.client_max_receive_pdu_size == 2048
+
+
 def test_receive_rlre_terminates_association(rlre: acse.ReleaseResponse):
     c = DlmsConnection(
         state=state.DlmsConnectionState(current_state=state.AWAITING_RELEASE_RESPONSE),

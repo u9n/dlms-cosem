@@ -16,7 +16,7 @@ PROJECT_URLS = {
 EMAIL = "henrik@pwit.se"
 AUTHOR = "Henrik Palmlund Wahlgren @ Palmlund Wahlgren Innovative Technology AB"
 REQUIRES_PYTHON = "~=3.7"
-VERSION = "24.1.0"
+VERSION = "25.1.0"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
@@ -120,7 +120,7 @@ setup(
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     include_package_data=True,
-    license="MIT",
+    license="Business Source License 1.1",
     zip_safe=False,
     keywords="AMR, Metering, smart meters, MDM, dlms, cosem",
     classifiers=CLASSIFIERS,
