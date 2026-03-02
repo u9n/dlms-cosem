@@ -102,7 +102,7 @@ management_client = DlmsClient(
 
 
 with management_client.session() as client:
-    read_to = dateparser.parse("2024-08-15T00:00:00-01:00")
+    read_to = dateparser.parse("2025-08-15T00:00:00-01:00")
     read_from = read_to - timedelta(days=500)
     profile = client.get(
         cosem.CosemAttribute(

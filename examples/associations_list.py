@@ -65,11 +65,7 @@ LOAD_PROFILE_BUFFER = cosem.CosemAttribute(
     attribute=2,
 )
 
-CURRENT_ASSOCIATION_OBJECTS = cosem.CosemAttribute(
-    interface=enumerations.CosemInterface.ASSOCIATION_LN,
-    instance=cosem.Obis(0, 0, 40, 0, 0),
-    attribute=2,
-)
+
 
 host = "127.0.0.1"
 port = 11703
