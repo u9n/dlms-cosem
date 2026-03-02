@@ -28,6 +28,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
   forever and now raise a communication timeout error.
 * Implemented encoding and parsing rules for `DateData` and `TimeData`, including
   support for `datetime` inputs and all-ones wildcard values mapping to `None`.
+* Corrected package metadata license in `setup.py` to match the Business Source
+  License 1.1 used by the project.
 
 ### Security
 
