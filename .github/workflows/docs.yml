@@ -6,6 +6,13 @@ on:
       - master
       - main
 
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -20,13 +27,12 @@ jobs:
           enable-cache: true
           cache-dependency-glob: |
             pyproject.toml
-            setup.py
+            uv.lock
           ignore-nothing-to-cache: true
 
-      - name: Install dependencies
+      - name: Install docs dependencies
         run: |
-          uv venv .venv --python 3.13 --clear
-          uv pip install mkdocs mkdocs-material
+          uv sync --extra docs --python 3.13 --locked
 
       - name: Deploy docs
         run: uv run mkdocs gh-deploy --force

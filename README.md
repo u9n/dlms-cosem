@@ -18,6 +18,12 @@ If you are not using a project-managed environment, you can also run:
 uv pip install dlms-cosem
 ```
 
+Or with pip:
+
+```bash
+pip install dlms-cosem
+```
+
 # Documentation
 
 Full documentation can be found at [www.dlms.dev](https://www.dlms.dev)
@@ -138,10 +144,38 @@ please contact us at `info(at)pwit.se`.
 
 # Development
 
+This library uses an `uv`-first development workflow.
+
+```bash
+uv sync --extra dev
+uv run pytest
+uvx pre-commit run --all-files
+```
+
+For maintainers, local releases can be built and uploaded with:
+
+```bash
+scripts/release.sh --repository testpypi
+# or
+scripts/release.sh
+```
+
 This library is developed by Palmlund Wahlgren Innovative Technology AB. We are
 based in Sweden and are members of the DLMS User Association.
 
 If you find a bug please raise an issue on Github.
+
+## Contribution policy
+
+We welcome bug reports, feature requests, and design discussions through GitHub
+Issues.
+
+To reduce security and maintenance risk in this protocol implementation, we do
+not directly accept external code contributions for merge.
+
+You are still welcome to open a pull request to illustrate an approach,
+provide examples, or share tests/reproduction steps. We review these proposals,
+but the maintainers implement and merge the final production code.
 
 We add features depending on our own, and our clients use cases. If you
 need a feature implemented please contact us.
@@ -149,7 +183,7 @@ need a feature implemented please contact us.
 # Training / Consultancy / Commercial Support / Services
 
 We offer consultancy service and training services around this library and general DLMS/COSEM.
-If you are interested in our services just reach at `ìnfo(at)pwit.se`
+If you are interested in our services just reach at `info(at)pwit.se`
 
 The library is an important part of our [Smart meter platform Utilitarian, https://utilitarian.io](https://utilitarian.io). If you need to
 collect data from a lot of DLMS devices or meters, deploying Utilitarian might be the smoothest

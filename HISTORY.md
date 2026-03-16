@@ -10,6 +10,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 
 ### Added
+* Added `scripts/release.sh` for maintainer-managed local releases using
+  `uv build` and `twine` uploads.
 
 ### Changed
 * `DlmsClient` now tracks and increments invoke-id values and sets explicit
@@ -21,10 +23,16 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 * Migrated CI and docs workflows from `pip`-based installs to `uv`.
 * Updated GitHub Actions workflow action versions to Node 24-compatible releases
   and set explicit uv cache dependency globs to avoid cache invalidation warnings.
+* Migrated package metadata to `pyproject.toml` (PEP 621), added `uv.lock`, and
+  switched CI/docs installs to `uv sync --locked`.
+* Added explicit GitHub Actions permissions and concurrency settings for safer and
+  less redundant workflow execution.
 
 ### Deprecated
 
 ### Removed
+* Removed legacy `setup.py` build script in favor of `pyproject.toml`
+  packaging metadata.
 
 ### Fixed
 
@@ -129,7 +137,7 @@ will allow for more versions.
 
 * Some DLMS over TCP implementations will return partial data. The
   `BlockingTcpTransport` now keeps on trying to read the data until all data is
-  received. Fixes [#35](https://github.com/pwitab/dlms-cosem/issues/35).
+  received. Fixes [#35](https://github.com/u9n/dlms-cosem/issues/35).
 * Fixed a bug in the HDLC layer that prevented correct sending of segmented information
   frames.
 
@@ -144,11 +152,11 @@ will allow for more versions.
 
 ### Fixed
 
-* Fixed [#23](https://github.com/pwitab/dlms-cosem/issues/23). Typo in A-XDR Parser.
+* Fixed [#23](https://github.com/u9n/dlms-cosem/issues/23). Typo in A-XDR Parser.
   Just referenced the function and did not call it. Now DLMS data is interpreted
   correctly.
 
-* Fixed [#20](https://github.com/pwitab/dlms-cosem/issues/20). It was possible that not
+* Fixed [#20](https://github.com/u9n/dlms-cosem/issues/20). It was possible that not
   calling the .shutdown() on socket before disconnecting made remote modems on meters,
   that have an embedded TCP/IP stack, keep the socket open and blocking subsequent calls.
 

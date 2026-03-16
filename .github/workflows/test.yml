@@ -4,6 +4,13 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -20,17 +27,21 @@ jobs:
           enable-cache: true
           cache-dependency-glob: |
             pyproject.toml
-            setup.py
+            uv.lock
           ignore-nothing-to-cache: true
+
+      - name: Install development dependencies
+        run: |
+          uv sync --extra dev --python 3.13 --locked
 
       - name: Run pre-commit on changed files
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            uvx pre-commit run --from-ref "${{ github.event.pull_request.base.sha }}" --to-ref "${{ github.event.pull_request.head.sha }}"
+            uv run pre-commit run --from-ref "${{ github.event.pull_request.base.sha }}" --to-ref "${{ github.event.pull_request.head.sha }}"
           elif [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
-            uvx pre-commit run --from-ref "${{ github.event.before }}" --to-ref "${{ github.sha }}"
+            uv run pre-commit run --from-ref "${{ github.event.before }}" --to-ref "${{ github.sha }}"
           else
-            uvx pre-commit run --all-files
+            uv run pre-commit run --all-files
           fi
 
   test:
@@ -51,13 +62,12 @@ jobs:
           enable-cache: true
           cache-dependency-glob: |
             pyproject.toml
-            setup.py
+            uv.lock
           ignore-nothing-to-cache: true
 
-      - name: Install dependencies
+      - name: Install test dependencies
         run: |
-          uv venv .venv --python ${{ matrix.python-version }} --clear
-          uv pip install -e ".[test]"
+          uv sync --extra test --python ${{ matrix.python-version }} --locked
 
       - name: Test with pytest
         run: |
