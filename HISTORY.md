@@ -19,6 +19,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 * Modernized pre-commit hooks, Black target version, and GitHub Actions workflow
   versions.
 * Migrated CI and docs workflows from `pip`-based installs to `uv`.
+* Updated GitHub Actions workflow action versions to Node 24-compatible releases
+  and set explicit uv cache dependency globs to avoid cache invalidation warnings.
 
 ### Deprecated
 
