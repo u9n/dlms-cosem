@@ -1,19 +1,28 @@
 name: build-docs
+
 on:
   push:
     branches:
       - master
       - main
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: 3.8
+          python-version: "3.13"
+          enable-cache: true
+
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install mkdocs-material
-      - run: mkdocs gh-deploy --force
+          uv venv --python 3.13
+          uv pip install mkdocs mkdocs-material
+
+      - name: Deploy docs
+        run: uv run mkdocs gh-deploy --force

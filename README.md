@@ -1,16 +1,21 @@
 
 # A Python library for DLMS/COSEM.
 
-[![codecov](https://codecov.io/gh/pwitab/dlms-cosem/branch/master/graph/badge.svg?token=RO37L11VQJ)](https://codecov.io/gh/pwitab/dlms-cosem)
-![run-tests](https://github.com/pwitab/dlms-cosem/workflows/run-tests/badge.svg)
-![build-docs](https://github.com/pwitab/dlms-cosem/workflows/build-docs/badge.svg)
+[![run-tests](https://github.com/u9n/dlms-cosem/actions/workflows/test.yml/badge.svg)](https://github.com/u9n/dlms-cosem/actions/workflows/test.yml)
+[![build-docs](https://github.com/u9n/dlms-cosem/actions/workflows/docs.yml/badge.svg)](https://github.com/u9n/dlms-cosem/actions/workflows/docs.yml)
 
 <img src="dlms-logo.png" alt="dlms_logo" width="200"/>
 
 # Installation
 
+```bash
+uv add dlms-cosem
 ```
-pip install dlms-cosem
+
+If you are not using a project-managed environment, you can also run:
+
+```bash
+uv pip install dlms-cosem
 ```
 
 # Documentation
@@ -98,7 +103,7 @@ We have some meters we have run tests on or know the library is used for in prod
 
 
 *The `dlms-cosem` library is released under the Business Source License 1.1 .
-It is not a fully Open Source License but will eventually be made available under an Open Source License 
+It is not a fully Open Source License but will eventually be made available under an Open Source License
 (Apache License, Version 2.0), as stated in the license document.*
 
 Our goal with this licence is to provide enough freedom for you to use and learn from the software without
@@ -108,7 +113,7 @@ Our goal with this licence is to provide enough freedom for you to use and learn
 
 You may make use of the Licensed Work for any Permitted Purpose other than a Competing Use.
 A Competing Use means use of the Licensed Work in or for a commercial product or service that
-competes with the Licensed Work or any other product or service we offer using the Licensed Work 
+competes with the Licensed Work or any other product or service we offer using the Licensed Work
 as of the date we make the Software available.
 
 Competing Uses specifically include using the Licensed Work:
@@ -129,7 +134,7 @@ Permitted Purposes specifically include using the Software:
 3. for non-commercial research.
 
 For information about alternative licensing arrangements or questions about permitted use of the library,
-please contact us at `info(at)pwit.se`. 
+please contact us at `info(at)pwit.se`.
 
 # Development
 
@@ -146,7 +151,6 @@ need a feature implemented please contact us.
 We offer consultancy service and training services around this library and general DLMS/COSEM.
 If you are interested in our services just reach at `ìnfo(at)pwit.se`
 
-The library is an important part of our [Smart meter platform Utilitarian, https://utilitarian.io](https://utilitarian.io). If you need to 
-collect data from a lot of DLMS devices or meters, deploying Utilitarian might be the smoothest 
+The library is an important part of our [Smart meter platform Utilitarian, https://utilitarian.io](https://utilitarian.io). If you need to
+collect data from a lot of DLMS devices or meters, deploying Utilitarian might be the smoothest
 solution for you.
-

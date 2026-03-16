@@ -7,15 +7,15 @@ from setuptools import Command, find_packages, setup
 # Package meta-data.
 NAME = "dlms-cosem"
 DESCRIPTION = "A Python library for DLMS/COSEM"
-URL = "https://github.com/pwitab/dlms-cosem"
+URL = "https://github.com/u9n/dlms-cosem"
 PROJECT_URLS = {
     "Documentation": "https://www.dlms.dev/",
-    "Bug Tracker": "https://github.com/pwitab/dlms-cosem/issues",
-    "Source Code": "https://github.com/pwitab/dlms-cosem",
+    "Bug Tracker": "https://github.com/u9n/dlms-cosem/issues",
+    "Source Code": "https://github.com/u9n/dlms-cosem",
 }
 EMAIL = "henrik@pwit.se"
 AUTHOR = "Henrik Palmlund Wahlgren @ Palmlund Wahlgren Innovative Technology AB"
-REQUIRES_PYTHON = "~=3.7"
+REQUIRES_PYTHON = ">=3.9"
 VERSION = "2026.1.0"
 
 # What packages are required for this module to be executed?
@@ -46,14 +46,14 @@ CLASSIFIERS = [
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Communications",
-
 ]
 
 here = os.path.abspath(os.path.dirname(__file__))

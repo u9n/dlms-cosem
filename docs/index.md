@@ -9,12 +9,18 @@ communication with energy meters.
 
 ## Installation
 
+```bash
+uv add dlms-cosem
 ```
-pip install dlms-cosem
+
+If you are not using a project-managed environment, you can also run:
+
+```bash
+uv pip install dlms-cosem
 ```
 
 !!! note
-    We only support Python 3.6+
+    We only support Python 3.9+
 
 
 ## Design

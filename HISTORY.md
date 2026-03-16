@@ -14,6 +14,11 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 ### Changed
 * `DlmsClient` now tracks and increments invoke-id values and sets explicit
   invoke-id-and-priority in GET, GET.WITH_LIST, SET, and ACTION requests.
+* Updated project metadata and documentation links to use the `u9n/dlms-cosem`
+  repository.
+* Modernized pre-commit hooks, Black target version, and GitHub Actions workflow
+  versions.
+* Migrated CI and docs workflows from `pip`-based installs to `uv`.
 
 ### Deprecated
 
@@ -46,7 +51,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 ## 25.1.0 - 2025-03-26
 
 ### Added
-* `use_rlrq_rlre` added to DlmsConnectionSettings with default to `True`. If `False` no ReleaseRequest is sent to 
+* `use_rlrq_rlre` added to DlmsConnectionSettings with default to `True`. If `False` no ReleaseRequest is sent to
   server/device and lower layer can be disconnected right away.
 
 ### Fixed
@@ -72,7 +77,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 * Shorthand class methods to create DlmsClients. Now composition has to be used.
 
 ### Fixed
-* Error in DataArray dlms data type 
+* Error in DataArray dlms data type
 
 
 ## [21.3.2] - 2021-11-07
