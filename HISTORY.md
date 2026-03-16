@@ -10,16 +10,26 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 
 
 ### Added
-* `use_rlrq_rlre` added to DlmsConnectionSettings. If `False` no ReleaseRequest is sent to server/device and lower 
-   layer can be disconnected right away.
 
 ### Changed
-* Renamed `TcpTransport` to `IPTransport` to reflect IP-wrapper semantics and kept
-  `TcpTransport` as a backward-compatible alias.
 
 ### Deprecated
 
 ### Removed
+
+### Fixed
+
+### Security
+
+## 2026.1.0 - 2026-03-02
+
+### Added
+* `use_rlrq_rlre` added to DlmsConnectionSettings. If `False` no ReleaseRequest is sent to server/device and lower
+  layer can be disconnected right away.
+
+### Changed
+* Renamed `TcpTransport` to `IPTransport` to reflect IP-wrapper semantics and kept
+  `TcpTransport` as a backward-compatible alias.
 
 ### Fixed
 * Fixed RLRQ context handling so unciphered associations omit user information, and
@@ -30,8 +40,6 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
   support for `datetime` inputs and all-ones wildcard values mapping to `None`.
 * Corrected package metadata license in `setup.py` to match the Business Source
   License 1.1 used by the project.
-
-### Security
 
 ## 25.1.0 - 2025-03-26
 
