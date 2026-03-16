@@ -1,5 +1,6 @@
 import contextlib
 from typing import *
+from typing import Any, Generator
 
 import attr
 import structlog
@@ -16,7 +17,7 @@ LOG = structlog.get_logger()
 
 
 class DataResultError(Exception):
-    """ Error retrieveing data"""
+    """Error retrieveing data"""
 
 
 class ActionError(Exception):
@@ -41,6 +42,9 @@ class DlmsClient:
     client_initial_invocation_counter: int = attr.ib(default=0)
     meter_initial_invocation_counter: int = attr.ib(default=0)
     timeout: int = attr.ib(default=10)
+    invoke_id: int = attr.ib(default=0)
+    invoke_id_confirmed: bool = attr.ib(default=True)
+    invoke_id_high_priority: bool = attr.ib(default=True)
     connection_settings: Optional[DlmsConnectionSettings] = attr.ib(default=None)
 
     dlms_connection: DlmsConnection = attr.ib(
@@ -63,21 +67,36 @@ class DlmsClient:
     )
 
     @contextlib.contextmanager
-    def session(self) -> "DlmsClient":
+    def session(self) -> Generator["DlmsClient", Any, None]:
         self.connect()
         self.associate()
         yield self
         self.release_association()
         self.disconnect()
 
+    def next_invoke_id(self) -> int:
+        current = self.invoke_id
+        self.invoke_id = (current + 1) % 16
+        return current
+
+    def next_invoke_id_and_priority(self) -> xdlms.InvokeIdAndPriority:
+        return xdlms.InvokeIdAndPriority(
+            invoke_id=self.next_invoke_id(),
+            confirmed=self.invoke_id_confirmed,
+            high_priority=self.invoke_id_high_priority,
+        )
+
     def get(
-            self,
-            cosem_attribute: cosem.CosemAttribute,
-            access_descriptor: Optional[RangeDescriptor] = None,
+        self,
+        cosem_attribute: cosem.CosemAttribute,
+        access_descriptor: Optional[RangeDescriptor] = None,
     ) -> bytes:
+        invoke = self.next_invoke_id_and_priority()
         self.send(
             xdlms.GetRequestNormal(
-                cosem_attribute=cosem_attribute, access_selection=access_descriptor
+                cosem_attribute=cosem_attribute,
+                access_selection=access_descriptor,
+                invoke_id_and_priority=invoke,
             )
         )
         all_data_received = False
@@ -115,13 +134,15 @@ class DlmsClient:
         return bytes(data)
 
     def get_many(
-            self, cosem_attributes_with_selection: List[cosem.CosemAttributeWithSelection]
+        self, cosem_attributes_with_selection: List[cosem.CosemAttributeWithSelection]
     ):
         """
         Make a GET.WITH_LIST call. Get many items in one request.
         """
+        invoke = self.next_invoke_id_and_priority()
         out = xdlms.GetRequestWithList(
-            cosem_attributes_with_selection=cosem_attributes_with_selection
+            cosem_attributes_with_selection=cosem_attributes_with_selection,
+            invoke_id_and_priority=invoke,
         )
         self.send(out)
         response = self.next_event()
@@ -134,11 +155,25 @@ class DlmsClient:
         return response
 
     def set(self, cosem_attribute: cosem.CosemAttribute, data: bytes):
-        self.send(xdlms.SetRequestNormal(cosem_attribute=cosem_attribute, data=data))
+        invoke = self.next_invoke_id_and_priority()
+        self.send(
+            xdlms.SetRequestNormal(
+                cosem_attribute=cosem_attribute,
+                data=data,
+                invoke_id_and_priority=invoke,
+            )
+        )
         return self.next_event()
 
     def action(self, method: cosem.CosemMethod, data: bytes):
-        self.send(xdlms.ActionRequestNormal(cosem_method=method, data=data))
+        invoke = self.next_invoke_id_and_priority()
+        self.send(
+            xdlms.ActionRequestNormal(
+                cosem_method=method,
+                data=data,
+                invoke_id_and_priority=invoke,
+            )
+        )
         response = self.next_event()
 
         if isinstance(response, xdlms.ActionResponseNormalWithError):
@@ -153,10 +188,9 @@ class DlmsClient:
         return
 
     def associate(
-            self,
-            association_request: Optional[acse.ApplicationAssociationRequest] = None,
+        self,
+        association_request: Optional[acse.ApplicationAssociationRequest] = None,
     ) -> acse.ApplicationAssociationResponse:
-
         # the aarq can be overridden or the standard one from the connection is used.
         aarq = association_request or self.dlms_connection.get_aarq()
 
@@ -174,7 +208,7 @@ class DlmsClient:
                 extra_error = None
                 if response.user_information:
                     if isinstance(
-                            response.user_information.content, ConfirmedServiceError
+                        response.user_information.content, ConfirmedServiceError
                     ):
                         extra_error = response.user_information.content.error
                 raise exceptions.DlmsClientException(
@@ -187,7 +221,6 @@ class DlmsClient:
             )
 
         if self.should_send_hls_reply():
-
             # TODO: wrap hls logic in method
             try:
                 hls_response = self.send_hls_reply()
@@ -203,7 +236,7 @@ class DlmsClient:
                 raise HLSError("Did not receive any HLS response data")
 
             if not self.dlms_connection.authentication.hls_meter_data_is_valid(
-                    hls_data, self.dlms_connection
+                hls_data, self.dlms_connection
             ):
                 raise HLSError(
                     f"Meter did not respond with correct challenge calculation"
@@ -213,8 +246,8 @@ class DlmsClient:
 
     def should_send_hls_reply(self) -> bool:
         return (
-                self.dlms_connection.state.current_state
-                == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
+            self.dlms_connection.state.current_state
+            == state.SHOULD_SEND_HLS_SEVER_CHALLENGE_RESULT
         )
 
     def send_hls_reply(self) -> Optional[bytes]:
@@ -232,7 +265,6 @@ class DlmsClient:
         )
 
     def release_association(self) -> Optional[acse.ReleaseResponse]:
-
         rlrq = self.dlms_connection.get_rlrq()
         try:
             self.send(rlrq)

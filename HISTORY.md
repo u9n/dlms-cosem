@@ -12,6 +12,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/)
 ### Added
 
 ### Changed
+* `DlmsClient` now tracks and increments invoke-id values and sets explicit
+  invoke-id-and-priority in GET, GET.WITH_LIST, SET, and ACTION requests.
 
 ### Deprecated
 
