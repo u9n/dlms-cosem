@@ -47,6 +47,15 @@ class XDlmsApduFactory:
         196: xdlms.GetResponseFactory,
         197: xdlms.SetResponseFactory,
         199: xdlms.ActionResponseFactory,
+
+        # Service Specific Global Ciphering
+        200: xdlms.GlobalGetRequest,
+        201: xdlms.GlobalSetRequest,
+        202: xdlms.GlobalActionNotificationRequest,
+        203: xdlms.GlobalActionRequest,
+        204: xdlms.GlobalGetResponse,
+        205: xdlms.GlobalSetResponse,
+        207: xdlms.GlobalActionResponse,
     }
 
     @classmethod
