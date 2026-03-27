@@ -113,21 +113,21 @@ class AssociationObjectListParser:
     def parse_access_right(access_right: int) -> List[AccessRight]:
         parsed_access_rights = list()
         if bool(access_right & 0b00000001):
-            parsed_access_rights.append(AccessRight.READ_ACCESS.value)
+            parsed_access_rights.append(AccessRight.READ_ACCESS)
         if bool(access_right & 0b00000010):
-            parsed_access_rights.append(AccessRight.WRITE_ACCESS.value)
+            parsed_access_rights.append(AccessRight.WRITE_ACCESS)
         if bool(access_right & 0b00000100):
-            parsed_access_rights.append(AccessRight.AUTHENTICATED_REQUEST.value)
+            parsed_access_rights.append(AccessRight.AUTHENTICATED_REQUEST)
         if bool(access_right & 0b00001000):
-            parsed_access_rights.append(AccessRight.ENCRYPTED_REQUEST.value)
+            parsed_access_rights.append(AccessRight.ENCRYPTED_REQUEST)
         if bool(access_right & 0b00010000):
-            parsed_access_rights.append(AccessRight.DIGITALLY_SIGNED_REQUEST.value)
+            parsed_access_rights.append(AccessRight.DIGITALLY_SIGNED_REQUEST)
         if bool(access_right & 0b00100000):
-            parsed_access_rights.append(AccessRight.AUTHENTICATED_RESPONSE.value)
+            parsed_access_rights.append(AccessRight.AUTHENTICATED_RESPONSE)
         if bool(access_right & 0b01000000):
-            parsed_access_rights.append(AccessRight.ENCRYPTED_RESPONSE.value)
+            parsed_access_rights.append(AccessRight.ENCRYPTED_RESPONSE)
         if bool(access_right & 0b10000000):
-            parsed_access_rights.append(AccessRight.DIGITALLY_SIGNED_RESPONSE.value)
+            parsed_access_rights.append(AccessRight.DIGITALLY_SIGNED_RESPONSE)
 
         return parsed_access_rights
 
