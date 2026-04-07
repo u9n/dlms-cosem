@@ -182,6 +182,26 @@ class ApplicationAssociationResponse(acse_base.AbstractAcseApdu):
     @property
     def protocol_version(self) -> int:
         return 0
+    
+    @classmethod
+    def _pop_ber_length(cls, source_bytes: bytearray) -> int:
+        """Pop a BER length field from data and return the decoded length."""
+        first = source_bytes.pop(0)
+
+        # Short form length, value is in the first byte.
+        if first < 0x80:
+            return first
+
+        num_octets = first & 0x7F
+        if num_octets == 0:
+            raise ValueError("Indefinite BER length is not supported for ACSE APDUs")
+
+        if len(source_bytes) < num_octets:
+            raise ValueError("Insufficient data to decode BER long-form length")
+
+        length_bytes = bytes(source_bytes[:num_octets])
+        del source_bytes[:num_octets]
+        return int.from_bytes(length_bytes, byteorder="big")
 
     @classmethod
     def from_bytes(cls, source_bytes: bytes):
@@ -192,7 +212,7 @@ class ApplicationAssociationResponse(acse_base.AbstractAcseApdu):
         if not aare_tag == cls.TAG:
             raise ValueError("Bytes are not an AARQ APDU. TAg is not int(96)")
 
-        aare_length = aare_data.pop(0)
+        aare_length = cls._pop_ber_length(aare_data)
 
         if not len(aare_data) == aare_length:
             raise ValueError(
@@ -216,7 +236,7 @@ class ApplicationAssociationResponse(acse_base.AbstractAcseApdu):
                     f"Could not find object with tag {object_tag} "
                     f"in AARQ definition"
                 )
-            object_length = aare_data.pop(0)
+            object_length = cls._pop_ber_length(aare_data)
             object_data = bytes(aare_data[:object_length])
             aare_data = aare_data[object_length:]
 
