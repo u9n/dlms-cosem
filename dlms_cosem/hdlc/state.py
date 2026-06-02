@@ -60,7 +60,10 @@ HDLC_STATE_TRANSITIONS = {
         frames.DisconnectFrame: AWAITING_DISCONNECT,
         frames.ReceiveReadyFrame: AWAITING_RESPONSE,
     },
-    AWAITING_RESPONSE: {frames.InformationFrame: IDLE, frames.ReceiveReadyFrame: IDLE},
+    AWAITING_RESPONSE: {
+        frames.InformationFrame: IDLE,
+        frames.ReceiveReadyFrame: IDLE,
+    },
     AWAITING_DISCONNECT: {frames.UnNumberedAcknowledgmentFrame: NOT_CONNECTED},
 }
 
@@ -98,4 +101,4 @@ class HdlcConnectionState:
             )
         old_state = self.current_state
         self.current_state = new_state
-        LOG.debug(f"HDLC state transitioned", old_state=old_state, new_state=new_state)
+        LOG.debug(f"HDLC state transitioned {old_state} => {new_state}")

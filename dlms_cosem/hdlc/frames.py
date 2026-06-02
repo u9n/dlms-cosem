@@ -18,8 +18,6 @@ HCS = FCS
 def frame_is_enclosed_by_hdlc_flags(frame_bytes: bytes):
     first: int = frame_bytes[0]
     last: int = frame_bytes[-1]
-    if first != last:
-        return False
     if first != ord(HDLC_FLAG) or last != ord(HDLC_FLAG):
         return False
 

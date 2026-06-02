@@ -171,6 +171,10 @@ class DlmsDate:
 
         return f"DlmsDate({year_str}-{month_str}-{day_str}{dow_str})"
 
+    def __eq__(self, value):
+        return isinstance(value, DlmsDate) and self.to_bytes() == value.to_bytes()
+
+
 
 class DlmsTime:
     """

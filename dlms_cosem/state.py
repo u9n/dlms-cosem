@@ -156,7 +156,6 @@ class DlmsConnectionState:
     current_state: _SentinelBase = attr.ib(default=NO_ASSOCIATION)
 
     def process_event(self, event):
-
         self._transition_state(type(event))
 
     def _transition_state(self, event_type):
@@ -168,4 +167,4 @@ class DlmsConnectionState:
             )
         old_state = self.current_state
         self.current_state = new_state
-        LOG.debug(f"DLMS state transitioned", old_state=old_state, new_state=new_state)
+        LOG.debug(f"DLMS state transitioned {old_state} => {new_state}")

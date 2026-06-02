@@ -300,7 +300,7 @@ class DlmsConnection:
         #    blocks = self.make_blocks(event)
         #    # TODO: How to handle the subcase of sending blocks?
 
-        LOG.info(f"Sending DLMS Request", request=event)
+        LOG.debug(f"Sending DLMS Request", request=event)
 
         out = event.to_bytes()
 
@@ -317,7 +317,6 @@ class DlmsConnection:
         After this you could call next_event
         """
         if data:
-            LOG.debug(f"Adding data to buffer", data=data)
             self.buffer += data
 
     def next_event(self):
@@ -333,7 +332,6 @@ class DlmsConnection:
 
         apdu = XDlmsApduFactory.apdu_from_bytes(self.buffer)
 
-        LOG.info("Received DLMS Response", response=apdu)
 
         if isinstance(apdu, acse.ApplicationAssociationResponse):
             # To be able to run the decryption we need to know some things about the
@@ -342,7 +340,6 @@ class DlmsConnection:
 
         if self.use_protection:
             apdu = self.unprotect(apdu)
-            LOG.info("Deciphered DLMS Response", response=apdu)
 
         if self.is_pre_established:
             if isinstance(
@@ -417,7 +414,7 @@ class DlmsConnection:
         Will apply the correct protection to apdus depending on the security context
         """
 
-        LOG.info(f"Ciphering DLMS Request", apdu=event)
+        LOG.debug(f"Ciphering DLMS Request", apdu=event)
 
         # ASCE have different rules about protection
         if isinstance(event, (acse.ApplicationAssociationRequest, acse.ReleaseRequest)):

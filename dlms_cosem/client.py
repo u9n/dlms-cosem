@@ -151,7 +151,7 @@ class DlmsClient:
 
     def set(self, cosem_attribute: cosem.CosemAttribute, data: bytes):
         naive_request = xdlms.SetRequestNormal(cosem_attribute=cosem_attribute, data=data)
-        gen = xdlms.SetRequestFactory.to_gen(naive_request, 255)
+        gen = xdlms.SetRequestFactory.to_gen(naive_request, 1500)
         try:
             req = next(gen)
             self.send(req)

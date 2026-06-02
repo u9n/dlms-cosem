@@ -227,7 +227,7 @@ class TcpTransport:
         Sends a whole DLMS APDU wrapped in the DLMS IP Wrapper.
         """
         wrapped = self.wrap(bytes_to_send)
-        LOG.debug("Sending data", data=wrapped, transport=self)
+        LOG.debug("Sending data", data=wrapped.hex())
         self.io.send(self.wrap(bytes_to_send))
 
         return self.recv_response()
@@ -240,7 +240,7 @@ class TcpTransport:
         header = WrapperHeader.from_bytes(header_data)
         data = self.io.recv(header.length)
 
-        LOG.debug("Received data", data=header_data + data, transport=self)
+        LOG.debug("Received data", data=header_data + data)
 
         return data
 
@@ -408,7 +408,7 @@ class HdlcTransport:
             self.out_buffer = self.out_buffer[data_size:]
             segmented = bool(self.out_buffer)
             if self.hdlc_connection.state.current_state != state.IDLE:
-                LOG.debug("Sending data", data=data, transport=self)
+                LOG.debug("Sending data", data=data.hex())
                 self.io.send(data)
                 return
             # We don't handle window sizes so final is always true
@@ -438,9 +438,9 @@ class HdlcTransport:
         )
 
     def send_frame(self, frame):
-        LOG.info(f"Sending HDLC frame", frame=frame)
+        LOG.debug(f"Sending HDLC frame", frame=frame)
         frame_bytes = self.hdlc_connection.send(frame)
-        LOG.debug("Sending data", data=frame_bytes, transport=self)
+        LOG.debug("Sending data", data=frame_bytes.hex())
         self.io.send(frame_bytes)
 
     def recv_frame(self) -> bytes:
@@ -450,7 +450,7 @@ class HdlcTransport:
             # We found the first HDLC Frame Flag. We should read until the last one.
             in_bytes += self.io.recv_until(frames.HDLC_FLAG)
 
-        LOG.debug("Received data", data=in_bytes, transport=self)
+        LOG.debug("Received data", data=in_bytes.hex())
 
         return in_bytes
 

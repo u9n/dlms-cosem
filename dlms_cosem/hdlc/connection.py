@@ -91,7 +91,6 @@ class HdlcConnection:
         After this you could call next_event
         """
         if data:
-            LOG.debug(f"Added data to buffer", data=data)
             self.buffer += data
 
     def next_event(self):

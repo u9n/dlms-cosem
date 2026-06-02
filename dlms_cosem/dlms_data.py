@@ -479,7 +479,7 @@ class DlmsDataParser:
 
     @property
     def buffer_empty(self) -> bool:
-        return self.pointer == len(self.buffer)
+        return self.pointer >= len(self.buffer)
 
     def parse(self, data: bytes, limit: Optional[int] = None):
         # clear previous results
